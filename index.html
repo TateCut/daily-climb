@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3-2-1</title>
+<style>
+  :root {
+    --bg: #f5f5f4;
+    --surface: #ffffff;
+    --line: #d6d3d1;
+    --text: #1c1917;
+    --muted: #78716c;
+    --accent: #d97706;
+    --good: #16a34a;
+    --warn: #dc2626;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1917;
+      --surface: #292524;
+      --line: #44403c;
+      --text: #f5f5f4;
+      --muted: #a8a29e;
+      --accent: #f59e0b;
+      --good: #4ade80;
+      --warn: #f87171;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 56px 16px 40px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .back {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    font-size: 0.85rem;
+    color: var(--muted);
+    text-decoration: none;
+  }
+  .back:hover { color: var(--text); }
+
+  main {
+    width: min(94vw, 460px);
+    text-align: center;
+  }
+  main > section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  h1 {
+    margin: 0 0 22px;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+  .lede { margin: 0; color: var(--muted); font-size: 0.95rem; line-height: 1.5; }
+  .rules {
+    margin: 0;
+    padding-left: 20px;
+    text-align: left;
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+  .rules b { color: var(--text); }
+
+  button.primary {
+    border: none;
+    background: var(--accent);
+    color: #1c1005;
+    font: inherit;
+    font-weight: 650;
+    font-size: 1rem;
+    padding: 11px 26px;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  button.primary:disabled { opacity: 0.5; cursor: default; }
+  button.ghost {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.85rem;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  button.ghost:hover { background: var(--bg); }
+  button.linkbtn {
+    border: none;
+    background: none;
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.8rem;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+    padding: 2px 6px;
+  }
+  button.linkbtn:hover { color: var(--text); }
+  .note { font-size: 0.8rem; color: var(--muted); min-height: 1.2em; }
+
+  .hud {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .hud b { color: var(--text); }
+
+  .timerbar {
+    width: 100%;
+    height: 8px;
+    background: var(--line);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .timerbar-fill {
+    height: 100%;
+    width: 100%;
+    background: var(--accent);
+    border-radius: 999px;
+    transition: width 0.1s linear;
+  }
+  .timerbar-fill.low { background: var(--warn); }
+
+  .secs { font-variant-numeric: tabular-nums; font-size: 0.85rem; color: var(--muted); }
+
+  .rowlabel {
+    width: 100%;
+    text-align: left;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: -8px;
+  }
+
+  .row {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 60px;
+  }
+  .row.answer {
+    padding: 8px;
+    border: 1px dashed var(--line);
+    border-radius: 12px;
+    min-height: 76px;
+  }
+
+  .tile {
+    width: 48px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 1.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+  }
+  .tile.new { border-color: var(--accent); }
+  .tile.pop { animation: pop 0.3s ease; }
+  @keyframes pop {
+    0% { transform: scale(0.6); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .tile.dragging { opacity: 0.3; }
+  .tile.ghost {
+    position: fixed;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 1000;
+    cursor: grabbing;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  }
+
+  .slot {
+    width: 48px;
+    height: 56px;
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    opacity: 0.5;
+  }
+  .drop-marker {
+    position: absolute;
+    width: 4px;
+    height: 52px;
+    margin-top: -26px;
+    background: var(--accent);
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  .btnrow {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .msg { min-height: 1.3em; font-size: 0.9rem; }
+  .msg.good { color: var(--good); }
+  .msg.warn { color: var(--warn); }
+
+  .def {
+    margin: -8px 0 0;
+    max-width: 34ch;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+  .def i { color: var(--text); font-style: italic; margin-right: 2px; }
+
+  .missed-word {
+    margin: 0;
+    font-size: 1.9rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .roundline {
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .roundline b { color: var(--text); }
+
+  .rounds {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+  .rounds .round {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .rounds .round-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .chips span {
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface);
+  }
+  .chips .none { color: var(--muted); font-weight: 400; border-style: dashed; }
+
+  .totalbox {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 14px;
+    border: 2px solid var(--accent);
+    border-radius: 12px;
+  }
+  .totalbox-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .totalbox .chips span { border-color: var(--accent); }
+  .totalbox-count { font-size: 0.85rem; color: var(--muted); }
+
+  .nameinput {
+    width: 100%;
+    font: inherit;
+    font-size: 1rem;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: var(--surface);
+    color: var(--text);
+  }
+  .nameinput:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .linkrow { display: flex; gap: 8px; width: 100%; }
+  .linkrow .nameinput { flex: 1; min-width: 0; }
+
+  .vsgrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: 100%;
+  }
+  .vscard {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .vscard.winner { border-color: var(--accent); border-width: 2px; }
+  .vscard .vsname {
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-align: center;
+  }
+  .vscard .vsscore { font-size: 2rem; font-weight: 700; }
+  .vscard .vscrown {
+    font-size: 0.72rem;
+    color: var(--accent);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .vsnamehead {
+    width: 100%;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text);
+    margin-top: 6px;
+  }
+
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+  <a class="back" href="../../index.html">&larr; Portfolio</a>
+
+  <main>
+    <h1>3&middot;2&middot;1</h1>
+
+    <!-- LANDING -->
+    <section id="screen-landing">
+      <p class="lede">Play solo against the clock, or challenge a friend to the same letters &mdash; results are revealed once you've both finished.</p>
+      <button class="primary" id="btn-solo" type="button">Play Solo</button>
+      <button class="ghost" id="btn-vs" type="button">Play a Friend</button>
+      <p class="note" id="vs-note" hidden>Multiplayer isn't set up on this site yet.</p>
+    </section>
+
+    <!-- VS: create a match -->
+    <section id="screen-vs-create" hidden>
+      <p class="lede">You and your friend get the exact same letters, all 3 rounds. Enter your name to create the match:</p>
+      <input class="nameinput" id="vs-name-create" type="text" placeholder="Your name" maxlength="24" autocomplete="off">
+      <button class="primary" id="btn-vs-create" type="button">Create match</button>
+      <p class="note" id="vs-create-note"></p>
+      <button class="linkbtn" id="btn-vs-create-back" type="button">Back</button>
+    </section>
+
+    <!-- VS: share the invite link -->
+    <section id="screen-vs-invite" hidden>
+      <p class="lede">Send this link to your friend, then play whenever you're ready:</p>
+      <div class="linkrow">
+        <input class="nameinput" id="vs-link" type="text" readonly>
+        <button class="ghost" id="btn-vs-copy" type="button">Copy</button>
+      </div>
+      <p class="note" id="vs-copy-note"></p>
+      <button class="primary" id="btn-vs-play" type="button">Play now</button>
+    </section>
+
+    <!-- VS: joined via invite link -->
+    <section id="screen-vs-join" hidden>
+      <p class="lede" id="vs-join-lede">You've been challenged to 3&middot;2&middot;1!</p>
+      <input class="nameinput" id="vs-name-join" type="text" placeholder="Your name" maxlength="24" autocomplete="off">
+      <button class="primary" id="btn-vs-join" type="button">Play</button>
+      <p class="note" id="vs-join-note"></p>
+    </section>
+
+    <!-- VS: waiting on the opponent -->
+    <section id="screen-vs-waiting" hidden>
+      <h2 style="margin:0;font-size:1.3rem;">You're done!</h2>
+      <p class="lede">You solved <b id="vs-wait-total">0</b> words. Results unlock once <span id="vs-wait-who">your friend</span> finishes too.</p>
+      <div class="linkrow" id="vs-wait-linkrow" hidden>
+        <input class="nameinput" id="vs-wait-link" type="text" readonly>
+        <button class="ghost" id="btn-vs-wait-copy" type="button">Copy</button>
+      </div>
+      <p class="note" id="vs-wait-note"></p>
+    </section>
+
+    <!-- VS: reveal -->
+    <section id="screen-vs-reveal" hidden>
+      <h2 id="vs-reveal-title" style="margin:0;font-size:1.3rem;">Results are in!</h2>
+      <div class="vsgrid" id="vs-reveal-grid"></div>
+      <div class="vsnamehead" id="vs-reveal-p1head">You</div>
+      <div class="rounds" id="vs-reveal-p1rounds"></div>
+      <div class="vsnamehead" id="vs-reveal-p2head">Opponent</div>
+      <div class="rounds" id="vs-reveal-p2rounds"></div>
+      <button class="primary" id="btn-vs-again" type="button">Play again</button>
+    </section>
+
+    <!-- START (solo) -->
+    <section id="screen-start" hidden>
+      <p class="lede">Rearrange the letter pool into a real word before the timer runs out. Every stage the pool grows &mdash; and you have to use <b>every</b> letter.</p>
+      <ol class="rules">
+        <li>Stage 1: <b>3</b> letters &rarr; make a 3-letter word.</li>
+        <li>Stage 2: <b>+2</b> letters &rarr; make a 5-letter word.</li>
+        <li>Stage 3: <b>+1</b> letter &rarr; make a 6-letter word.</li>
+        <li>Every stage after that: <b>+1</b> letter, one longer word.</li>
+      </ol>
+      <p class="lede">Click a letter to move it into your word, click it again to send it back, and drag letters to reorder. Press <b>Enter</b> to submit.</p>
+      <p class="lede">Time left when you solve a word carries over to the next one, so solving fast banks you extra time.</p>
+      <p class="lede">You play <b>3 rounds</b>. Your score is the total words solved across all three. Best total: <b id="best-start">0</b> words.</p>
+      <button class="primary" id="btn-start" disabled>Loading&hellip;</button>
+      <p class="note" id="load-note">Loading dictionary&hellip;</p>
+    </section>
+
+    <!-- PLAY -->
+    <section id="screen-play" hidden>
+      <div class="roundline">Round <b id="round-n">1</b> of 3</div>
+      <div class="hud">
+        <span>Stage <b id="stage-n">1</b> &middot; <b id="pool-n">3</b> letters</span>
+        <span><b id="solved-n">0</b> this round</span>
+      </div>
+      <div class="timerbar"><div class="timerbar-fill" id="bar"></div></div>
+      <div class="secs"><span id="secs">30</span>s left</div>
+
+      <div class="rowlabel">Letters</div>
+      <div class="row" id="tray"></div>
+
+      <div class="rowlabel">Your word</div>
+      <div class="row answer" id="answer"></div>
+
+      <div class="btnrow">
+        <button class="primary" id="btn-enter" type="button">Enter</button>
+        <button class="ghost" id="btn-return" type="button">Return all</button>
+        <button class="ghost" id="btn-shuffle" type="button">Shuffle</button>
+      </div>
+      <div class="msg" id="msg"></div>
+      <button class="linkbtn" id="btn-endround" type="button">End round</button>
+    </section>
+
+    <!-- ROUND END (after every round) -->
+    <section id="screen-roundend" hidden>
+      <h2 id="re-title" style="margin:0;font-size:1.3rem;">Round 1 of 3</h2>
+      <p class="lede" id="re-sub">A word that could have worked:</p>
+      <p class="missed-word" id="re-word"></p>
+      <p class="def" id="re-def" hidden></p>
+      <button class="primary" id="re-btn" type="button">Continue</button>
+    </section>
+
+    <!-- FINAL SUMMARY -->
+    <section id="screen-over" hidden>
+      <h2 style="margin:0;font-size:1.3rem;">That's a wrap</h2>
+
+      <div class="rounds" id="over-rounds"></div>
+
+      <div class="totalbox" id="over-totalbox">
+        <span class="totalbox-label">Total</span>
+        <div class="chips" id="over-totalwords"></div>
+        <span class="totalbox-count" id="over-totalcount">0 words</span>
+      </div>
+
+      <p class="lede">Best total: <b id="best-over">0</b> words</p>
+      <button class="primary" id="btn-again" type="button">Play again</button>
+    </section>
+  </main>
+
+<script src="firebase-config.js"></script>
+<script type="module">
+  // Thin adapter around Firestore for versus-mode match state. Exposes
+  // window.MatchDB, used by the main game script below. If no Firebase
+  // config has been filled in, MatchDB.ready stays false and "Play a
+  // Friend" is disabled — solo play works either way.
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import {
+    getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, serverTimestamp,
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+  const cfg = window.THREE21_FIREBASE_CONFIG;
+  let db = null;
+  if (cfg && cfg.apiKey && cfg.apiKey !== "REPLACE_ME") {
+    try {
+      db = getFirestore(initializeApp(cfg));
+    } catch (e) {
+      db = null;
+    }
+  }
+
+  const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I — easy to read aloud
+  function genCode(len) {
+    let s = "";
+    for (let i = 0; i < (len || 5); i++) s += CODE_CHARS[(Math.random() * CODE_CHARS.length) | 0];
+    return s;
+  }
+  function genSeed() {
+    return (Math.random() * 0xffffffff) >>> 0;
+  }
+
+  // Firestore rejects arrays nested directly inside arrays, and roundWords is
+  // exactly that ([["dog","cat"],["ace"],[]]) — so on the wire each round's
+  // word list is wrapped in a one-field object, and unwrapped again on read.
+  // The rest of the app only ever sees plain arrays of arrays.
+  function wrapRoundWords(roundWords) {
+    return (roundWords || []).map((words) => ({ words: words }));
+  }
+  function unwrapPlayer(p) {
+    if (!p) return p;
+    return Object.assign({}, p, {
+      roundWords: (p.roundWords || []).map((r) => (r && r.words) || []),
+    });
+  }
+  function unwrapMatch(data) {
+    if (!data) return data;
+    return Object.assign({}, data, {
+      p1: unwrapPlayer(data.p1),
+      p2: unwrapPlayer(data.p2),
+    });
+  }
+
+  window.MatchDB = {
+    ready: !!db,
+
+    async createMatch(name) {
+      const code = genCode();
+      const seed = genSeed();
+      await setDoc(doc(db, "matches", code), {
+        seed,
+        createdAt: serverTimestamp(),
+        p1: { name: name, done: false, total: 0, roundWords: [] },
+        p2: null,
+      });
+      return { code: code, seed: seed };
+    },
+
+    async getMatch(code) {
+      const snap = await getDoc(doc(db, "matches", code));
+      return snap.exists() ? unwrapMatch(snap.data()) : null;
+    },
+
+    async joinMatch(code, name) {
+      const ref = doc(db, "matches", code);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) return null;
+      const data = snap.data();
+      if (!data.p2) {
+        await updateDoc(ref, { p2: { name: name, done: false, total: 0, roundWords: [] } });
+      }
+      return unwrapMatch(data);
+    },
+
+    async submitResult(code, slot, total, roundWords) {
+      const ref = doc(db, "matches", code);
+      const patch = {};
+      patch[slot + ".done"] = true;
+      patch[slot + ".total"] = total;
+      patch[slot + ".roundWords"] = wrapRoundWords(roundWords);
+      patch[slot + ".finishedAt"] = Date.now();
+      await updateDoc(ref, patch);
+    },
+
+    // Returns an unsubscribe function.
+    watch(code, cb) {
+      return onSnapshot(doc(db, "matches", code), (snap) => {
+        cb(snap.exists() ? unwrapMatch(snap.data()) : null);
+      });
+    },
+  };
+</script>
+<script src="freq.js"></script>
+<script src="words.js"></script>
+<script>
+(function () {
+  const RAW = window.THREE21_WORDS || [];
+  const FREQ_RAW = window.THREE21_FREQ || [];
+  const $ = (s) => document.querySelector(s);
+  const ALPHA = "abcdefghijklmnopqrstuvwxyz".split("");
+  const BEST_KEY = "three21.best";
+
+  // Deterministic PRNG so two players in a versus match get the exact same
+  // letters. `rand` is Math.random in solo mode, or reseeded per round from
+  // the match's shared seed in versus mode — see startRound().
+  function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function mixSeed(seed, n) {
+    return ((seed ^ Math.imul(n + 1, 0x9E3779B1)) >>> 0);
+  }
+  let rand = Math.random;
+
+  // ---- versus-mode state ----
+  let mode = "solo";        // "solo" | "versus"
+  let matchCode = null;
+  let matchSeed = 0;
+  let playerSlot = null;    // "p1" | "p2"
+  let playerName = "";
+  let opponentName = "";
+  let dictReady = false;
+  let unwatchMatch = null;
+
+  let WORD_SET = null;
+  let ANA = null;          // sorted-letters key -> array of words with those letters
+  let FREQ = null;         // word -> frequency rank (lower = more common)
+  let WORDS3 = [];
+
+  const sortStr = (s) => s.split("").sort().join("");
+  const poolChars = () => pool.map((t) => t.ch);
+  const poolKey = () => sortStr(poolChars().join(""));
+  const hasAna = (chars) => ANA.has(sortStr(chars.join("")));
+
+  function buildIndex() {
+    WORD_SET = new Set();
+    ANA = new Map();
+    WORDS3 = [];
+    for (let i = 0; i < RAW.length; i++) {
+      const w = RAW[i];
+      if (!w || w.length < 3) continue;
+      WORD_SET.add(w);
+      const k = sortStr(w);
+      let arr = ANA.get(k);
+      if (!arr) { arr = []; ANA.set(k, arr); }
+      arr.push(w);
+      if (w.length === 3) WORDS3.push(w);
+    }
+    FREQ = new Map();
+    for (let i = 0; i < FREQ_RAW.length; i++) {
+      const w = FREQ_RAW[i];
+      if (w && !FREQ.has(w)) FREQ.set(w, i);
+    }
+  }
+
+  // Best example anagram for a pool: the most common word that uses those letters.
+  function exampleWord(k) {
+    const arr = ANA.get(k);
+    if (!arr || !arr.length) return null;
+    let best = arr[0];
+    let bestRank = FREQ.has(best) ? FREQ.get(best) : Infinity;
+    for (let i = 1; i < arr.length; i++) {
+      const r = FREQ.has(arr[i]) ? FREQ.get(arr[i]) : Infinity;
+      if (r < bestRank) { bestRank = r; best = arr[i]; }
+    }
+    return best;
+  }
+
+  const POS_NAMES = { n: "noun", v: "verb", adj: "adjective", adv: "adverb", u: "" };
+
+  // One shared Datamuse spelling lookup. Returns the results array (possibly
+  // empty) on success, or null if the request couldn't be made.
+  async function datamuseSpell(word) {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 5000);
+      const res = await fetch(
+        "https://api.datamuse.com/words?sp=" + encodeURIComponent(word) + "&md=d&max=1",
+        { signal: ctrl.signal }
+      );
+      clearTimeout(timer);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // true = real word, false = not a word, null = couldn't check (offline etc.)
+  async function verifyWord(word) {
+    const data = await datamuseSpell(word);
+    if (data === null) return null;
+    const hit = data[0];
+    if (!hit || hit.word !== word) return false;
+    return !!((hit.defs && hit.defs.length) || hit.score >= 2000);
+  }
+
+  async function fetchDefinition(word) {
+    try {
+      const data = await datamuseSpell(word);
+      const defs = data && data[0] && data[0].defs;
+      if (!defs || !defs.length) return null;
+      const raw = defs[0];
+      const tab = raw.indexOf("\t");
+      let pos = "", text = raw;
+      if (tab > -1) { pos = raw.slice(0, tab); text = raw.slice(tab + 1); }
+      text = text.replace(/\s*\[[^\]]*\]\s*$/, "").trim();
+      if (!text) return null;
+      return { pos: POS_NAMES[pos] !== undefined ? POS_NAMES[pos] : pos, text: text };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  let defToken = 0; // invalidates an in-flight lookup when the round changes
+
+  async function showDefinition(word, el) {
+    const my = ++defToken;
+    el.hidden = false;
+    el.textContent = "Looking up definition…";
+    const def = await fetchDefinition(word);
+    if (my !== defToken) return;
+    if (!def) { el.hidden = true; return; }
+    el.textContent = "";
+    if (def.pos) {
+      const tag = document.createElement("i");
+      tag.textContent = def.pos + "  ";
+      el.appendChild(tag);
+    }
+    el.appendChild(document.createTextNode(def.text));
+  }
+
+  function validSingles(chars) {
+    const out = [];
+    for (const c of ALPHA) if (hasAna(chars.concat(c))) out.push(c);
+    return out;
+  }
+  function validPairs(chars) {
+    const out = [];
+    for (let i = 0; i < 26; i++) {
+      for (let j = i; j < 26; j++) {
+        if (hasAna(chars.concat(ALPHA[i], ALPHA[j]))) out.push([ALPHA[i], ALPHA[j]]);
+      }
+    }
+    return out;
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = (Math.random() * (i + 1)) | 0;
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  // Order the tray for a new stage. Carried letters (the previous stage's word)
+  // stay grouped at the front but shuffled among themselves; new letters follow.
+  // Try to keep the tray from reading as a valid word: the whole string isn't in
+  // the dictionary, and the carried block doesn't re-spell the word just solved.
+  function arrangeTray(prevWord) {
+    const carried = tiles.filter((t) => !t.isNew).map((t) => t.id);
+    const fresh = tiles.filter((t) => t.isNew).map((t) => t.id);
+    const grouped = carried.length > 0 && !!prevWord;
+    const str = (ids) => ids.map((id) => tileMap[id].ch).join("");
+    let fallback = null;
+
+    for (let attempt = 0; attempt < 40; attempt++) {
+      const order = grouped
+        ? shuffle(carried.slice()).concat(shuffle(fresh.slice()))
+        : shuffle(carried.concat(fresh));
+      fallback = order;
+      if (WORD_SET.has(str(order))) continue;
+      if (grouped && carried.length > 1 && str(order.slice(0, carried.length)) === prevWord) continue;
+      return order;
+    }
+    return fallback;
+  }
+
+  // ---- game state ----
+  let pool = [];        // [{ch, isNew}] — the stage's letters (drives generation)
+  let tiles = [];       // [{id, ch, isNew}] — stable UI tiles for the stage
+  let tileMap = {};     // id -> tile
+  // Both rows are fixed grids of N cells for the whole stage — moving a letter
+  // out leaves a gap in place, it never reflows.
+  let trayCells = [];   // [{type:"letter", id} | {type:"gap", for:id}]
+  let ans = [];         // length N: letterId, or null for a gap
+  const ROUNDS = 3;
+  let round = 0;                        // 1..ROUNDS
+  let roundWords = [];                  // [[word,…], …] — one entry per finished round
+  let currentRoundWords = [];           // words solved so far in the current round
+  let stage = 0;
+  let solved = 0;                       // words solved in the current round (== currentRoundWords.length)
+  let duration = 0;
+  let endAt = 0;
+  let carryMs = 0;                      // time left over from the last solved word
+  let timerId = null;
+  let locked = false;
+  let checking = false;                 // an online word-check is in flight
+  const extraWords = new Map();         // word -> true/false, verified via Datamuse
+
+  const screens = {
+    landing: $("#screen-landing"),
+    vscreate: $("#screen-vs-create"),
+    vsinvite: $("#screen-vs-invite"),
+    vsjoin: $("#screen-vs-join"),
+    vswaiting: $("#screen-vs-waiting"),
+    vsreveal: $("#screen-vs-reveal"),
+    start: $("#screen-start"),
+    play: $("#screen-play"),
+    roundend: $("#screen-roundend"),
+    over: $("#screen-over"),
+  };
+  function show(name) {
+    for (const k in screens) screens[k].hidden = k !== name;
+  }
+
+  function readBest() {
+    try { return parseInt(localStorage.getItem(BEST_KEY), 10) || 0; } catch (e) { return 0; }
+  }
+  function writeBest(n) {
+    try { localStorage.setItem(BEST_KEY, String(n)); } catch (e) {}
+  }
+
+  function startSession() {
+    if (!dictReady) { setTimeout(startSession, 100); return; }
+    round = 1;
+    roundWords = [];
+    startRound();
+  }
+
+  function startRound() {
+    solved = 0;
+    currentRoundWords = [];
+    stage = 1;
+    carryMs = 0;
+    locked = false;
+    checking = false;
+
+    // Versus mode: reseed fresh for every round so the letter sequence only
+    // depends on the shared match seed + round number, never on how many
+    // stages either player reached in an earlier round.
+    rand = mode === "versus" ? mulberry32(mixSeed(matchSeed, round)) : Math.random;
+
+    let chosen = null;
+    for (let tries = 0; tries < 300 && !chosen; tries++) {
+      const w = WORDS3[(rand() * WORDS3.length) | 0];
+      const chars = w.split("");
+      if (validPairs(chars).length) chosen = chars;
+    }
+    if (!chosen) chosen = WORDS3[(rand() * WORDS3.length) | 0].split("");
+
+    pool = chosen.map((ch) => ({ ch, isNew: true }));
+    $("#round-n").textContent = round;
+    show("play");
+    beginStage();
+  }
+
+  function roundEndContinue() {
+    if (round >= ROUNDS) afterAllRounds();
+    else { round++; startRound(); }
+  }
+
+  function nextStage() {
+    stage++;
+    pool.forEach((t) => (t.isNew = false));
+    const chars = poolChars();
+
+    if (stage === 2) {
+      let pairs = validPairs(chars);
+      if (!pairs.length) { finish(true); return; }
+      const better = pairs.filter(([a, b]) => validSingles(chars.concat(a, b)).length);
+      if (better.length) pairs = better;
+      const [a, b] = pairs[(rand() * pairs.length) | 0];
+      pool.push({ ch: a, isNew: true }, { ch: b, isNew: true });
+    } else {
+      let singles = validSingles(chars);
+      if (!singles.length) { finish(true); return; }
+      const better = singles.filter((c) => validSingles(chars.concat(c)).length);
+      if (better.length) singles = better;
+      const c = singles[(rand() * singles.length) | 0];
+      pool.push({ ch: c, isNew: true });
+    }
+
+    locked = false;
+    beginStage();
+  }
+
+  function beginStage() {
+    tiles = pool.map((t, i) => ({ id: "t" + i, ch: t.ch, isNew: t.isNew }));
+    tileMap = {};
+    tiles.forEach((t) => (tileMap[t.id] = t));
+
+    const prevWord = stage > 1 ? currentRoundWords[currentRoundWords.length - 1] : null;
+    trayCells = arrangeTray(prevWord).map((id) => ({ type: "letter", id: id }));
+
+    ans = new Array(tiles.length).fill(null);
+    checking = false;
+
+    $("#stage-n").textContent = stage;
+    $("#pool-n").textContent = tiles.length;
+    $("#solved-n").textContent = solved;
+    render(true);
+
+    // Base time for the stage, plus whatever was left on the clock last word.
+    const base = Math.min(30 + 7 * (tiles.length - 3), 90);
+    const carriedSec = carryMs / 1000;
+    carryMs = 0;
+    duration = base + carriedSec;
+    endAt = Date.now() + duration * 1000;
+    clearInterval(timerId);
+    timerId = setInterval(tick, 100);
+    tick();
+
+    if (carriedSec >= 1) msg("+" + Math.round(carriedSec) + "s carried over", "good");
+    else msg("");
+  }
+
+  function tick() {
+    const rem = Math.max(0, endAt - Date.now());
+    const frac = rem / (duration * 1000);
+    const bar = $("#bar");
+    bar.style.width = (frac * 100) + "%";
+    bar.classList.toggle("low", frac < 0.25);
+    $("#secs").textContent = Math.ceil(rem / 1000);
+    if (rem <= 0) {
+      clearInterval(timerId);
+      finish(false);
+    }
+  }
+
+  // ---- tile rows ----
+  function makeTile(id, animate) {
+    const t = tileMap[id];
+    const el = document.createElement("div");
+    el.className = "tile" + (t.isNew ? " new" : "") + (animate && t.isNew ? " pop" : "");
+    el.textContent = t.ch;
+    el.dataset.id = id;
+    el.addEventListener("pointerdown", (e) => onPointerDown(e, id));
+    return el;
+  }
+
+  function slotEl() {
+    const s = document.createElement("div");
+    s.className = "slot";
+    return s;
+  }
+
+  function render(firstOfStage) {
+    const trayEl = $("#tray");
+    const ansEl = $("#answer");
+    trayEl.innerHTML = "";
+    ansEl.innerHTML = "";
+    trayCells.forEach((cell) => {
+      trayEl.appendChild(cell.type === "letter" ? makeTile(cell.id, firstOfStage) : slotEl());
+    });
+    ans.forEach((id) => ansEl.appendChild(id === null ? slotEl() : makeTile(id, false)));
+  }
+
+  const inAnswer = (id) => ans.indexOf(id) > -1;
+  const answerFull = () => ans.indexOf(null) === -1;
+  const setTrayGap = (id) => {
+    const ci = trayCells.findIndex((c) => c.type === "letter" && c.id === id);
+    if (ci > -1) trayCells[ci] = { type: "gap", for: id };
+  };
+
+  // click a tray letter -> it drops into the leftmost gap in the answer
+  function clickToAnswer(id) {
+    setTrayGap(id);
+    const g = ans.indexOf(null);
+    if (g > -1) ans[g] = id;
+    msg("");
+    render(false);
+  }
+
+  // click an answer letter -> it snaps back to the exact tray gap it left,
+  // and its answer slot becomes a gap in place
+  function toTrayHome(id) {
+    const ai = ans.indexOf(id);
+    if (ai > -1) ans[ai] = null;
+    const gi = trayCells.findIndex((c) => c.type === "gap" && c.for === id);
+    if (gi > -1) trayCells[gi] = { type: "letter", id: id };
+    else trayCells.push({ type: "letter", id: id });
+    msg("");
+    render(false);
+  }
+
+  // drag into the tray at a chosen position: insert and shift the tray cells;
+  // if the letter came from the answer, its answer slot becomes a gap in place
+  function toTrayAt(id, index) {
+    const ai = ans.indexOf(id);
+    if (ai > -1) ans[ai] = null;
+    const ci = trayCells.findIndex(
+      (c) => (c.type === "letter" && c.id === id) || (c.type === "gap" && c.for === id)
+    );
+    let at = index;
+    if (ci > -1) {
+      if (ci < at) at--;
+      trayCells.splice(ci, 1);
+    }
+    at = Math.max(0, Math.min(trayCells.length, at));
+    trayCells.splice(at, 0, { type: "letter", id: id });
+    msg("");
+    render(false);
+  }
+
+  // drop a letter into the answer at a chosen cell (from the tray or reordering)
+  function dropInAnswer(id, index) {
+    const from = ans.indexOf(id);
+    if (from > -1) {
+      // reordering within the answer — insert and shift the whole cell row
+      ans.splice(from, 1);
+      if (from < index) index--;
+      index = Math.max(0, Math.min(ans.length, index));
+      ans.splice(index, 0, id);
+    } else {
+      setTrayGap(id);
+      if (index < ans.length && ans[index] === null) {
+        ans[index] = id; // straight into the targeted gap, nothing shifts
+      } else {
+        const g = ans.indexOf(null);
+        if (g > -1) { ans.splice(g, 1); if (g < index) index--; }
+        index = Math.max(0, Math.min(ans.length, index));
+        ans.splice(index, 0, id);
+      }
+    }
+    msg("");
+    render(false);
+  }
+
+  // ---- pointer drag / click ----
+  let drag = null;
+  let dropTarget = null;
+  const marker = document.createElement("div");
+  marker.className = "drop-marker";
+
+  function onPointerDown(e, id) {
+    if (locked || checking) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    const el = e.currentTarget;
+    drag = { id: id, el: el, startX: e.clientX, startY: e.clientY, pointerId: e.pointerId, started: false };
+    try { el.setPointerCapture(e.pointerId); } catch (err) {}
+    el.addEventListener("pointermove", onPointerMove);
+    el.addEventListener("pointerup", onPointerUp);
+    el.addEventListener("pointercancel", onPointerUp);
+  }
+
+  function onPointerMove(e) {
+    if (!drag) return;
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    if (!drag.started) {
+      if (Math.hypot(dx, dy) < 6) return;
+      drag.started = true;
+      document.body.style.userSelect = "none";
+      const r = drag.el.getBoundingClientRect();
+      drag.ghost = drag.el.cloneNode(true);
+      drag.ghost.className = "tile ghost";
+      drag.ghost.style.width = r.width + "px";
+      drag.ghost.style.height = r.height + "px";
+      document.body.appendChild(drag.ghost);
+      drag.el.classList.add("dragging");
+    }
+    drag.ghost.style.left = e.clientX + "px";
+    drag.ghost.style.top = e.clientY + "px";
+    updateMarker(e.clientX, e.clientY);
+  }
+
+  function onPointerUp() {
+    if (!drag) return;
+    const el = drag.el;
+    try { el.releasePointerCapture(drag.pointerId); } catch (err) {}
+    el.removeEventListener("pointermove", onPointerMove);
+    el.removeEventListener("pointerup", onPointerUp);
+    el.removeEventListener("pointercancel", onPointerUp);
+
+    const d = drag;
+    drag = null;
+    document.body.style.userSelect = "";
+
+    if (!d.started) {
+      // plain click: hop between tray and answer
+      if (inAnswer(d.id)) toTrayHome(d.id);
+      else clickToAnswer(d.id);
+      return;
+    }
+
+    if (d.ghost) d.ghost.remove();
+    marker.remove();
+    const target = dropTarget;
+    dropTarget = null;
+    if (!target) { render(false); return; }
+    if (target.list === "ans") dropInAnswer(d.id, target.index);
+    else toTrayAt(d.id, target.index);
+  }
+
+  function distToRect(x, y, r) {
+    const dx = Math.max(r.left - x, 0, x - r.right);
+    const dy = Math.max(r.top - y, 0, y - r.bottom);
+    return Math.hypot(dx, dy);
+  }
+
+  function updateMarker(x, y) {
+    const trayEl = $("#tray");
+    const ansEl = $("#answer");
+    const useAns = distToRect(x, y, ansEl.getBoundingClientRect()) <=
+                   distToRect(x, y, trayEl.getBoundingClientRect());
+    const rowEl = useAns ? ansEl : trayEl;
+    const listName = useAns ? "ans" : "tray";
+
+    // Both rows are N-cell grids; every cell (letters and gaps) is a drop slot.
+    // The dragged tile stays in the list so `index` is a position in the full
+    // row; each commit path then removes exactly one cell and adjusts.
+    const cellEls = [].slice.call(rowEl.querySelectorAll(".tile, .slot"));
+    let index = cellEls.length;
+    for (let i = 0; i < cellEls.length; i++) {
+      const r = cellEls[i].getBoundingClientRect();
+      if (y < r.bottom && x < r.left + r.width / 2) { index = i; break; }
+    }
+
+    dropTarget = { list: listName, index: index };
+
+    // Draw the caret as an absolutely-positioned overlay so inserting it never
+    // shifts the tiles (which would move the hit-test targets under the cursor).
+    const rowRect = rowEl.getBoundingClientRect();
+    const ref = cellEls[index];
+    let left, top;
+    if (ref) {
+      const rr = ref.getBoundingClientRect();
+      left = rr.left - rowRect.left - 6;
+      top = rr.top - rowRect.top + rr.height / 2;
+    } else if (cellEls.length) {
+      const rr = cellEls[cellEls.length - 1].getBoundingClientRect();
+      left = rr.right - rowRect.left + 2;
+      top = rr.top - rowRect.top + rr.height / 2;
+    } else {
+      left = rowRect.width / 2;
+      top = rowRect.height / 2;
+    }
+    marker.style.left = left + "px";
+    marker.style.top = top + "px";
+    if (marker.parentElement !== rowEl) {
+      marker.remove();
+      rowEl.appendChild(marker);
+    }
+  }
+
+  function msg(text, kind) {
+    const el = $("#msg");
+    el.textContent = text || "";
+    el.className = "msg" + (kind ? " " + kind : "");
+  }
+
+  function acceptWord(g) {
+    carryMs = Math.max(0, endAt - Date.now()); // bank the leftover time
+    solved++;
+    currentRoundWords.push(g);
+    locked = true;
+    checking = false;
+    clearInterval(timerId);
+    marker.remove();
+    msg("Nice — “" + g.toUpperCase() + "”", "good");
+    $("#solved-n").textContent = solved;
+    setTimeout(nextStage, 750);
+  }
+
+  function submit() {
+    if (locked || checking || screens.play.hidden) return;
+    if (!answerFull()) {
+      msg("Put all " + tiles.length + " letters in your word.", "warn");
+      return;
+    }
+    const g = ans.map((id) => tileMap[id].ch).join("").toLowerCase();
+
+    if (WORD_SET.has(g) || extraWords.get(g) === true) {
+      acceptWord(g);
+      return;
+    }
+    if (extraWords.get(g) === false) {
+      msg("“" + g.toUpperCase() + "” isn't a word.", "warn");
+      return;
+    }
+
+    // Not in the bundled list — check it online (Datamuse). The board is frozen
+    // while we wait; the timer keeps running.
+    checking = true;
+    const atStage = stage;
+    msg("Checking “" + g.toUpperCase() + "”…");
+    verifyWord(g).then((result) => {
+      checking = false;
+      if (locked || screens.play.hidden || stage !== atStage) return;
+      if (result === true) {
+        extraWords.set(g, true);
+        acceptWord(g);
+      } else if (result === false) {
+        extraWords.set(g, false);
+        msg("“" + g.toUpperCase() + "” isn't a word.", "warn");
+      } else {
+        msg("Couldn't check “" + g.toUpperCase() + "” — try a word from the built-in list.", "warn");
+      }
+    });
+  }
+
+  function returnAll() {
+    if (locked || checking) return;
+    trayCells = trayCells.map((c) =>
+      c.type === "gap" ? { type: "letter", id: c.for } : c
+    );
+    ans = new Array(tiles.length).fill(null);
+    msg("");
+    render(false);
+  }
+
+  function doShuffle() {
+    if (locked || checking) return;
+    shuffle(trayCells);
+    msg("");
+    render(false);
+  }
+
+  function endRound() {
+    if (locked || checking || screens.play.hidden) return;
+    finish(false);
+  }
+
+  const wordsLabel = (n) => n + " word" + (n === 1 ? "" : "s");
+
+  function chipEl(text, isNone) {
+    const s = document.createElement("span");
+    s.textContent = isNone ? text : text.toUpperCase();
+    if (isNone) s.className = "none";
+    return s;
+  }
+
+  function fillChips(container, words) {
+    container.innerHTML = "";
+    if (words.length) words.forEach((w) => container.appendChild(chipEl(w)));
+    else container.appendChild(chipEl("no words", true));
+  }
+
+  // Renders one player's per-round word chips into a `.rounds` container.
+  function renderRoundsBlock(container, wordsByRound) {
+    container.innerHTML = "";
+    (wordsByRound || []).forEach((words, i) => {
+      const row = document.createElement("div");
+      row.className = "round";
+      const label = document.createElement("div");
+      label.className = "round-label";
+      label.textContent = "Round " + (i + 1) + " · " + wordsLabel(words.length);
+      const chips = document.createElement("div");
+      chips.className = "chips";
+      fillChips(chips, words);
+      row.appendChild(label);
+      row.appendChild(chips);
+      container.appendChild(row);
+    });
+  }
+
+  // Final screen (solo): the words from every stage of every round, plus a Total box.
+  function renderFinal() {
+    renderRoundsBlock($("#over-rounds"), roundWords);
+    const all = roundWords.reduce((acc, w) => acc.concat(w), []);
+    fillChips($("#over-totalwords"), all);
+    $("#over-totalcount").textContent = wordsLabel(all.length);
+    return all.length;
+  }
+
+  // Same layout after every round: a prominent word, its definition, one button.
+  function finish(maxedOut) {
+    clearInterval(timerId);
+    checking = false;
+    marker.remove();
+
+    roundWords[round - 1] = currentRoundWords.slice();
+    defToken++;
+
+    const isLast = round >= ROUNDS;
+
+    // Nothing to show when the last round is cleared (maxed out) — go to summary.
+    if (isLast && maxedOut) { afterAllRounds(); return; }
+
+    const ex = maxedOut ? null : exampleWord(poolKey());
+
+    $("#re-title").textContent = isLast ? "Time's up!" : "Round " + round + " of " + ROUNDS;
+    $("#re-def").hidden = true;
+    if (ex) {
+      $("#re-sub").textContent = isLast
+        ? "That's the end of the last round. A word that could have worked:"
+        : "A word that could have worked:";
+      $("#re-word").hidden = false;
+      $("#re-word").textContent = ex.toUpperCase();
+      showDefinition(ex, $("#re-def"));
+    } else {
+      $("#re-sub").textContent = "You cleared every letter — " + wordsLabel(solved) + " this round!";
+      $("#re-word").hidden = true;
+      $("#re-word").textContent = "";
+    }
+    $("#re-btn").textContent = isLast ? "Continue" : "Start round " + (round + 1);
+    show("roundend");
+  }
+
+  function showFinalSummary() {
+    defToken++; // drop any round-end lookup still in flight
+    const total = renderFinal();
+    const best = Math.max(readBest(), total);
+    writeBest(best);
+    $("#best-over").textContent = best;
+    show("over");
+  }
+
+  // All 3 rounds are done: solo goes to the personal summary; versus submits
+  // this player's result and waits for (or reveals against) the opponent.
+  function afterAllRounds() {
+    if (mode === "versus") submitVersusResult();
+    else showFinalSummary();
+  }
+
+  // ---- versus mode ----
+
+  function urlMatchCode() {
+    return new URLSearchParams(location.search).get("m");
+  }
+  function matchLink(code) {
+    const u = new URL(location.href);
+    u.search = "";
+    u.searchParams.set("m", code);
+    return u.toString();
+  }
+  function dbReady() {
+    return !!(window.MatchDB && window.MatchDB.ready);
+  }
+
+  function goLanding() {
+    if (unwatchMatch) { unwatchMatch(); unwatchMatch = null; }
+    mode = "solo";
+    matchCode = null;
+    matchSeed = 0;
+    playerSlot = null;
+    playerName = "";
+    opponentName = "";
+    history.replaceState(null, "", location.pathname);
+    show("landing");
+    $("#vs-note").hidden = dbReady();
+  }
+
+  async function submitVersusResult() {
+    defToken++;
+    const total = roundWords.reduce((a, w) => a + w.length, 0);
+
+    $("#vs-wait-total").textContent = total;
+    $("#vs-wait-who").textContent = opponentName || "your friend";
+    $("#vs-wait-note").textContent = "";
+    if (playerSlot === "p1") {
+      $("#vs-wait-linkrow").hidden = false;
+      $("#vs-wait-link").value = matchLink(matchCode);
+    } else {
+      $("#vs-wait-linkrow").hidden = true;
+    }
+    show("vswaiting");
+
+    try {
+      await window.MatchDB.submitResult(matchCode, playerSlot, total, roundWords);
+    } catch (e) {
+      $("#vs-wait-note").textContent = "Couldn't save your result — check your connection. It'll retry.";
+      try { await window.MatchDB.submitResult(matchCode, playerSlot, total, roundWords); }
+      catch (e2) { return; }
+      $("#vs-wait-note").textContent = "";
+    }
+
+    if (unwatchMatch) unwatchMatch();
+    unwatchMatch = window.MatchDB.watch(matchCode, (data) => {
+      if (!data) return;
+      const oppSlot = playerSlot === "p1" ? "p2" : "p1";
+      const opp = data[oppSlot];
+      if (opp && opp.done) showVsReveal(data);
+    });
+  }
+
+  function showVsReveal(data) {
+    if (unwatchMatch) { unwatchMatch(); unwatchMatch = null; }
+    const oppSlot = playerSlot === "p1" ? "p2" : "p1";
+    const me = data[playerSlot] || { name: playerName, total: 0, roundWords: [] };
+    const opp = data[oppSlot] || { name: opponentName, total: 0, roundWords: [] };
+    const meTotal = me.total || 0;
+    const oppTotal = opp.total || 0;
+    const winner = meTotal === oppTotal ? -1 : (meTotal > oppTotal ? 0 : 1);
+
+    $("#vs-reveal-title").textContent =
+      winner === -1 ? "It's a tie!" : winner === 0 ? "You win!" : (opp.name || "Your opponent") + " wins!";
+
+    const grid = $("#vs-reveal-grid");
+    grid.innerHTML = "";
+    [{ name: (me.name || "You") + " (you)", total: meTotal }, { name: opp.name || "Opponent", total: oppTotal }]
+      .forEach((c, i) => {
+        const card = document.createElement("div");
+        card.className = "vscard" + (i === winner ? " winner" : "");
+        const nm = document.createElement("div"); nm.className = "vsname"; nm.textContent = c.name;
+        const sc = document.createElement("div"); sc.className = "vsscore"; sc.textContent = c.total;
+        card.appendChild(nm);
+        card.appendChild(sc);
+        if (i === winner) {
+          const crown = document.createElement("div");
+          crown.className = "vscrown";
+          crown.textContent = "Winner";
+          card.appendChild(crown);
+        }
+        grid.appendChild(card);
+      });
+
+    $("#vs-reveal-p1head").textContent = (me.name || "You") + " — your words";
+    renderRoundsBlock($("#vs-reveal-p1rounds"), me.roundWords);
+    $("#vs-reveal-p2head").textContent = (opp.name || "Opponent") + "'s words";
+    renderRoundsBlock($("#vs-reveal-p2rounds"), opp.roundWords);
+
+    show("vsreveal");
+  }
+
+  // ---- wire up ----
+  $("#btn-enter").addEventListener("click", submit);
+  $("#btn-return").addEventListener("click", returnAll);
+  $("#btn-shuffle").addEventListener("click", doShuffle);
+  $("#btn-endround").addEventListener("click", endRound);
+  $("#btn-start").addEventListener("click", startSession);
+  $("#re-btn").addEventListener("click", roundEndContinue);
+  $("#btn-again").addEventListener("click", startSession);
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    if (!screens.play.hidden) { e.preventDefault(); submit(); }
+    else if (!screens.roundend.hidden) { e.preventDefault(); roundEndContinue(); }
+    else if (!screens.over.hidden) { e.preventDefault(); startSession(); }
+    else if (!screens.start.hidden && !$("#btn-start").disabled) { e.preventDefault(); startSession(); }
+  });
+
+  // ---- versus wiring ----
+  $("#btn-solo").addEventListener("click", () => { mode = "solo"; show("start"); });
+  $("#btn-vs").addEventListener("click", () => {
+    if (!dbReady()) { $("#vs-note").hidden = false; return; }
+    $("#vs-name-create").value = "";
+    show("vscreate");
+  });
+  $("#btn-vs-create-back").addEventListener("click", goLanding);
+
+  $("#btn-vs-create").addEventListener("click", async () => {
+    const name = $("#vs-name-create").value.trim().slice(0, 24) || "Player 1";
+    $("#btn-vs-create").disabled = true;
+    $("#vs-create-note").textContent = "";
+    try {
+      const { code, seed } = await window.MatchDB.createMatch(name);
+      matchCode = code;
+      matchSeed = seed;
+      playerSlot = "p1";
+      playerName = name;
+      opponentName = "";
+      history.replaceState(null, "", location.pathname + "?m=" + code);
+      $("#vs-link").value = matchLink(code);
+      $("#vs-copy-note").textContent = "";
+      show("vsinvite");
+    } catch (e) {
+      $("#vs-create-note").textContent = "Couldn't create a match — check your connection and try again.";
+    }
+    $("#btn-vs-create").disabled = false;
+  });
+  $("#vs-name-create").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); $("#btn-vs-create").click(); }
+  });
+
+  $("#btn-vs-copy").addEventListener("click", () => {
+    navigator.clipboard.writeText($("#vs-link").value)
+      .then(() => { $("#vs-copy-note").textContent = "Link copied!"; })
+      .catch(() => { $("#vs-copy-note").textContent = "Couldn't copy — select and copy the link manually."; });
+  });
+  $("#btn-vs-wait-copy").addEventListener("click", () => {
+    navigator.clipboard.writeText($("#vs-wait-link").value)
+      .then(() => { $("#vs-wait-note").textContent = "Link copied!"; })
+      .catch(() => { $("#vs-wait-note").textContent = "Couldn't copy — select and copy the link manually."; });
+  });
+
+  $("#btn-vs-play").addEventListener("click", () => {
+    mode = "versus";
+    startSession();
+  });
+
+  $("#btn-vs-join").addEventListener("click", async () => {
+    const name = $("#vs-name-join").value.trim().slice(0, 24) || "Player 2";
+    $("#btn-vs-join").disabled = true;
+    $("#vs-join-note").textContent = "";
+    try {
+      const data = await window.MatchDB.joinMatch(matchCode, name);
+      if (!data) {
+        $("#vs-join-note").textContent = "That invite link isn't valid.";
+        $("#btn-vs-join").disabled = false;
+        return;
+      }
+      matchSeed = data.seed;
+      playerSlot = "p2";
+      playerName = name;
+      opponentName = (data.p1 && data.p1.name) || "your friend";
+      mode = "versus";
+      startSession();
+    } catch (e) {
+      $("#vs-join-note").textContent = "Couldn't join — check your connection and try again.";
+      $("#btn-vs-join").disabled = false;
+    }
+  });
+  $("#vs-name-join").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); $("#btn-vs-join").click(); }
+  });
+
+  $("#btn-vs-again").addEventListener("click", goLanding);
+
+  window.addEventListener("DOMContentLoaded", () => {
+    $("#best-start").textContent = readBest();
+
+    const code = urlMatchCode();
+    if (code) {
+      matchCode = code;
+      show("vsjoin");
+      if (dbReady()) {
+        window.MatchDB.getMatch(code).then((data) => {
+          if (data && data.p1) {
+            $("#vs-join-lede").textContent = data.p1.name + " has challenged you to 3·2·1!";
+          } else if (!data) {
+            $("#vs-join-note").textContent = "That invite link isn't valid.";
+          }
+        });
+      } else {
+        $("#vs-join-note").textContent = "Multiplayer isn't set up on this site yet.";
+      }
+    } else {
+      show("landing");
+      $("#vs-note").hidden = dbReady();
+    }
+
+    setTimeout(() => {
+      if (!RAW.length) {
+        $("#load-note").textContent = "Could not load the dictionary file.";
+        return;
+      }
+      buildIndex();
+      dictReady = true;
+      $("#btn-start").disabled = false;
+      $("#btn-start").textContent = "Start";
+      $("#load-note").textContent = WORD_SET.size.toLocaleString() + " words ready.";
+    }, 50);
+  });
+})();
+</script>
+</body>
+</html>
