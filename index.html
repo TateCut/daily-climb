@@ -14,6 +14,7 @@
     --accent: #d97706;
     --good: #16a34a;
     --warn: #dc2626;
+    --tile-w: 48px; /* set from JS (sizeTiles) so a row's letters always fit on one line */
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -153,30 +154,32 @@
   .row {
     position: relative;
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: center;
     align-items: center;
-    gap: 8px;
+    gap: calc(var(--tile-w) * 0.1667);
     width: 100%;
-    min-height: 60px;
+    min-height: calc(var(--tile-w) * 1.1667);
+    overflow-x: auto;
   }
   .row.answer {
     padding: 8px;
     border: 1px dashed var(--line);
     border-radius: 12px;
-    min-height: 76px;
+    min-height: calc(var(--tile-w) * 1.1667 + 16px);
   }
 
   .tile {
-    width: 48px;
-    height: 56px;
+    flex-shrink: 0;
+    width: var(--tile-w);
+    height: calc(var(--tile-w) * 1.1667);
     display: flex;
     align-items: center;
     justify-content: center;
     background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: 8px;
-    font-size: 1.6rem;
+    border-radius: calc(var(--tile-w) * 0.1667);
+    font-size: calc(var(--tile-w) * 0.5333);
     font-weight: 700;
     text-transform: uppercase;
     cursor: grab;
@@ -200,17 +203,18 @@
   }
 
   .slot {
-    width: 48px;
-    height: 56px;
+    flex-shrink: 0;
+    width: var(--tile-w);
+    height: calc(var(--tile-w) * 1.1667);
     border: 1px dashed var(--line);
-    border-radius: 8px;
+    border-radius: calc(var(--tile-w) * 0.1667);
     opacity: 0.5;
   }
   .drop-marker {
     position: absolute;
     width: 4px;
-    height: 52px;
-    margin-top: -26px;
+    height: calc(var(--tile-w) * 1.0833);
+    margin-top: calc(var(--tile-w) * -0.5417);
     background: var(--accent);
     border-radius: 2px;
     pointer-events: none;
@@ -962,7 +966,27 @@
     return s;
   }
 
+  // Shrink tiles so a stage's letters always fit on one line — never wrap.
+  // `.row` is width:100% of its section regardless of its children, so it's
+  // safe to measure before (re)building the tiles that go inside it.
+  const TILE_MAX = 48;
+  const TILE_MIN = 22;
+  const TILE_GAP_RATIO = 1 / 6; // keep in sync with the CSS `gap: calc(var(--tile-w) * 0.1667)`
+  function sizeTiles(n) {
+    if (!n) return;
+    const avail = Math.min($("#tray").clientWidth || 0, $("#answer").clientWidth || 0) || 320;
+    let tile = avail / (n + (n - 1) * TILE_GAP_RATIO);
+    tile = Math.max(TILE_MIN, Math.min(TILE_MAX, Math.floor(tile)));
+    document.documentElement.style.setProperty("--tile-w", tile + "px");
+  }
+  let resizeTimer = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => sizeTiles(tiles.length), 120);
+  });
+
   function render(firstOfStage) {
+    sizeTiles(tiles.length);
     const trayEl = $("#tray");
     const ansEl = $("#answer");
     trayEl.innerHTML = "";
