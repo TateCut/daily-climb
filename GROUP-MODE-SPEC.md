@@ -238,11 +238,14 @@ counters only `increment` — is a nice-to-have, not v1.)
 
 Each phase ships and is testable on its own.
 
-**Phase A — schema + adapter (no visible change).**
+**Phase A — schema + adapter (no visible change). ✅ SHIPPED (13a76c8).**
 New parent shape + `entrants` subcollection + rules. Adapter rewritten to the
 new methods with the `p1`/`p2` read-compat shim. 2-player still works end to end,
-just routed through `entrants` under the hood. Test: create, join from a second
-origin, both finish, existing reveal still appears.
+just routed through `entrants`. Verified on real Firestore: create, join from
+two more origins, 2-player head-to-head reveal, 3-player holding screen with
+live rank. Phase A shortcuts to revisit in B/C: 3+ holding screen is text-only
+(no leaderboard); tie-break is by uid order not `finishedAt`; legacy `p1`/`p2`
+matches drop off My Games; "closed, didn't play" wording is rough.
 
 **Phase B — leaderboard screen.**
 `#screen-leaderboard`, live `watchEntrants`, ranking, the exactly-2 → head-to-head
