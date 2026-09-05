@@ -493,9 +493,9 @@
       <p class="note" id="vs-note" hidden>Multiplayer isn't set up on this site yet.</p>
     </section>
 
-    <!-- VS: create a match -->
+    <!-- VS: create a game -->
     <section id="screen-vs-create" hidden>
-      <p class="lede">You and your friend get the exact same letters, all 3 rounds. Pick a difficulty and create the match:</p>
+      <p class="lede">Everyone who joins gets the exact same letters, all 3 rounds. Send the link to as many people as you like — results are a live leaderboard.</p>
       <input class="nameinput" id="vs-name-create" type="text" placeholder="Your name" maxlength="24" autocomplete="off">
       <div class="diffrow" id="diff-picker-vs">
         <button class="diffbtn" data-diff="easy" type="button">Easy</button>
@@ -503,18 +503,27 @@
         <button class="diffbtn" data-diff="hard" type="button">Hard</button>
       </div>
       <p class="note" id="diff-desc-vs"></p>
-      <button class="primary" id="btn-vs-create" type="button">Create match</button>
+      <div class="rowlabel">Closes</div>
+      <div class="diffrow" id="close-picker">
+        <button class="diffbtn" data-close="24h" type="button">24 hours</button>
+        <button class="diffbtn" data-close="48h" type="button">48 hours</button>
+        <button class="diffbtn" data-close="1w" type="button">1 week</button>
+        <button class="diffbtn" data-close="none" type="button">No deadline</button>
+      </div>
+      <p class="note" id="close-desc"></p>
+      <button class="primary" id="btn-vs-create" type="button">Create game</button>
       <p class="note" id="vs-create-note"></p>
       <button class="linkbtn" id="btn-vs-create-back" type="button">Back</button>
     </section>
 
     <!-- VS: share the invite link -->
     <section id="screen-vs-invite" hidden>
-      <p class="lede">Send this link to your friend, then play whenever you're ready:</p>
+      <p class="lede">Send this link to everyone you want in the game — they all get the same letters. Results are a live leaderboard.</p>
       <div class="linkrow">
         <input class="nameinput" id="vs-link" type="text" readonly>
         <button class="ghost" id="btn-vs-copy" type="button">Copy</button>
       </div>
+      <p class="note" id="vs-invite-close"></p>
       <p class="note" id="vs-copy-note"></p>
       <button class="primary" id="btn-vs-play" type="button">Play now</button>
       <button class="linkbtn" id="btn-vs-invite-home" type="button">&larr; My games</button>
@@ -721,7 +730,7 @@
     return out;
   }
 
-  const CLOSE_MS = { "24h": 86400000, "48h": 172800000 };
+  const CLOSE_MS = { "24h": 86400000, "48h": 172800000, "1w": 604800000 };
   const newEntrant = (name, late) => ({
     name: name, joinedAt: Date.now(), done: false,
     total: 0, roundWords: [], finishedAt: null, late: !!late,
@@ -752,7 +761,7 @@
       } catch (e) {}
     },
 
-    // Create a game. `close` is "24h" (default) | "48h" | "none" | a ms epoch.
+    // Create a game. `close` is "24h" (default) | "48h" | "1w" | "none" | a ms epoch.
     async createMatch(name, difficulty, close) {
       if (!uid) throw new Error("sign-in required");
       const code = genCode();
@@ -769,6 +778,8 @@
         closesAt: closesAt,
         status: "open",
         playerUids: [uid],
+        lateUids: [],
+        doneUids: [],
         names: { [uid]: name },
         results: {},
       });
@@ -797,13 +808,15 @@
       if (uid) {
         const eRef = doc(db, "matches", code, "entrants", uid);
         if (!(await getDoc(eRef)).exists()) {
-          const late = !!(data.closesAt && Date.now() > data.closesAt);
+          const late = data.status === "closed" || !!(data.closesAt && Date.now() > data.closesAt);
           await setDoc(eRef, newEntrant(name, late));
-          await updateDoc(ref, {
+          const patch = {
             playerUids: arrayUnion(uid),
             ["names." + uid]: name,
             updatedAt: Date.now(),
-          });
+          };
+          if (late) patch.lateUids = arrayUnion(uid);
+          await updateDoc(ref, patch);
         }
       }
       return this.getMatch(code);
@@ -821,6 +834,7 @@
       }, { merge: true });
       await updateDoc(doc(db, "matches", code), {
         ["results." + uid]: total,
+        doneUids: arrayUnion(uid),
         updatedAt: Date.now(),
       });
     },
@@ -1748,13 +1762,16 @@
     if (!dbReady()) { $("#vs-join-note").textContent = "Multiplayer isn't set up on this site yet."; return; }
     window.MatchDB.getMatch(code).then((data) => {
       if (!data) { $("#vs-join-note").textContent = "That invite link isn't valid."; return; }
-      $("#vs-join-lede").textContent = hostName(data) + " started a game of 3·2·1";
+      const closed = matchIsClosed(data);
+      $("#vs-join-lede").textContent = closed
+        ? (hostName(data) + "'s game has closed — you can still play it for fun")
+        : (hostName(data) + " started a game of 3·2·1");
       const d = DIFF_INFO[data.difficulty] ? data.difficulty : "medium";
       const count = (data.playerUids || []).length || (data.entrants || []).length;
       let sub = "Difficulty: " + DIFF_INFO[d].label;
       if (count > 1) sub += " · " + count + " playing so far";
-      if (matchIsClosed(data)) sub += " · closed — you can still play for fun";
       $("#vs-join-diff").textContent = sub;
+      $("#btn-vs-join").textContent = closed ? "Play for fun" : "Play";
     });
   }
 
@@ -1803,44 +1820,53 @@
   }
 
   // Work out, for the signed-in player, where a game stands. `m` is a parent
-  // matches/{code} doc (playerUids / names / results / closesAt / status).
+  // matches/{code} doc (playerUids / lateUids / names / results / closesAt / status).
   function matchStatus(m) {
     const myUid = window.MatchDB.uid;
-    const uids = m.playerUids || [];
+    const lateSet = {};
+    (m.lateUids || []).forEach((u) => { lateSet[u] = true; });
+    const uids = (m.playerUids || []).filter((u) => !lateSet[u]);   // the official roster
     const names = m.names || {};
     const results = m.results || {};
     const total = uids.length;
-    const finished = Object.keys(results);
+    const rankedUids = Object.keys(results).filter((u) => !lateSet[u]);
     const iFinished = Object.prototype.hasOwnProperty.call(results, myUid);
+    const iLate = !!lateSet[myUid];
     const others = uids.filter((u) => u !== myUid);
-    const twoP = total === 2;
+    const twoP = total === 2 && !iLate;
     const oppName = twoP ? (names[others[0]] || "your friend") : null;
-    const label = twoP ? ("vs " + oppName) : (total + "-player game");
+    const label = twoP ? ("vs " + oppName) : (total < 2 ? "Group game" : (total + "-player game"));
     const closed = matchIsClosed(m);
 
-    if (total <= 1) {
-      return { group: "waiting", vs: "Waiting for players", sub: "Tap for the invite link", action: "invite" };
+    if (iLate) {
+      if (!iFinished) return { group: "turn", vs: label, sub: "Play for fun", action: "play" };
+      return { group: "done", vs: label, sub: "Played for fun — " + (results[myUid] || 0) + " words", action: "open" };
     }
-    if (!iFinished && !closed) {
-      return { group: "turn", vs: label, sub: "Your turn to play", action: "play" };
-    }
-    if (!iFinished && closed) {
+    if (closed && !iFinished) {
       return { group: "done", vs: label, sub: "Closed — you didn't play", action: "open" };
     }
-    if (finished.length < total && !closed) {
+    if (total <= 1 && !iFinished) {
+      return { group: "waiting", vs: "Waiting for players", sub: "Tap for the invite link", action: "invite" };
+    }
+    if (!iFinished) {
+      return { group: "turn", vs: label, sub: "Your turn to play", action: "play" };
+    }
+    if (rankedUids.length < total && !closed) {
       const sub = twoP ? ("Waiting on " + oppName)
-        : (finished.length + " of " + total + " finished");
+        : (rankedUids.length + " of " + total + " finished");
       return { group: "waiting", vs: label, sub: sub, action: "open" };
     }
-    // Everyone's done, or the game has closed with me among the finishers.
+    // Everyone's done, or the game closed with me among the finishers.
     if (twoP) {
       const mt = results[myUid] || 0, ot = results[others[0]] || 0;
       const verdict = (mt === ot ? "Tied " : mt > ot ? "You won " : "You lost ") + mt + "–" + ot;
       return { group: "done", vs: label, sub: verdict, action: "open" };
     }
-    const sorted = Object.keys(results).sort((a, b) => results[b] - results[a]);
+    const order = m.doneUids || [];
+    const sorted = rankedUids.slice().sort((a, b) =>
+      (results[b] - results[a]) || (order.indexOf(a) - order.indexOf(b)));
     const rank = sorted.indexOf(myUid) + 1;
-    return { group: "done", vs: label, sub: ordinal(rank) + " of " + finished.length, action: "open" };
+    return { group: "done", vs: label, sub: ordinal(rank) + " of " + rankedUids.length, action: "open" };
   }
 
   function gameCard(m, info) {
@@ -1922,6 +1948,8 @@
       history.replaceState(null, "", location.pathname + "?m=" + m.code);
       $("#vs-link").value = matchLink(m.code);
       $("#vs-copy-note").textContent = "";
+      $("#vs-invite-close").textContent = closesInText() === "no deadline"
+        ? "No deadline set." : ("Game " + closesInText() + ".");
       show("vsinvite");
     } else if (info.action === "play") {
       startSession(); // run the 3 rounds, submit at the end
@@ -1951,11 +1979,13 @@
 
   function renderResults() {
     const entrants = matchEntrants;
-    const total = groupSize();
-    const doneCount = entrants.filter((e) => e.done).length;
+    const official = entrants.filter((e) => !e.late);
+    const total = Math.max(groupSize() - ((matchMeta && matchMeta.lateUids) ? matchMeta.lateUids.length : 0), official.length);
+    const closed = matchIsClosed(matchMeta);
 
-    if (total === 2) {
-      if (doneCount === 2) { showVsReveal(entrants); return; }
+    if (total === 2 && !(entrants.some((e) => e.late))) {
+      const doneCount = official.filter((e) => e.done).length;
+      if (doneCount === 2 || (closed && doneCount >= 1)) { showVsReveal(entrants); return; }
       renderTwoPlayerWait(entrants);
       return;
     }
@@ -1990,20 +2020,20 @@
 
   function lbRow(rank, e, isMe) {
     const row = document.createElement("div");
-    row.className = "lb-row" + (isMe ? " me" : "") + (rank === null ? " pending" : "");
+    row.className = "lb-row" + (isMe ? " me" : "") + (e.done ? "" : " pending");
     const r = document.createElement("div");
     r.className = "lb-rank";
-    r.textContent = rank === null ? "·" : rank;
+    r.textContent = rank == null ? "·" : rank;
     const nm = document.createElement("div");
     nm.className = "lb-name";
-    nm.textContent = (e.name || "?") + (isMe ? " (you)" : "");
+    nm.textContent = (e.name || "?") + (isMe ? " (you)" : "") + (e.late && e.done ? " · for fun" : "");
     const sc = document.createElement("div");
     sc.className = "lb-score";
-    sc.textContent = rank === null ? "playing…" : (e.total || 0);
+    sc.textContent = e.done ? (e.total || 0) : "playing…";
     row.appendChild(r);
     row.appendChild(nm);
     row.appendChild(sc);
-    if (rank !== null) row.addEventListener("click", () => toggleLbDetail(row, e));
+    if (e.done) row.addEventListener("click", () => toggleLbDetail(row, e));
     return row;
   }
 
@@ -2023,9 +2053,10 @@
   function renderLeaderboard(entrants, total) {
     const myUid = window.MatchDB.uid;
     const closed = matchIsClosed(matchMeta);
-    const done = entrants.filter((e) => e.done).sort((a, b) =>
-      (b.total || 0) - (a.total || 0) || (a.finishedAt || 0) - (b.finishedAt || 0));
-    const pending = entrants.filter((e) => !e.done);
+    const byScore = (a, b) => (b.total || 0) - (a.total || 0) || (a.finishedAt || 0) - (b.finishedAt || 0);
+    const ranked = entrants.filter((e) => e.done && !e.late).sort(byScore);
+    const forFun = entrants.filter((e) => e.done && e.late).sort(byScore);
+    const pending = entrants.filter((e) => !e.done && !e.late);
     const me = entrants.find((e) => e.uid === myUid);
     const iDone = !!(me && me.done);
     const iHost = !!(matchMeta && matchMeta.host === myUid);
@@ -2036,16 +2067,24 @@
 
     const list = $("#lb-list");
     list.innerHTML = "";
-    done.forEach((e, i) => list.appendChild(lbRow(i + 1, e, e.uid === myUid)));
+    ranked.forEach((e, i) => list.appendChild(lbRow(i + 1, e, e.uid === myUid)));
     if (!closed) pending.forEach((e) => list.appendChild(lbRow(null, e, e.uid === myUid)));
+    if (forFun.length) {
+      const head = document.createElement("div");
+      head.className = "gamegroup";
+      head.textContent = "After the deadline";
+      list.appendChild(head);
+      forFun.forEach((e) => list.appendChild(lbRow(null, e, e.uid === myUid)));
+    }
 
     let foot;
     if (closed) {
-      const dnf = Math.max(0, total - done.length);
+      const dnf = Math.max(0, total - ranked.length);
       foot = dnf > 0 ? (dnf + (dnf === 1 ? " player didn't finish" : " players didn't finish")) : "Everyone finished.";
     } else {
-      foot = done.length + " finished · " + pending.length + " still playing";
-      if (!iDone) foot += " — finish your game to join the board";
+      foot = ranked.length + " finished · " + pending.length + " still playing";
+      if (!iDone && me && me.late) foot = "You're playing for fun — this game has closed.";
+      else if (!iDone) foot += " — finish your game to join the board";
     }
     $("#lb-foot").textContent = foot;
 
@@ -2079,7 +2118,8 @@
   }
 
   function showVsReveal(entrants) {
-    teardownMatchWatches();
+    // Keep the result watches alive — if a 3rd player joins this game it should
+    // flip to the leaderboard. goHome / openResults tear them down.
     const myUid = window.MatchDB.uid;
     const me = entrants.find((e) => e.uid === myUid) || { name: playerName, total: 0, roundWords: [] };
     const opp = entrants.find((e) => e.uid !== myUid) || { name: opponentName, total: 0, roundWords: [] };
@@ -2154,10 +2194,31 @@
     if (btn) setDifficulty(btn.dataset.diff);
   });
 
+  // ---- close-condition picker (versus create) ----
+  let closeChoice = "24h";
+  const CLOSE_DESC = {
+    "24h": "The leaderboard locks 24 hours after you create it.",
+    "48h": "The leaderboard locks 48 hours after you create it.",
+    "1w":  "The leaderboard locks one week after you create it.",
+    "none": "Stays open until you close it yourself.",
+  };
+  function setClose(choice) {
+    if (!CLOSE_DESC[choice]) return;
+    closeChoice = choice;
+    [].slice.call($("#close-picker").children).forEach((btn) =>
+      btn.classList.toggle("active", btn.dataset.close === choice));
+    $("#close-desc").textContent = CLOSE_DESC[choice];
+  }
+  $("#close-picker").addEventListener("click", (e) => {
+    const btn = e.target.closest(".diffbtn");
+    if (btn) setClose(btn.dataset.close);
+  });
+
   // ---- home / versus wiring ----
   $("#btn-home-new").addEventListener("click", () => {
     $("#vs-name-create").value = storedName || "";
     $("#vs-create-note").textContent = "";
+    setClose("24h");
     show("vscreate");
   });
   $("#btn-home-solo").addEventListener("click", () => { mode = "solo"; show("start"); });
@@ -2194,6 +2255,7 @@
   $("#btn-vs").addEventListener("click", () => {
     if (!dbReady()) { $("#vs-note").hidden = false; return; }
     $("#vs-name-create").value = storedName || "";
+    setClose("24h");
     show("vscreate");
   });
   $("#btn-vs-create-back").addEventListener("click", goHome);
@@ -2203,7 +2265,7 @@
     $("#btn-vs-create").disabled = true;
     $("#vs-create-note").textContent = "";
     try {
-      const { code, seed } = await window.MatchDB.createMatch(name, difficulty, "24h");
+      const { code, seed } = await window.MatchDB.createMatch(name, difficulty, closeChoice);
       matchCode = code;
       matchSeed = seed;
       playerName = name;
@@ -2214,6 +2276,9 @@
       history.replaceState(null, "", location.pathname + "?m=" + code);
       $("#vs-link").value = matchLink(code);
       $("#vs-copy-note").textContent = "";
+      $("#vs-invite-close").textContent = closeChoice === "none"
+        ? "No deadline — close it yourself whenever you're ready."
+        : ("Closes " + { "24h": "in 24 hours", "48h": "in 48 hours", "1w": "in a week" }[closeChoice] + " — after that the leaderboard is final.");
       show("vsinvite");
     } catch (e) {
       $("#vs-create-note").textContent = "Couldn't create a game — check your connection and try again.";
@@ -2281,6 +2346,7 @@
 
   window.addEventListener("DOMContentLoaded", () => {
     setDifficulty("medium");
+    setClose("24h");
 
     const code = urlMatchCode();
     pendingMatchCode = code || null;
