@@ -371,6 +371,26 @@
     margin-top: 6px;
   }
 
+  .diffrow { display: flex; gap: 8px; width: 100%; }
+  .diffbtn {
+    flex: 1;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 650;
+    padding: 9px 6px;
+    border-radius: 9px;
+    cursor: pointer;
+  }
+  .diffbtn:hover { background: var(--bg); }
+  .diffbtn.active {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #1c1005;
+  }
+
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -392,6 +412,12 @@
     <section id="screen-vs-create" hidden>
       <p class="lede">You and your friend get the exact same letters, all 3 rounds. Enter your name to create the match:</p>
       <input class="nameinput" id="vs-name-create" type="text" placeholder="Your name" maxlength="24" autocomplete="off">
+      <div class="diffrow" id="diff-picker-vs">
+        <button class="diffbtn" data-diff="easy" type="button">Easy</button>
+        <button class="diffbtn" data-diff="medium" type="button">Medium</button>
+        <button class="diffbtn" data-diff="hard" type="button">Hard</button>
+      </div>
+      <p class="note" id="diff-desc-vs"></p>
       <button class="primary" id="btn-vs-create" type="button">Create match</button>
       <p class="note" id="vs-create-note"></p>
       <button class="linkbtn" id="btn-vs-create-back" type="button">Back</button>
@@ -411,6 +437,7 @@
     <!-- VS: joined via invite link -->
     <section id="screen-vs-join" hidden>
       <p class="lede" id="vs-join-lede">You've been challenged to 3&middot;2&middot;1!</p>
+      <p class="note" id="vs-join-diff"></p>
       <input class="nameinput" id="vs-name-join" type="text" placeholder="Your name" maxlength="24" autocomplete="off">
       <button class="primary" id="btn-vs-join" type="button">Play</button>
       <p class="note" id="vs-join-note"></p>
@@ -449,14 +476,21 @@
       </ol>
       <p class="lede">Click a letter to move it into your word, click it again to send it back, and drag letters to reorder. Press <b>Enter</b> to submit.</p>
       <p class="lede">Time left when you solve a word carries over to the next one, so solving fast banks you extra time.</p>
-      <p class="lede">You play <b>3 rounds</b>. Your score is the total words solved across all three. Best total: <b id="best-start">0</b> words.</p>
+      <p class="lede">You play <b>3 rounds</b>. Your score is the total words solved across all three.</p>
+      <div class="diffrow" id="diff-picker">
+        <button class="diffbtn" data-diff="easy" type="button">Easy</button>
+        <button class="diffbtn" data-diff="medium" type="button">Medium</button>
+        <button class="diffbtn" data-diff="hard" type="button">Hard</button>
+      </div>
+      <p class="note" id="diff-desc"></p>
+      <p class="lede">Best total: <b id="best-start">0</b> words.</p>
       <button class="primary" id="btn-start" disabled>Loading&hellip;</button>
       <p class="note" id="load-note">Loading dictionary&hellip;</p>
     </section>
 
     <!-- PLAY -->
     <section id="screen-play" hidden>
-      <div class="roundline">Round <b id="round-n">1</b> of 3</div>
+      <div class="roundline">Round <b id="round-n">1</b> of 3 &middot; <b id="round-diff">Medium</b></div>
       <div class="hud">
         <span>Stage <b id="stage-n">1</b> &middot; <b id="pool-n">3</b> letters</span>
         <span><b id="solved-n">0</b> this round</span>
@@ -560,11 +594,12 @@
   window.MatchDB = {
     ready: !!db,
 
-    async createMatch(name) {
+    async createMatch(name, difficulty) {
       const code = genCode();
       const seed = genSeed();
       await setDoc(doc(db, "matches", code), {
         seed,
+        difficulty: difficulty || "medium",
         createdAt: serverTimestamp(),
         p1: { name: name, done: false, total: 0, roundWords: [] },
         p2: null,
@@ -615,6 +650,18 @@
   const $ = (s) => document.querySelector(s);
   const ALPHA = "abcdefghijklmnopqrstuvwxyz".split("");
   const BEST_KEY = "three21.best";
+
+  const DIFF_INFO = {
+    easy:   { label: "Easy",   desc: "More time, friendlier letters, and Datamuse can verify tricky words." },
+    medium: { label: "Medium", desc: "Balanced timer and letters — the classic 3·2·1 experience." },
+    hard:   { label: "Hard",   desc: "Less time, tougher letters, and only the built-in dictionary counts." },
+  };
+  const TIMER_BY_DIFF = {
+    easy:   { base: 40, step: 8, cap: 120 },
+    medium: { base: 30, step: 7, cap: 90 },
+    hard:   { base: 22, step: 5, cap: 65 },
+  };
+  let difficulty = "medium"; // "easy" | "medium" | "hard" — biases letter choice + timer, see startRound()
 
   // Deterministic PRNG so two players in a versus match get the exact same
   // letters. `rand` is Math.random in solo mode, or reseeded per round from
@@ -774,6 +821,41 @@
     return arr;
   }
 
+  // Difficulty biases WHICH letters get picked, not how many options exist —
+  // games stay just as unpredictable at every difficulty, only the odds shift.
+  // Rank letters by English frequency (1 = most common, 26 = rarest).
+  const LETTER_RANK = {};
+  "etaoinsrhdlcumfgypwbvkxjqz".split("").forEach((ch, i) => { LETTER_RANK[ch] = i + 1; });
+  function letterWeight(ch, diff) {
+    const rank = LETTER_RANK[ch] || 13;
+    // Exponentiated so the bias survives being summed with an ordinary letter
+    // (most candidate words already carry a common vowel, which washes out a
+    // linear weight). Easy needs a steeper curve than hard: most 3-letter
+    // English words already lean common, so there's less headroom to push
+    // "more common" than there is to push "rarer" — verified empirically.
+    if (diff === "easy") return Math.pow(27 - rank, 2.6); // favor common letters
+    if (diff === "hard") return rank * rank;               // favor rare letters
+    return 1;                                              // medium: uniform (unchanged behavior)
+  }
+  function wordWeight(word, diff) {
+    if (diff === "medium") return 1;
+    let sum = 0;
+    for (let i = 0; i < word.length; i++) sum += letterWeight(word[i], diff);
+    return sum;
+  }
+  function weightedPick(items, weightFn, rnd) {
+    if (items.length <= 1) return items[0];
+    const weights = items.map(weightFn);
+    const total = weights.reduce((a, b) => a + b, 0);
+    if (!(total > 0)) return items[(rnd() * items.length) | 0];
+    let r = rnd() * total;
+    for (let i = 0; i < items.length; i++) {
+      r -= weights[i];
+      if (r < 0) return items[i];
+    }
+    return items[items.length - 1];
+  }
+
   // Order the tray for a new stage. Carried letters (the previous stage's word)
   // stay grouped at the front but shuffled among themselves; new letters follow.
   // Try to keep the tray from reading as a valid word: the whole string isn't in
@@ -795,6 +877,18 @@
       return order;
     }
     return fallback;
+  }
+
+  // 3-letter starting words that have at least one valid 5-letter extension.
+  // Computed once (lazily) and reused every round — difficulty only changes
+  // which of these gets picked, via weightedPick(), never the candidate set.
+  let GOOD_WORDS3 = null;
+  function goodWords3() {
+    if (!GOOD_WORDS3) {
+      GOOD_WORDS3 = WORDS3.filter((w) => validPairs(w.split("")).length > 0);
+      if (!GOOD_WORDS3.length) GOOD_WORDS3 = WORDS3.slice();
+    }
+    return GOOD_WORDS3;
   }
 
   // ---- game state ----
@@ -835,11 +929,12 @@
     for (const k in screens) screens[k].hidden = k !== name;
   }
 
+  function bestKey() { return BEST_KEY + "." + difficulty; }
   function readBest() {
-    try { return parseInt(localStorage.getItem(BEST_KEY), 10) || 0; } catch (e) { return 0; }
+    try { return parseInt(localStorage.getItem(bestKey()), 10) || 0; } catch (e) { return 0; }
   }
   function writeBest(n) {
-    try { localStorage.setItem(BEST_KEY, String(n)); } catch (e) {}
+    try { localStorage.setItem(bestKey(), String(n)); } catch (e) {}
   }
 
   function startSession() {
@@ -862,16 +957,10 @@
     // stages either player reached in an earlier round.
     rand = mode === "versus" ? mulberry32(mixSeed(matchSeed, round)) : Math.random;
 
-    let chosen = null;
-    for (let tries = 0; tries < 300 && !chosen; tries++) {
-      const w = WORDS3[(rand() * WORDS3.length) | 0];
-      const chars = w.split("");
-      if (validPairs(chars).length) chosen = chars;
-    }
-    if (!chosen) chosen = WORDS3[(rand() * WORDS3.length) | 0].split("");
-
+    const chosen = weightedPick(goodWords3(), (w) => wordWeight(w, difficulty), rand).split("");
     pool = chosen.map((ch) => ({ ch, isNew: true }));
     $("#round-n").textContent = round;
+    $("#round-diff").textContent = DIFF_INFO[difficulty].label;
     show("play");
     beginStage();
   }
@@ -891,14 +980,14 @@
       if (!pairs.length) { finish(true); return; }
       const better = pairs.filter(([a, b]) => validSingles(chars.concat(a, b)).length);
       if (better.length) pairs = better;
-      const [a, b] = pairs[(rand() * pairs.length) | 0];
+      const [a, b] = weightedPick(pairs, ([x, y]) => letterWeight(x, difficulty) + letterWeight(y, difficulty), rand);
       pool.push({ ch: a, isNew: true }, { ch: b, isNew: true });
     } else {
       let singles = validSingles(chars);
       if (!singles.length) { finish(true); return; }
       const better = singles.filter((c) => validSingles(chars.concat(c)).length);
       if (better.length) singles = better;
-      const c = singles[(rand() * singles.length) | 0];
+      const c = weightedPick(singles, (ch) => letterWeight(ch, difficulty), rand);
       pool.push({ ch: c, isNew: true });
     }
 
@@ -923,7 +1012,8 @@
     render(true);
 
     // Base time for the stage, plus whatever was left on the clock last word.
-    const base = Math.min(30 + 7 * (tiles.length - 3), 90);
+    const t = TIMER_BY_DIFF[difficulty] || TIMER_BY_DIFF.medium;
+    const base = Math.min(t.base + t.step * (tiles.length - 3), t.cap);
     const carriedSec = carryMs / 1000;
     carryMs = 0;
     duration = base + carriedSec;
@@ -1220,6 +1310,11 @@
       msg("“" + g.toUpperCase() + "” isn't a word.", "warn");
       return;
     }
+    if (difficulty === "hard") {
+      // Hard mode: only the built-in dictionary counts, no online lookup.
+      msg("“" + g.toUpperCase() + "” isn't in the word list.", "warn");
+      return;
+    }
 
     // Not in the bundled list — check it online (Datamuse). The board is frozen
     // while we wait; the timer keeps running.
@@ -1472,6 +1567,26 @@
     else if (!screens.start.hidden && !$("#btn-start").disabled) { e.preventDefault(); startSession(); }
   });
 
+  // ---- difficulty wiring ----
+  function setDifficulty(diff) {
+    if (!DIFF_INFO[diff]) return;
+    difficulty = diff;
+    [$("#diff-picker"), $("#diff-picker-vs")].forEach((row) => {
+      [].slice.call(row.children).forEach((btn) => btn.classList.toggle("active", btn.dataset.diff === diff));
+    });
+    $("#diff-desc").textContent = DIFF_INFO[diff].desc;
+    $("#diff-desc-vs").textContent = DIFF_INFO[diff].desc;
+    $("#best-start").textContent = readBest();
+  }
+  $("#diff-picker").addEventListener("click", (e) => {
+    const btn = e.target.closest(".diffbtn");
+    if (btn) setDifficulty(btn.dataset.diff);
+  });
+  $("#diff-picker-vs").addEventListener("click", (e) => {
+    const btn = e.target.closest(".diffbtn");
+    if (btn) setDifficulty(btn.dataset.diff);
+  });
+
   // ---- versus wiring ----
   $("#btn-solo").addEventListener("click", () => { mode = "solo"; show("start"); });
   $("#btn-vs").addEventListener("click", () => {
@@ -1486,7 +1601,7 @@
     $("#btn-vs-create").disabled = true;
     $("#vs-create-note").textContent = "";
     try {
-      const { code, seed } = await window.MatchDB.createMatch(name);
+      const { code, seed } = await window.MatchDB.createMatch(name, difficulty);
       matchCode = code;
       matchSeed = seed;
       playerSlot = "p1";
@@ -1533,6 +1648,7 @@
         return;
       }
       matchSeed = data.seed;
+      difficulty = DIFF_INFO[data.difficulty] ? data.difficulty : "medium";
       playerSlot = "p2";
       playerName = name;
       opponentName = (data.p1 && data.p1.name) || "your friend";
@@ -1550,7 +1666,7 @@
   $("#btn-vs-again").addEventListener("click", goLanding);
 
   window.addEventListener("DOMContentLoaded", () => {
-    $("#best-start").textContent = readBest();
+    setDifficulty("medium");
 
     const code = urlMatchCode();
     if (code) {
@@ -1560,6 +1676,8 @@
         window.MatchDB.getMatch(code).then((data) => {
           if (data && data.p1) {
             $("#vs-join-lede").textContent = data.p1.name + " has challenged you to 3·2·1!";
+            const d = DIFF_INFO[data.difficulty] ? data.difficulty : "medium";
+            $("#vs-join-diff").textContent = "Difficulty: " + DIFF_INFO[d].label;
           } else if (!data) {
             $("#vs-join-note").textContent = "That invite link isn't valid.";
           }
