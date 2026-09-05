@@ -497,7 +497,7 @@
 
     <!-- VS: joined via invite link -->
     <section id="screen-vs-join" hidden>
-      <p class="lede" id="vs-join-lede">You've been challenged to 3&middot;2&middot;1!</p>
+      <p class="lede" id="vs-join-lede">You've been invited to a game of 3&middot;2&middot;1!</p>
       <p class="note" id="vs-join-diff"></p>
       <input class="nameinput" id="vs-name-join" type="text" placeholder="Your name" maxlength="24" autocomplete="off">
       <button class="primary" id="btn-vs-join" type="button">Play</button>
@@ -507,7 +507,7 @@
     <!-- VS: waiting on the opponent -->
     <section id="screen-vs-waiting" hidden>
       <h2 style="margin:0;font-size:1.3rem;">You're done!</h2>
-      <p class="lede">You solved <b id="vs-wait-total">0</b> words. Results unlock once <span id="vs-wait-who">your friend</span> finishes too.</p>
+      <p class="lede" id="vs-wait-lede">You're done — waiting on the others.</p>
       <div class="linkrow" id="vs-wait-linkrow" hidden>
         <input class="nameinput" id="vs-wait-link" type="text" readonly>
         <button class="ghost" id="btn-vs-wait-copy" type="button">Copy</button>
@@ -611,8 +611,8 @@
   // Friend" is disabled — solo play works either way.
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
   import {
-    getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, serverTimestamp, arrayUnion,
-    collection, query, where,
+    getFirestore, doc, setDoc, getDoc, getDocs, updateDoc, onSnapshot, serverTimestamp,
+    arrayUnion, collection, query, where,
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
   import {
     getAuth, signInAnonymously, onAuthStateChanged,
@@ -660,19 +660,33 @@
   function wrapRoundWords(roundWords) {
     return (roundWords || []).map((words) => ({ words: words }));
   }
-  function unwrapPlayer(p) {
-    if (!p) return p;
-    return Object.assign({}, p, {
-      roundWords: (p.roundWords || []).map((r) => (r && r.words) || []),
-    });
+  function unwrapRoundWords(wrapped) {
+    return (wrapped || []).map((r) => (r && r.words) || []);
   }
-  function unwrapMatch(data) {
-    if (!data) return data;
-    return Object.assign({}, data, {
-      p1: unwrapPlayer(data.p1),
-      p2: unwrapPlayer(data.p2),
-    });
+  function unwrapEntrant(e) {
+    return Object.assign({}, e, { roundWords: unwrapRoundWords(e.roundWords) });
   }
+
+  // A match/{code} doc from before the entrants subcollection had fixed p1/p2
+  // slots. Present those to the app as an entrants array so a finished old game
+  // still opens. New games never get written in this shape.
+  function isLegacyMatch(data) {
+    return data && (data.p1 !== undefined || data.p2 !== undefined);
+  }
+  function legacyEntrants(data) {
+    const out = [];
+    [["p1", data.uids && data.uids.p1], ["p2", data.uids && data.uids.p2]].forEach(([slot, u]) => {
+      const p = data[slot];
+      if (p) out.push(unwrapEntrant(Object.assign({ uid: u || slot }, p)));
+    });
+    return out;
+  }
+
+  const CLOSE_MS = { "24h": 86400000, "48h": 172800000 };
+  const newEntrant = (name, late) => ({
+    name: name, joinedAt: Date.now(), done: false,
+    total: 0, roundWords: [], finishedAt: null, late: !!late,
+  });
 
   window.MatchDB = {
     ready: !!db,
@@ -699,77 +713,110 @@
       } catch (e) {}
     },
 
-    async createMatch(name, difficulty) {
+    // Create a game. `close` is "24h" (default) | "48h" | "none" | a ms epoch.
+    async createMatch(name, difficulty, close) {
+      if (!uid) throw new Error("sign-in required");
       const code = genCode();
       const seed = genSeed();
-      const base = {
-        seed,
+      let closesAt = null;
+      if (typeof close === "number") closesAt = close;
+      else if (close !== "none") closesAt = Date.now() + (CLOSE_MS[close] || CLOSE_MS["24h"]);
+      await setDoc(doc(db, "matches", code), {
+        seed: seed,
         difficulty: difficulty || "medium",
         createdAt: serverTimestamp(),
         updatedAt: Date.now(),
-        p1: { name: name, done: false, total: 0, roundWords: [] },
-        p2: null,
-      };
-      if (uid) { base.players = [uid]; base.uids = { p1: uid }; }
-      await setDoc(doc(db, "matches", code), base);
+        host: uid,
+        closesAt: closesAt,
+        status: "open",
+        playerUids: [uid],
+        names: { [uid]: name },
+        results: {},
+      });
+      await setDoc(doc(db, "matches", code, "entrants", uid), newEntrant(name, false));
       return { code: code, seed: seed };
     },
 
+    // One-time read: parent meta + `entrants` array (compat for legacy docs).
     async getMatch(code) {
       const snap = await getDoc(doc(db, "matches", code));
-      return snap.exists() ? unwrapMatch(snap.data()) : null;
+      if (!snap.exists()) return null;
+      const data = Object.assign({ code: code }, snap.data());
+      if (isLegacyMatch(data)) { data.entrants = legacyEntrants(data); return data; }
+      const es = await getDocs(collection(db, "matches", code, "entrants"));
+      data.entrants = es.docs.map((d) => unwrapEntrant(Object.assign({ uid: d.id }, d.data())));
+      return data;
     },
 
+    // Add the signed-in player to a game (idempotent). Returns getMatch(code).
     async joinMatch(code, name) {
       const ref = doc(db, "matches", code);
       const snap = await getDoc(ref);
       if (!snap.exists()) return null;
       const data = snap.data();
-
-      // Re-opening a match I'm already part of — just hand it back.
-      if (uid && data.uids && (data.uids.p1 === uid || data.uids.p2 === uid)) {
-        return unwrapMatch(data);
+      if (isLegacyMatch(data)) return this.getMatch(code); // legacy games: view only
+      if (uid) {
+        const eRef = doc(db, "matches", code, "entrants", uid);
+        if (!(await getDoc(eRef)).exists()) {
+          const late = !!(data.closesAt && Date.now() > data.closesAt);
+          await setDoc(eRef, newEntrant(name, late));
+          await updateDoc(ref, {
+            playerUids: arrayUnion(uid),
+            ["names." + uid]: name,
+            updatedAt: Date.now(),
+          });
+        }
       }
-      if (!data.p2) {
-        const patch = {
-          p2: { name: name, done: false, total: 0, roundWords: [] },
-          updatedAt: Date.now(),
-        };
-        if (uid) { patch["uids.p2"] = uid; patch.players = arrayUnion(uid); }
-        await updateDoc(ref, patch);
-        data.p2 = patch.p2;
-        if (uid) data.uids = Object.assign({}, data.uids, { p2: uid });
-      }
-      return unwrapMatch(data);
+      return this.getMatch(code);
     },
 
-    async submitResult(code, slot, total, roundWords) {
-      const ref = doc(db, "matches", code);
-      const patch = {};
-      patch[slot + ".done"] = true;
-      patch[slot + ".total"] = total;
-      patch[slot + ".roundWords"] = wrapRoundWords(roundWords);
-      patch[slot + ".finishedAt"] = Date.now();
-      patch.updatedAt = Date.now();
-      await updateDoc(ref, patch);
-    },
-
-    // Returns an unsubscribe function.
-    watch(code, cb) {
-      return onSnapshot(doc(db, "matches", code), (snap) => {
-        cb(snap.exists() ? unwrapMatch(snap.data()) : null);
+    async submitResult(code, total, roundWords) {
+      if (!uid) return;
+      // setDoc+merge, not updateDoc — tolerate a missing entrant doc (e.g. a
+      // late "play for fun" that skipped the normal join).
+      await setDoc(doc(db, "matches", code, "entrants", uid), {
+        done: true,
+        total: total,
+        roundWords: wrapRoundWords(roundWords),
+        finishedAt: Date.now(),
+      }, { merge: true });
+      await updateDoc(doc(db, "matches", code), {
+        ["results." + uid]: total,
+        updatedAt: Date.now(),
       });
     },
 
-    // Live list of every match this uid belongs to. cb gets an array of match
-    // objects (each with its `code`), or null on error. Sorting/capping is left
-    // to the caller so no composite index is needed. Returns an unsubscribe fn.
+    async closeMatch(code) {
+      if (!uid) return;
+      await updateDoc(doc(db, "matches", code), { status: "closed", updatedAt: Date.now() });
+    },
+
+    // Watch the parent meta doc. cb gets { code, ...data } or null.
+    watch(code, cb) {
+      return onSnapshot(doc(db, "matches", code), (snap) => {
+        cb(snap.exists() ? Object.assign({ code: code }, snap.data()) : null);
+      });
+    },
+
+    // Watch a game's entrants. cb gets [{ uid, ...entrant }] or null on error.
+    watchEntrants(code, cb) {
+      return onSnapshot(
+        collection(db, "matches", code, "entrants"),
+        (snap) => cb(snap.docs.map((d) => unwrapEntrant(Object.assign({ uid: d.id }, d.data())))),
+        () => cb(null)
+      );
+    },
+
+    // Live list of every game this uid is in — parent docs only (they carry
+    // playerUids / names / results, enough for the My Games cards). cb gets an
+    // array (each with its `code`) or null on error. Sorted/capped by the caller
+    // so no composite index is needed. Returns an unsubscribe fn.
     watchMyMatches(cb) {
       if (!uid) { cb([]); return function () {}; }
-      const q = query(collection(db, "matches"), where("players", "array-contains", uid));
+      const q = query(collection(db, "matches"), where("playerUids", "array-contains", uid));
       return onSnapshot(
         q,
-        (snap) => cb(snap.docs.map((d) => Object.assign({ code: d.id }, unwrapMatch(d.data())))),
+        (snap) => cb(snap.docs.map((d) => Object.assign({ code: d.id }, d.data()))),
         () => cb(null)
       );
     },
@@ -814,15 +861,17 @@
   }
   let rand = Math.random;
 
-  // ---- versus-mode state ----
+  // ---- versus / group-mode state ----
   let mode = "solo";        // "solo" | "versus"
   let matchCode = null;
   let matchSeed = 0;
-  let playerSlot = null;    // "p1" | "p2"
   let playerName = "";
-  let opponentName = "";
+  let opponentName = "";     // the one other player's name, in a 2-player game
+  let matchMeta = null;      // latest matches/{code} parent doc
+  let matchEntrants = [];    // latest entrants snapshot for the open game
   let dictReady = false;
   let unwatchMatch = null;
+  let unwatchEntrants = null;
   let unwatchHome = null;
   let storedName = "";      // persistent display name (players/{uid}), once auth resolves
   let pendingMatchCode = null;
@@ -1628,7 +1677,7 @@
     $("#name-input").value = storedName || "";
     $("#name-note").textContent = "";
     $("#name-lede").textContent = pendingMatchCode
-      ? "You've been challenged! Pick a name your friend will see."
+      ? "You've been invited to a game! Pick a name the others will see."
       : "What should your friends see you as? You can change it later.";
     show("name");
     $("#name-input").focus();
@@ -1647,16 +1696,25 @@
     else goHome();
   }
 
+  function matchIsClosed(m) {
+    return !!(m && (m.status === "closed" || (m.closesAt && Date.now() > m.closesAt)));
+  }
+  function hostName(m) {
+    if (m.names && m.host && m.names[m.host]) return m.names[m.host];
+    return (m.entrants && m.entrants[0] && m.entrants[0].name) || "A friend";
+  }
+
   function loadJoinPreview(code) {
     if (!dbReady()) { $("#vs-join-note").textContent = "Multiplayer isn't set up on this site yet."; return; }
     window.MatchDB.getMatch(code).then((data) => {
-      if (data && data.p1) {
-        $("#vs-join-lede").textContent = data.p1.name + " has challenged you to 3·2·1!";
-        const d = DIFF_INFO[data.difficulty] ? data.difficulty : "medium";
-        $("#vs-join-diff").textContent = "Difficulty: " + DIFF_INFO[d].label;
-      } else if (!data) {
-        $("#vs-join-note").textContent = "That invite link isn't valid.";
-      }
+      if (!data) { $("#vs-join-note").textContent = "That invite link isn't valid."; return; }
+      $("#vs-join-lede").textContent = hostName(data) + " started a game of 3·2·1";
+      const d = DIFF_INFO[data.difficulty] ? data.difficulty : "medium";
+      const count = (data.playerUids || []).length || (data.entrants || []).length;
+      let sub = "Difficulty: " + DIFF_INFO[d].label;
+      if (count > 1) sub += " · " + count + " playing so far";
+      if (matchIsClosed(data)) sub += " · closed — you can still play for fun";
+      $("#vs-join-diff").textContent = sub;
     });
   }
 
@@ -1664,14 +1722,20 @@
 
   // The hub once you're signed in with a name. Without a backend or sign-in it
   // falls back to the solo-only landing screen.
-  function goHome() {
+  function teardownMatchWatches() {
     if (unwatchMatch) { unwatchMatch(); unwatchMatch = null; }
+    if (unwatchEntrants) { unwatchEntrants(); unwatchEntrants = null; }
+  }
+
+  function goHome() {
+    teardownMatchWatches();
     mode = "solo";
     matchCode = null;
     matchSeed = 0;
-    playerSlot = null;
     playerName = storedName || "";
     opponentName = "";
+    matchMeta = null;
+    matchEntrants = [];
     pendingMatchCode = null;
     history.replaceState(null, "", location.pathname);
 
@@ -1693,35 +1757,50 @@
     unwatchHome = window.MatchDB.watchMyMatches(renderHome);
   }
 
-  // Work out, for the signed-in player, where a match stands.
+  function ordinal(n) {
+    const s = ["th", "st", "nd", "rd"], v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+
+  // Work out, for the signed-in player, where a game stands. `m` is a parent
+  // matches/{code} doc (playerUids / names / results / closesAt / status).
   function matchStatus(m) {
     const myUid = window.MatchDB.uid;
-    const mySlot = (m.uids && m.uids.p1 === myUid) ? "p1" : "p2";
-    const oppSlot = mySlot === "p1" ? "p2" : "p1";
-    const me = m[mySlot];
-    const opp = m[oppSlot];
-    const oppName = (opp && opp.name) || "your friend";
-    const base = { mySlot: mySlot, oppSlot: oppSlot };
+    const uids = m.playerUids || [];
+    const names = m.names || {};
+    const results = m.results || {};
+    const total = uids.length;
+    const finished = Object.keys(results);
+    const iFinished = Object.prototype.hasOwnProperty.call(results, myUid);
+    const others = uids.filter((u) => u !== myUid);
+    const twoP = total === 2;
+    const oppName = twoP ? (names[others[0]] || "your friend") : null;
+    const label = twoP ? ("vs " + oppName) : (total + "-player game");
+    const closed = matchIsClosed(m);
 
-    if (!m.p2) {
-      return Object.assign(base, {
-        group: "waiting", vs: "Waiting for a friend", sub: "Tap for the invite link", action: "invite",
-      });
+    if (total <= 1) {
+      return { group: "waiting", vs: "Waiting for players", sub: "Tap for the invite link", action: "invite" };
     }
-    if (me && me.done && opp && opp.done) {
-      const mt = me.total || 0, ot = opp.total || 0;
-      // Always "your score – their score" so the number order never flips.
+    if (!iFinished && !closed) {
+      return { group: "turn", vs: label, sub: "Your turn to play", action: "play" };
+    }
+    if (!iFinished && closed) {
+      return { group: "done", vs: label, sub: "Closed — you didn't play", action: "open" };
+    }
+    if (finished.length < total && !closed) {
+      const sub = twoP ? ("Waiting on " + oppName)
+        : (finished.length + " of " + total + " finished");
+      return { group: "waiting", vs: label, sub: sub, action: "open" };
+    }
+    // Everyone's done, or the game has closed with me among the finishers.
+    if (twoP) {
+      const mt = results[myUid] || 0, ot = results[others[0]] || 0;
       const verdict = (mt === ot ? "Tied " : mt > ot ? "You won " : "You lost ") + mt + "–" + ot;
-      return Object.assign(base, { group: "done", vs: "vs " + oppName, sub: verdict, action: "reveal" });
+      return { group: "done", vs: label, sub: verdict, action: "open" };
     }
-    if (me && me.done) {
-      return Object.assign(base, {
-        group: "waiting", vs: "vs " + oppName, sub: "Waiting on " + oppName, action: "waiting",
-      });
-    }
-    return Object.assign(base, {
-      group: "turn", vs: "vs " + oppName, sub: "Your turn to play", action: "play",
-    });
+    const sorted = Object.keys(results).sort((a, b) => results[b] - results[a]);
+    const rank = sorted.indexOf(myUid) + 1;
+    return { group: "done", vs: label, sub: ordinal(rank) + " of " + finished.length, action: "open" };
   }
 
   function gameCard(m, info) {
@@ -1762,7 +1841,7 @@
 
     const myUid = window.MatchDB.uid;
     const mine = matches
-      .filter((m) => m.uids && (m.uids.p1 === myUid || m.uids.p2 === myUid))
+      .filter((m) => (m.playerUids || []).indexOf(myUid) > -1)
       .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 
     $("#home-empty").hidden = mine.length > 0;
@@ -1785,85 +1864,104 @@
     });
   }
 
-  // Tapping a match card — pick up wherever it left off.
+  // Tapping a game card — pick up wherever it left off. `m` is a parent doc.
   function openMatch(m, info) {
-    if (unwatchMatch) { unwatchMatch(); unwatchMatch = null; }
+    teardownMatchWatches();
     matchCode = m.code;
     matchSeed = m.seed;
     difficulty = DIFF_INFO[m.difficulty] ? m.difficulty : "medium";
-    playerSlot = info.mySlot;
-    playerName = (m[info.mySlot] && m[info.mySlot].name) || storedName || "You";
-    opponentName = (m[info.oppSlot] && m[info.oppSlot].name) || "your friend";
+    matchMeta = m;
+    matchEntrants = [];
     mode = "versus";
+    const names = m.names || {};
+    const others = (m.playerUids || []).filter((u) => u !== window.MatchDB.uid);
+    playerName = names[window.MatchDB.uid] || storedName || "You";
+    opponentName = others.length === 1 ? (names[others[0]] || "your friend") : "the others";
 
     if (info.action === "invite") {
       history.replaceState(null, "", location.pathname + "?m=" + m.code);
       $("#vs-link").value = matchLink(m.code);
       $("#vs-copy-note").textContent = "";
       show("vsinvite");
-    } else if (info.action === "reveal") {
-      showVsReveal(m);
-    } else if (info.action === "waiting") {
-      showWaitingFor(m);
+    } else if (info.action === "play") {
+      startSession(); // run the 3 rounds, submit at the end
     } else {
-      startSession(); // "play" — run the 3 rounds, submit at the end
+      openResults(); // "open" — finished/closed; show results, live
     }
   }
 
-  // Show the "you're done, waiting on them" screen and listen for the reveal.
-  function showWaitingFor(data) {
-    const me = data[playerSlot] || {};
-    $("#vs-wait-total").textContent = me.total || 0;
-    $("#vs-wait-who").textContent = opponentName || "your friend";
-    $("#vs-wait-note").textContent = "";
-    $("#vs-wait-linkrow").hidden = playerSlot !== "p1";
-    if (playerSlot === "p1") $("#vs-wait-link").value = matchLink(matchCode);
-    show("vswaiting");
-    watchForReveal();
+  // Live view of a game's results: the 2-player head-to-head reveal once both
+  // are done, otherwise the "you're done, others still playing" holding screen.
+  // (Phase B swaps the holding screen for a real N-player leaderboard.)
+  function openResults() {
+    teardownMatchWatches();
+    unwatchMatch = window.MatchDB.watch(matchCode, (meta) => {
+      if (meta) { matchMeta = meta; renderResults(); }
+    });
+    unwatchEntrants = window.MatchDB.watchEntrants(matchCode, (entrants) => {
+      matchEntrants = entrants || [];
+      renderResults();
+    });
   }
 
-  function watchForReveal() {
-    if (unwatchMatch) unwatchMatch();
-    unwatchMatch = window.MatchDB.watch(matchCode, (data) => {
-      if (!data) return;
-      const oppSlot = playerSlot === "p1" ? "p2" : "p1";
-      const opp = data[oppSlot];
-      if (opp && opp.done) showVsReveal(data);
-    });
+  function renderResults() {
+    const entrants = matchEntrants;
+    const total = (matchMeta && matchMeta.playerUids) ? matchMeta.playerUids.length : entrants.length;
+    const doneCount = entrants.filter((e) => e.done).length;
+
+    if (total === 2 && doneCount === 2) { showVsReveal(entrants); return; }
+
+    const myUid = window.MatchDB.uid;
+    const me = entrants.find((e) => e.uid === myUid) || {};
+    const iHost = matchMeta && matchMeta.host === myUid;
+    $("#vs-wait-linkrow").hidden = !iHost;
+    if (iHost) $("#vs-wait-link").value = matchLink(matchCode);
+    if (total === 2) {
+      const opp = entrants.find((e) => e.uid !== myUid);
+      $("#vs-wait-lede").textContent = "You solved " + (me.total || 0) +
+        " words. Results unlock once " + ((opp && opp.name) || opponentName || "your friend") + " finishes too.";
+      $("#vs-wait-note").textContent = "";
+    } else {
+      // Phase A holding view for 3+ players; Phase B replaces this with a real
+      // leaderboard screen.
+      const board = entrants.filter((e) => e.done).sort((a, b) => (b.total || 0) - (a.total || 0));
+      const rank = board.findIndex((e) => e.uid === myUid) + 1;
+      const still = total - doneCount;
+      $("#vs-wait-lede").textContent = "You solved " + (me.total || 0) + " words — " +
+        ordinal(rank) + " of " + board.length + (still > 0 ? " so far" : "") + ".";
+      $("#vs-wait-note").textContent = still > 0
+        ? (still + (still === 1 ? " player is" : " players are") + " still going.")
+        : "Everyone's finished.";
+    }
+    show("vswaiting");
   }
 
   async function submitVersusResult() {
     defToken++;
     const total = roundWords.reduce((a, w) => a + w.length, 0);
 
-    $("#vs-wait-total").textContent = total;
-    $("#vs-wait-who").textContent = opponentName || "your friend";
+    $("#vs-wait-lede").textContent = "You solved " + total + " words. Saving…";
     $("#vs-wait-note").textContent = "";
-    if (playerSlot === "p1") {
-      $("#vs-wait-linkrow").hidden = false;
-      $("#vs-wait-link").value = matchLink(matchCode);
-    } else {
-      $("#vs-wait-linkrow").hidden = true;
-    }
+    $("#vs-wait-linkrow").hidden = true;
     show("vswaiting");
 
     try {
-      await window.MatchDB.submitResult(matchCode, playerSlot, total, roundWords);
+      await window.MatchDB.submitResult(matchCode, total, roundWords);
     } catch (e) {
       $("#vs-wait-note").textContent = "Couldn't save your result — check your connection. It'll retry.";
-      try { await window.MatchDB.submitResult(matchCode, playerSlot, total, roundWords); }
+      try { await window.MatchDB.submitResult(matchCode, total, roundWords); }
       catch (e2) { return; }
       $("#vs-wait-note").textContent = "";
     }
 
-    watchForReveal();
+    openResults();
   }
 
-  function showVsReveal(data) {
-    if (unwatchMatch) { unwatchMatch(); unwatchMatch = null; }
-    const oppSlot = playerSlot === "p1" ? "p2" : "p1";
-    const me = data[playerSlot] || { name: playerName, total: 0, roundWords: [] };
-    const opp = data[oppSlot] || { name: opponentName, total: 0, roundWords: [] };
+  function showVsReveal(entrants) {
+    teardownMatchWatches();
+    const myUid = window.MatchDB.uid;
+    const me = entrants.find((e) => e.uid === myUid) || { name: playerName, total: 0, roundWords: [] };
+    const opp = entrants.find((e) => e.uid !== myUid) || { name: opponentName, total: 0, roundWords: [] };
     const meTotal = me.total || 0;
     const oppTotal = opp.total || 0;
     const winner = meTotal === oppTotal ? -1 : (meTotal > oppTotal ? 0 : 1);
@@ -1956,23 +2054,24 @@
   $("#btn-vs-create-back").addEventListener("click", goHome);
 
   $("#btn-vs-create").addEventListener("click", async () => {
-    const name = $("#vs-name-create").value.trim().slice(0, 24) || "Player 1";
+    const name = $("#vs-name-create").value.trim().slice(0, 24) || storedName || "Player";
     $("#btn-vs-create").disabled = true;
     $("#vs-create-note").textContent = "";
     try {
-      const { code, seed } = await window.MatchDB.createMatch(name, difficulty);
+      const { code, seed } = await window.MatchDB.createMatch(name, difficulty, "24h");
       matchCode = code;
       matchSeed = seed;
-      playerSlot = "p1";
       playerName = name;
       opponentName = "";
+      matchMeta = null;
+      matchEntrants = [];
       if (name !== storedName) { storedName = name; window.MatchDB.savePlayerName(name); prefillNames(name); }
       history.replaceState(null, "", location.pathname + "?m=" + code);
       $("#vs-link").value = matchLink(code);
       $("#vs-copy-note").textContent = "";
       show("vsinvite");
     } catch (e) {
-      $("#vs-create-note").textContent = "Couldn't create a match — check your connection and try again.";
+      $("#vs-create-note").textContent = "Couldn't create a game — check your connection and try again.";
     }
     $("#btn-vs-create").disabled = false;
   });
@@ -1997,7 +2096,7 @@
   });
 
   $("#btn-vs-join").addEventListener("click", async () => {
-    const name = $("#vs-name-join").value.trim().slice(0, 24) || "Player 2";
+    const name = $("#vs-name-join").value.trim().slice(0, 24) || storedName || "Player";
     $("#btn-vs-join").disabled = true;
     $("#vs-join-note").textContent = "";
     try {
@@ -2009,14 +2108,17 @@
       }
       matchSeed = data.seed;
       difficulty = DIFF_INFO[data.difficulty] ? data.difficulty : "medium";
-      playerSlot = (data.uids && data.uids.p1 === window.MatchDB.uid) ? "p1" : "p2";
+      matchMeta = data;
+      matchEntrants = data.entrants || [];
       playerName = name;
-      opponentName = playerSlot === "p2"
-        ? ((data.p1 && data.p1.name) || "your friend")
-        : ((data.p2 && data.p2.name) || "your friend");
+      const myUid = window.MatchDB.uid;
+      const others = (data.entrants || []).filter((e) => e.uid !== myUid);
+      opponentName = others.length === 1 ? (others[0].name || "your friend") : "the others";
       if (name !== storedName) { storedName = name; window.MatchDB.savePlayerName(name); prefillNames(name); }
       mode = "versus";
-      startSession();
+      const me = (data.entrants || []).find((e) => e.uid === myUid);
+      if (me && me.done) openResults(); // already played this one — show standings
+      else startSession();
     } catch (e) {
       $("#vs-join-note").textContent = "Couldn't join — check your connection and try again.";
       $("#btn-vs-join").disabled = false;
