@@ -254,9 +254,13 @@ two-tap "Close game now" + invite link, `closesInText()` status line. 2-player
 still routes to the head-to-head reveal / simple wait; self-heals if a 2-player
 game gains a 3rd player mid-wait. Verified on real Firestore.
 
-**Phase C — open join + close conditions.**
-Create-flow deadline control, `closesAt` / `status` handling, Final state, late
-"for fun" play, host "Close now". Test the timed close and the late-join path.
+**Phase C — open join + close conditions. ✅ SHIPPED (492ac4b).**
+Create-flow "Closes" picker (24h default / 48h / 1w / none — "pick a time"
+dropped, note if wanted). `closesAt`/`status` → closed state; join screen
+"play for fun"; `lateUids` on the parent, late entrants excluded from roster
++ ranks, shown in an "After the deadline" leaderboard group. `doneUids`
+finish-order array for stable tie-ranking. Head-to-head reveal keeps its
+watches alive (2→3 flip). Verified on real Firestore.
 
 **Phase D — My Games polish.**
 Group-aware `matchStatus`, "you're 2nd of 4" cards, turnout counts on the join
