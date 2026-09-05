@@ -247,9 +247,12 @@ live rank. Phase A shortcuts to revisit in B/C: 3+ holding screen is text-only
 (no leaderboard); tie-break is by uid order not `finishedAt`; legacy `p1`/`p2`
 matches drop off My Games; "closed, didn't play" wording is rough.
 
-**Phase B — leaderboard screen.**
-`#screen-leaderboard`, live `watchEntrants`, ranking, the exactly-2 → head-to-head
-special case. After-finish path points here. Test with 3 simulated entrants.
+**Phase B — leaderboard screen. ✅ SHIPPED (1282b1e).**
+`#screen-leaderboard`, live `watchEntrants`, ranking (total desc, `finishedAt`
+asc), your row accented, "playing…" rows, tap-to-expand per-round words, host
+two-tap "Close game now" + invite link, `closesInText()` status line. 2-player
+still routes to the head-to-head reveal / simple wait; self-heals if a 2-player
+game gains a 3rd player mid-wait. Verified on real Firestore.
 
 **Phase C — open join + close conditions.**
 Create-flow deadline control, `closesAt` / `status` handling, Final state, late
