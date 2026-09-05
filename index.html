@@ -378,6 +378,39 @@
     margin-top: 6px;
   }
 
+  /* My Games home screen */
+  .homeactions { display: flex; flex-direction: column; gap: 8px; width: 100%; align-items: center; }
+  #home-list { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+  .gamegroup {
+    width: 100%;
+    text-align: left;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+  .gamegroup:first-child { margin-top: 0; }
+  .gamecard {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font: inherit;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .gamecard:hover { border-color: var(--accent); }
+  .gamecard-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .gamecard-vs { font-weight: 650; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gamecard-sub { font-size: 0.8rem; color: var(--muted); }
+  .gamecard-chev { color: var(--muted); font-size: 1.3rem; line-height: 1; flex-shrink: 0; }
+
   .diffrow { display: flex; gap: 8px; width: 100%; }
   .diffbtn {
     flex: 1;
@@ -415,9 +448,20 @@
       <p class="note" id="name-note"></p>
     </section>
 
-    <!-- LANDING -->
+    <!-- MY GAMES (home hub, once signed in with a name) -->
+    <section id="screen-home" hidden>
+      <p class="note whoami" id="home-whoami" hidden></p>
+      <div class="homeactions">
+        <button class="primary" id="btn-home-new" type="button">+ New match</button>
+        <button class="ghost" id="btn-home-solo" type="button">Play solo</button>
+      </div>
+      <p class="note" id="home-empty" hidden>No games yet. Start a match, then send a friend the invite link.</p>
+      <div id="home-list"></div>
+    </section>
+
+    <!-- LANDING (fallback when there's no backend / no sign-in) -->
     <section id="screen-landing">
-      <p class="note" id="landing-whoami" hidden></p>
+      <p class="note whoami" id="landing-whoami" hidden></p>
       <p class="lede">Play solo against the clock, or challenge a friend to the same letters &mdash; results are revealed once you've both finished.</p>
       <button class="primary" id="btn-solo" type="button">Play Solo</button>
       <button class="ghost" id="btn-vs" type="button">Play a Friend</button>
@@ -448,6 +492,7 @@
       </div>
       <p class="note" id="vs-copy-note"></p>
       <button class="primary" id="btn-vs-play" type="button">Play now</button>
+      <button class="linkbtn" id="btn-vs-invite-home" type="button">&larr; My games</button>
     </section>
 
     <!-- VS: joined via invite link -->
@@ -468,6 +513,7 @@
         <button class="ghost" id="btn-vs-wait-copy" type="button">Copy</button>
       </div>
       <p class="note" id="vs-wait-note"></p>
+      <button class="linkbtn" id="btn-vs-wait-home" type="button">&larr; My games</button>
     </section>
 
     <!-- VS: reveal -->
@@ -478,7 +524,7 @@
       <div class="rounds" id="vs-reveal-p1rounds"></div>
       <div class="vsnamehead" id="vs-reveal-p2head">Opponent</div>
       <div class="rounds" id="vs-reveal-p2rounds"></div>
-      <button class="primary" id="btn-vs-again" type="button">Play again</button>
+      <button class="primary" id="btn-vs-again" type="button">Back to my games</button>
     </section>
 
     <!-- START (solo) -->
@@ -502,6 +548,7 @@
       <p class="lede">Best total: <b id="best-start">0</b> words.</p>
       <button class="primary" id="btn-start" disabled>Loading&hellip;</button>
       <p class="note" id="load-note">Loading dictionary&hellip;</p>
+      <button class="linkbtn tomenu" id="btn-start-home" type="button" hidden>&larr; My games</button>
     </section>
 
     <!-- PLAY -->
@@ -552,6 +599,7 @@
 
       <p class="lede">Best total: <b id="best-over">0</b> words</p>
       <button class="primary" id="btn-again" type="button">Play again</button>
+      <button class="linkbtn tomenu" id="btn-over-home" type="button" hidden>&larr; My games</button>
     </section>
   </main>
 
@@ -564,6 +612,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
   import {
     getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, serverTimestamp, arrayUnion,
+    collection, query, where,
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
   import {
     getAuth, signInAnonymously, onAuthStateChanged,
@@ -711,6 +760,19 @@
         cb(snap.exists() ? unwrapMatch(snap.data()) : null);
       });
     },
+
+    // Live list of every match this uid belongs to. cb gets an array of match
+    // objects (each with its `code`), or null on error. Sorting/capping is left
+    // to the caller so no composite index is needed. Returns an unsubscribe fn.
+    watchMyMatches(cb) {
+      if (!uid) { cb([]); return function () {}; }
+      const q = query(collection(db, "matches"), where("players", "array-contains", uid));
+      return onSnapshot(
+        q,
+        (snap) => cb(snap.docs.map((d) => Object.assign({ code: d.id }, unwrapMatch(d.data())))),
+        () => cb(null)
+      );
+    },
   };
 </script>
 <script src="freq.js"></script>
@@ -761,6 +823,7 @@
   let opponentName = "";
   let dictReady = false;
   let unwatchMatch = null;
+  let unwatchHome = null;
   let storedName = "";      // persistent display name (players/{uid}), once auth resolves
   let pendingMatchCode = null;
 
@@ -989,6 +1052,7 @@
 
   const screens = {
     name: $("#screen-name"),
+    home: $("#screen-home"),
     landing: $("#screen-landing"),
     vscreate: $("#screen-vs-create"),
     vsinvite: $("#screen-vs-invite"),
@@ -1546,9 +1610,9 @@
       $("#vs-name-create").value = name;
       $("#vs-name-join").value = name;
     }
-    const el = $("#landing-whoami");
-    if (name) {
+    document.querySelectorAll(".whoami").forEach((el) => {
       el.textContent = "";
+      if (!name) { el.hidden = true; return; }
       el.appendChild(document.createTextNode("Playing as "));
       const b = document.createElement("b"); b.textContent = name; el.appendChild(b);
       el.appendChild(document.createTextNode(" · "));
@@ -1557,9 +1621,7 @@
       btn.addEventListener("click", showNameScreen);
       el.appendChild(btn);
       el.hidden = false;
-    } else {
-      el.hidden = true;
-    }
+    });
   }
 
   function showNameScreen() {
@@ -1582,7 +1644,7 @@
     $("#name-save").disabled = false;
     prefillNames(val);
     if (pendingMatchCode) { show("vsjoin"); loadJoinPreview(pendingMatchCode); }
-    else { show("landing"); $("#vs-note").hidden = dbReady(); }
+    else goHome();
   }
 
   function loadJoinPreview(code) {
@@ -1598,7 +1660,11 @@
     });
   }
 
-  function goLanding() {
+  // ---- My Games home ----
+
+  // The hub once you're signed in with a name. Without a backend or sign-in it
+  // falls back to the solo-only landing screen.
+  function goHome() {
     if (unwatchMatch) { unwatchMatch(); unwatchMatch = null; }
     mode = "solo";
     matchCode = null;
@@ -1608,9 +1674,162 @@
     opponentName = "";
     pendingMatchCode = null;
     history.replaceState(null, "", location.pathname);
-    show("landing");
-    $("#vs-note").hidden = dbReady();
-    prefillNames(storedName);
+
+    if (dbReady() && window.MatchDB.hasAuth && storedName) {
+      prefillNames(storedName);
+      document.querySelectorAll(".tomenu").forEach((el) => { el.hidden = false; });
+      show("home");
+      startHomeWatch();
+    } else {
+      show("landing");
+      $("#vs-note").hidden = dbReady();
+      prefillNames(storedName);
+    }
+  }
+  function startHomeWatch() {
+    if (unwatchHome) { unwatchHome(); unwatchHome = null; }
+    $("#home-list").innerHTML = "<p class='note'>Loading your games…</p>";
+    $("#home-empty").hidden = true;
+    unwatchHome = window.MatchDB.watchMyMatches(renderHome);
+  }
+
+  // Work out, for the signed-in player, where a match stands.
+  function matchStatus(m) {
+    const myUid = window.MatchDB.uid;
+    const mySlot = (m.uids && m.uids.p1 === myUid) ? "p1" : "p2";
+    const oppSlot = mySlot === "p1" ? "p2" : "p1";
+    const me = m[mySlot];
+    const opp = m[oppSlot];
+    const oppName = (opp && opp.name) || "your friend";
+    const base = { mySlot: mySlot, oppSlot: oppSlot };
+
+    if (!m.p2) {
+      return Object.assign(base, {
+        group: "waiting", vs: "Waiting for a friend", sub: "Tap for the invite link", action: "invite",
+      });
+    }
+    if (me && me.done && opp && opp.done) {
+      const mt = me.total || 0, ot = opp.total || 0;
+      // Always "your score – their score" so the number order never flips.
+      const verdict = (mt === ot ? "Tied " : mt > ot ? "You won " : "You lost ") + mt + "–" + ot;
+      return Object.assign(base, { group: "done", vs: "vs " + oppName, sub: verdict, action: "reveal" });
+    }
+    if (me && me.done) {
+      return Object.assign(base, {
+        group: "waiting", vs: "vs " + oppName, sub: "Waiting on " + oppName, action: "waiting",
+      });
+    }
+    return Object.assign(base, {
+      group: "turn", vs: "vs " + oppName, sub: "Your turn to play", action: "play",
+    });
+  }
+
+  function gameCard(m, info) {
+    const card = document.createElement("button");
+    card.className = "gamecard";
+    card.type = "button";
+    const main = document.createElement("div");
+    main.className = "gamecard-main";
+    const vs = document.createElement("div");
+    vs.className = "gamecard-vs";
+    vs.textContent = info.vs;
+    const sub = document.createElement("div");
+    sub.className = "gamecard-sub";
+    const diffLabel = DIFF_INFO[m.difficulty] ? DIFF_INFO[m.difficulty].label : "Medium";
+    sub.textContent = info.sub + " · " + diffLabel;
+    main.appendChild(vs);
+    main.appendChild(sub);
+    const chev = document.createElement("div");
+    chev.className = "gamecard-chev";
+    chev.textContent = "›";
+    card.appendChild(main);
+    card.appendChild(chev);
+    card.addEventListener("click", () => openMatch(m, info));
+    return card;
+  }
+
+  function renderHome(matches) {
+    const list = $("#home-list");
+    list.innerHTML = "";
+    if (matches === null) {
+      $("#home-empty").hidden = true;
+      const p = document.createElement("p");
+      p.className = "note";
+      p.textContent = "Couldn't load your games — check your connection.";
+      list.appendChild(p);
+      return;
+    }
+
+    const myUid = window.MatchDB.uid;
+    const mine = matches
+      .filter((m) => m.uids && (m.uids.p1 === myUid || m.uids.p2 === myUid))
+      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+    $("#home-empty").hidden = mine.length > 0;
+
+    const groups = { turn: [], waiting: [], done: [] };
+    mine.forEach((m) => {
+      const info = matchStatus(m);
+      groups[info.group].push({ m: m, info: info });
+    });
+
+    [["turn", "Your turn"], ["waiting", "Waiting"], ["done", "Done"]].forEach(([key, label]) => {
+      let items = groups[key];
+      if (!items.length) return;
+      if (key === "done") items = items.slice(0, 15);
+      const head = document.createElement("div");
+      head.className = "gamegroup";
+      head.textContent = label;
+      list.appendChild(head);
+      items.forEach(({ m, info }) => list.appendChild(gameCard(m, info)));
+    });
+  }
+
+  // Tapping a match card — pick up wherever it left off.
+  function openMatch(m, info) {
+    if (unwatchMatch) { unwatchMatch(); unwatchMatch = null; }
+    matchCode = m.code;
+    matchSeed = m.seed;
+    difficulty = DIFF_INFO[m.difficulty] ? m.difficulty : "medium";
+    playerSlot = info.mySlot;
+    playerName = (m[info.mySlot] && m[info.mySlot].name) || storedName || "You";
+    opponentName = (m[info.oppSlot] && m[info.oppSlot].name) || "your friend";
+    mode = "versus";
+
+    if (info.action === "invite") {
+      history.replaceState(null, "", location.pathname + "?m=" + m.code);
+      $("#vs-link").value = matchLink(m.code);
+      $("#vs-copy-note").textContent = "";
+      show("vsinvite");
+    } else if (info.action === "reveal") {
+      showVsReveal(m);
+    } else if (info.action === "waiting") {
+      showWaitingFor(m);
+    } else {
+      startSession(); // "play" — run the 3 rounds, submit at the end
+    }
+  }
+
+  // Show the "you're done, waiting on them" screen and listen for the reveal.
+  function showWaitingFor(data) {
+    const me = data[playerSlot] || {};
+    $("#vs-wait-total").textContent = me.total || 0;
+    $("#vs-wait-who").textContent = opponentName || "your friend";
+    $("#vs-wait-note").textContent = "";
+    $("#vs-wait-linkrow").hidden = playerSlot !== "p1";
+    if (playerSlot === "p1") $("#vs-wait-link").value = matchLink(matchCode);
+    show("vswaiting");
+    watchForReveal();
+  }
+
+  function watchForReveal() {
+    if (unwatchMatch) unwatchMatch();
+    unwatchMatch = window.MatchDB.watch(matchCode, (data) => {
+      if (!data) return;
+      const oppSlot = playerSlot === "p1" ? "p2" : "p1";
+      const opp = data[oppSlot];
+      if (opp && opp.done) showVsReveal(data);
+    });
   }
 
   async function submitVersusResult() {
@@ -1637,13 +1856,7 @@
       $("#vs-wait-note").textContent = "";
     }
 
-    if (unwatchMatch) unwatchMatch();
-    unwatchMatch = window.MatchDB.watch(matchCode, (data) => {
-      if (!data) return;
-      const oppSlot = playerSlot === "p1" ? "p2" : "p1";
-      const opp = data[oppSlot];
-      if (opp && opp.done) showVsReveal(data);
-    });
+    watchForReveal();
   }
 
   function showVsReveal(data) {
@@ -1722,14 +1935,25 @@
     if (btn) setDifficulty(btn.dataset.diff);
   });
 
-  // ---- versus wiring ----
+  // ---- home / versus wiring ----
+  $("#btn-home-new").addEventListener("click", () => {
+    $("#vs-name-create").value = storedName || "";
+    $("#vs-create-note").textContent = "";
+    show("vscreate");
+  });
+  $("#btn-home-solo").addEventListener("click", () => { mode = "solo"; show("start"); });
+  $("#btn-vs-invite-home").addEventListener("click", goHome);
+  $("#btn-vs-wait-home").addEventListener("click", goHome);
+  $("#btn-start-home").addEventListener("click", goHome);
+  $("#btn-over-home").addEventListener("click", goHome);
+
   $("#btn-solo").addEventListener("click", () => { mode = "solo"; show("start"); });
   $("#btn-vs").addEventListener("click", () => {
     if (!dbReady()) { $("#vs-note").hidden = false; return; }
-    $("#vs-name-create").value = "";
+    $("#vs-name-create").value = storedName || "";
     show("vscreate");
   });
-  $("#btn-vs-create-back").addEventListener("click", goLanding);
+  $("#btn-vs-create-back").addEventListener("click", goHome);
 
   $("#btn-vs-create").addEventListener("click", async () => {
     const name = $("#vs-name-create").value.trim().slice(0, 24) || "Player 1";
@@ -1802,7 +2026,7 @@
     if (e.key === "Enter") { e.preventDefault(); $("#btn-vs-join").click(); }
   });
 
-  $("#btn-vs-again").addEventListener("click", goLanding);
+  $("#btn-vs-again").addEventListener("click", goHome);
   $("#name-save").addEventListener("click", nameContinue);
   $("#name-input").addEventListener("keydown", (e) => {
     if (e.key === "Enter") { e.preventDefault(); nameContinue(); }
@@ -1819,15 +2043,19 @@
     if (code) { show("vsjoin"); loadJoinPreview(code); }
     else { show("landing"); $("#vs-note").hidden = dbReady(); }
 
-    // Once anonymous auth resolves, adopt the stored name (or ask for one).
+    // Once anonymous auth resolves, adopt the stored name (or ask for one),
+    // then swap the default landing for the My Games hub.
     if (dbReady()) {
       window.MatchDB.whenReady(async () => {
         storedName = (await window.MatchDB.getPlayerName()) || "";
-        if (storedName) {
-          prefillNames(storedName);
-        } else if (!screens.landing.hidden || !screens.vsjoin.hidden) {
-          showNameScreen(); // first run — but don't yank someone mid-flow
+        if (!storedName) {
+          if (!screens.landing.hidden || !screens.vsjoin.hidden) {
+            showNameScreen(); // first run — but don't yank someone mid-flow
+          }
+          return;
         }
+        prefillNames(storedName);
+        if (!code && !screens.landing.hidden) goHome();
       });
     }
 
