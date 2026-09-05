@@ -262,10 +262,12 @@ dropped, note if wanted). `closesAt`/`status` → closed state; join screen
 finish-order array for stable tie-ranking. Head-to-head reveal keeps its
 watches alive (2→3 flip). Verified on real Firestore.
 
-**Phase D — My Games polish.**
-Group-aware `matchStatus`, "you're 2nd of 4" cards, turnout counts on the join
-screen, auto-archive of Final / idle games into an "Older" group. Test the card
-copy across all states.
+**Phase D — My Games polish. ✅ SHIPPED (a2edb39).**
+Group-aware `matchStatus` (labels "vs Sam" / "Your game" / "Mom's game"; live
+"You're 2nd so far · 2/3 done"; done "Finished 2nd of 5"); home groups
+Your turn / In progress / Done / Older; closed + week-idle games → dimmed
+`.gamecard.dim` "Older" group (cap 10). Verified host + non-host views on real
+Firestore. **All four phases shipped — group mode is complete.**
 
 **Later / out of scope:** push notification triggers (step 3) fire naturally on
 `entrants` create ("Sam joined") and finish ("Sam scored 11") — wire when step 3
