@@ -411,6 +411,31 @@
   .gamecard-sub { font-size: 0.8rem; color: var(--muted); }
   .gamecard-chev { color: var(--muted); font-size: 1.3rem; line-height: 1; flex-shrink: 0; }
 
+  /* Group leaderboard */
+  .lb-list { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+  .lb-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    font: inherit;
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+  }
+  .lb-row.me { border-color: var(--accent); }
+  .lb-row.pending { opacity: 0.55; cursor: default; }
+  .lb-rank { min-width: 1.4em; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--muted); }
+  .lb-row.me .lb-rank { color: var(--accent); }
+  .lb-name { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lb-score { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .lb-row.pending .lb-score { font-weight: 400; font-size: 0.8rem; color: var(--muted); }
+  .lb-detail { width: 100%; padding: 2px 4px 8px; }
+
   .diffrow { display: flex; gap: 8px; width: 100%; }
   .diffbtn {
     flex: 1;
@@ -514,6 +539,20 @@
       </div>
       <p class="note" id="vs-wait-note"></p>
       <button class="linkbtn" id="btn-vs-wait-home" type="button">&larr; My games</button>
+    </section>
+
+    <!-- GROUP: live leaderboard (3+ players) -->
+    <section id="screen-leaderboard" hidden>
+      <h2 id="lb-title" style="margin:0;font-size:1.3rem;">Standings</h2>
+      <p class="note" id="lb-status"></p>
+      <div class="lb-list" id="lb-list"></div>
+      <p class="note" id="lb-foot"></p>
+      <div class="linkrow" id="lb-linkrow" hidden>
+        <input class="nameinput" id="lb-link" type="text" readonly>
+        <button class="ghost" id="btn-lb-copy" type="button">Copy</button>
+      </div>
+      <button class="ghost" id="btn-lb-close" type="button" hidden>Close game now</button>
+      <button class="linkbtn" id="btn-lb-home" type="button">&larr; My games</button>
     </section>
 
     <!-- VS: reveal -->
@@ -1107,6 +1146,7 @@
     vsinvite: $("#screen-vs-invite"),
     vsjoin: $("#screen-vs-join"),
     vswaiting: $("#screen-vs-waiting"),
+    leaderboard: $("#screen-leaderboard"),
     vsreveal: $("#screen-vs-reveal"),
     start: $("#screen-start"),
     play: $("#screen-play"),
@@ -1890,9 +1930,9 @@
     }
   }
 
-  // Live view of a game's results: the 2-player head-to-head reveal once both
-  // are done, otherwise the "you're done, others still playing" holding screen.
-  // (Phase B swaps the holding screen for a real N-player leaderboard.)
+  // Live view of a game's results: a 2-player game holds on #screen-vs-waiting
+  // and flips to the head-to-head reveal once both are done; a 3+ game shows the
+  // live leaderboard.
   function openResults() {
     teardownMatchWatches();
     unwatchMatch = window.MatchDB.watch(matchCode, (meta) => {
@@ -1904,36 +1944,117 @@
     });
   }
 
+  function groupSize() {
+    if (matchMeta && matchMeta.playerUids) return matchMeta.playerUids.length;
+    return Math.max(matchEntrants.length, 1);
+  }
+
   function renderResults() {
     const entrants = matchEntrants;
-    const total = (matchMeta && matchMeta.playerUids) ? matchMeta.playerUids.length : entrants.length;
+    const total = groupSize();
     const doneCount = entrants.filter((e) => e.done).length;
 
-    if (total === 2 && doneCount === 2) { showVsReveal(entrants); return; }
+    if (total === 2) {
+      if (doneCount === 2) { showVsReveal(entrants); return; }
+      renderTwoPlayerWait(entrants);
+      return;
+    }
+    renderLeaderboard(entrants, total);
+  }
 
+  // 2-player holding screen — you're done, the one other person isn't.
+  function renderTwoPlayerWait(entrants) {
     const myUid = window.MatchDB.uid;
     const me = entrants.find((e) => e.uid === myUid) || {};
+    const opp = entrants.find((e) => e.uid !== myUid);
     const iHost = matchMeta && matchMeta.host === myUid;
     $("#vs-wait-linkrow").hidden = !iHost;
     if (iHost) $("#vs-wait-link").value = matchLink(matchCode);
-    if (total === 2) {
-      const opp = entrants.find((e) => e.uid !== myUid);
-      $("#vs-wait-lede").textContent = "You solved " + (me.total || 0) +
-        " words. Results unlock once " + ((opp && opp.name) || opponentName || "your friend") + " finishes too.";
-      $("#vs-wait-note").textContent = "";
-    } else {
-      // Phase A holding view for 3+ players; Phase B replaces this with a real
-      // leaderboard screen.
-      const board = entrants.filter((e) => e.done).sort((a, b) => (b.total || 0) - (a.total || 0));
-      const rank = board.findIndex((e) => e.uid === myUid) + 1;
-      const still = total - doneCount;
-      $("#vs-wait-lede").textContent = "You solved " + (me.total || 0) + " words — " +
-        ordinal(rank) + " of " + board.length + (still > 0 ? " so far" : "") + ".";
-      $("#vs-wait-note").textContent = still > 0
-        ? (still + (still === 1 ? " player is" : " players are") + " still going.")
-        : "Everyone's finished.";
-    }
+    $("#vs-wait-lede").textContent = "You solved " + (me.total || 0) +
+      " words. Results unlock once " + ((opp && opp.name) || opponentName || "your friend") + " finishes too.";
+    $("#vs-wait-note").textContent = "";
     show("vswaiting");
+  }
+
+  function closesInText() {
+    if (matchMeta && matchMeta.status === "closed") return "closed by the host";
+    const at = matchMeta && matchMeta.closesAt;
+    if (!at) return "no deadline";
+    const ms = at - Date.now();
+    if (ms <= 0) return "closed";
+    const h = Math.round(ms / 3600000);
+    if (h < 1) return "closing within the hour";
+    if (h < 24) return "closes in " + h + "h";
+    return "closes in " + Math.round(h / 24) + "d";
+  }
+
+  function lbRow(rank, e, isMe) {
+    const row = document.createElement("div");
+    row.className = "lb-row" + (isMe ? " me" : "") + (rank === null ? " pending" : "");
+    const r = document.createElement("div");
+    r.className = "lb-rank";
+    r.textContent = rank === null ? "·" : rank;
+    const nm = document.createElement("div");
+    nm.className = "lb-name";
+    nm.textContent = (e.name || "?") + (isMe ? " (you)" : "");
+    const sc = document.createElement("div");
+    sc.className = "lb-score";
+    sc.textContent = rank === null ? "playing…" : (e.total || 0);
+    row.appendChild(r);
+    row.appendChild(nm);
+    row.appendChild(sc);
+    if (rank !== null) row.addEventListener("click", () => toggleLbDetail(row, e));
+    return row;
+  }
+
+  function toggleLbDetail(row, e) {
+    const open = row.nextElementSibling && row.nextElementSibling.classList.contains("lb-detail");
+    document.querySelectorAll(".lb-detail").forEach((d) => d.remove());
+    if (open) return;
+    const d = document.createElement("div");
+    d.className = "lb-detail";
+    const rounds = document.createElement("div");
+    rounds.className = "rounds";
+    renderRoundsBlock(rounds, e.roundWords || []);
+    d.appendChild(rounds);
+    row.after(d);
+  }
+
+  function renderLeaderboard(entrants, total) {
+    const myUid = window.MatchDB.uid;
+    const closed = matchIsClosed(matchMeta);
+    const done = entrants.filter((e) => e.done).sort((a, b) =>
+      (b.total || 0) - (a.total || 0) || (a.finishedAt || 0) - (b.finishedAt || 0));
+    const pending = entrants.filter((e) => !e.done);
+    const me = entrants.find((e) => e.uid === myUid);
+    const iDone = !!(me && me.done);
+    const iHost = !!(matchMeta && matchMeta.host === myUid);
+
+    const diffLabel = DIFF_INFO[difficulty] ? DIFF_INFO[difficulty].label : "Medium";
+    $("#lb-title").textContent = closed ? "Final standings" : "Standings";
+    $("#lb-status").textContent = diffLabel + " · " + closesInText();
+
+    const list = $("#lb-list");
+    list.innerHTML = "";
+    done.forEach((e, i) => list.appendChild(lbRow(i + 1, e, e.uid === myUid)));
+    if (!closed) pending.forEach((e) => list.appendChild(lbRow(null, e, e.uid === myUid)));
+
+    let foot;
+    if (closed) {
+      const dnf = Math.max(0, total - done.length);
+      foot = dnf > 0 ? (dnf + (dnf === 1 ? " player didn't finish" : " players didn't finish")) : "Everyone finished.";
+    } else {
+      foot = done.length + " finished · " + pending.length + " still playing";
+      if (!iDone) foot += " — finish your game to join the board";
+    }
+    $("#lb-foot").textContent = foot;
+
+    $("#lb-linkrow").hidden = !(iHost && !closed);
+    if (iHost && !closed) $("#lb-link").value = matchLink(matchCode);
+    $("#btn-lb-close").hidden = !(iHost && !closed);
+    $("#btn-lb-close").textContent = "Close game now";
+
+    show("leaderboard");
   }
 
   async function submitVersusResult() {
@@ -2044,6 +2165,30 @@
   $("#btn-vs-wait-home").addEventListener("click", goHome);
   $("#btn-start-home").addEventListener("click", goHome);
   $("#btn-over-home").addEventListener("click", goHome);
+  $("#btn-lb-home").addEventListener("click", goHome);
+  $("#btn-lb-copy").addEventListener("click", () => {
+    navigator.clipboard.writeText($("#lb-link").value)
+      .then(() => { $("#lb-foot").textContent = "Link copied!"; })
+      .catch(() => {});
+  });
+
+  // Two-tap confirm so an accidental tap can't end the game early.
+  let lbCloseArmed = false;
+  $("#btn-lb-close").addEventListener("click", async () => {
+    if (!lbCloseArmed) {
+      lbCloseArmed = true;
+      $("#btn-lb-close").textContent = "Tap again to close it for everyone";
+      setTimeout(() => {
+        lbCloseArmed = false;
+        if ($("#btn-lb-close")) $("#btn-lb-close").textContent = "Close game now";
+      }, 4000);
+      return;
+    }
+    lbCloseArmed = false;
+    $("#btn-lb-close").disabled = true;
+    try { await window.MatchDB.closeMatch(matchCode); } catch (e) {}
+    $("#btn-lb-close").disabled = false;
+  });
 
   $("#btn-solo").addEventListener("click", () => { mode = "solo"; show("start"); });
   $("#btn-vs").addEventListener("click", () => {
