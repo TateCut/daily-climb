@@ -406,6 +406,8 @@
     cursor: pointer;
   }
   .gamecard:hover { border-color: var(--accent); }
+  .gamecard.dim { opacity: 0.6; }
+  .gamecard.dim:hover { opacity: 1; }
   .gamecard-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
   .gamecard-vs { font-weight: 650; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .gamecard-sub { font-size: 0.8rem; color: var(--muted); }
@@ -477,10 +479,10 @@
     <section id="screen-home" hidden>
       <p class="note whoami" id="home-whoami" hidden></p>
       <div class="homeactions">
-        <button class="primary" id="btn-home-new" type="button">+ New match</button>
+        <button class="primary" id="btn-home-new" type="button">+ New game</button>
         <button class="ghost" id="btn-home-solo" type="button">Play solo</button>
       </div>
-      <p class="note" id="home-empty" hidden>No games yet. Start a match, then send a friend the invite link.</p>
+      <p class="note" id="home-empty" hidden>No games yet. Start one and send the link to your family or friends.</p>
       <div id="home-list"></div>
     </section>
 
@@ -1819,59 +1821,72 @@
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
   }
 
+  const IDLE_MS = 7 * 86400000; // a no-deadline game with no activity this long tucks into "Older"
+
+  function twoVerdict(results, me, opp) {
+    const mt = results[me] || 0, ot = results[opp] || 0;
+    return (mt === ot ? "Tied " : mt > ot ? "You won " : "You lost ") + mt + "–" + ot;
+  }
+
   // Work out, for the signed-in player, where a game stands. `m` is a parent
-  // matches/{code} doc (playerUids / lateUids / names / results / closesAt / status).
+  // matches/{code} doc (playerUids / lateUids / doneUids / names / results / closesAt / status).
   function matchStatus(m) {
     const myUid = window.MatchDB.uid;
     const lateSet = {};
     (m.lateUids || []).forEach((u) => { lateSet[u] = true; });
-    const uids = (m.playerUids || []).filter((u) => !lateSet[u]);   // the official roster
+    const roster = (m.playerUids || []).filter((u) => !lateSet[u]); // official players only
     const names = m.names || {};
     const results = m.results || {};
-    const total = uids.length;
-    const rankedUids = Object.keys(results).filter((u) => !lateSet[u]);
+    const order = m.doneUids || [];
+    const total = roster.length;
+
+    const ranked = order.filter((u) => !lateSet[u] && (u in results));
+    Object.keys(results).forEach((u) => { if (!lateSet[u] && ranked.indexOf(u) < 0) ranked.push(u); });
+    ranked.sort((a, b) => (results[b] - results[a]) || (order.indexOf(a) - order.indexOf(b)));
+
     const iFinished = Object.prototype.hasOwnProperty.call(results, myUid);
     const iLate = !!lateSet[myUid];
-    const others = uids.filter((u) => u !== myUid);
+    const iHost = m.host === myUid;
+    const closed = matchIsClosed(m);
+    const others = roster.filter((u) => u !== myUid);
     const twoP = total === 2 && !iLate;
     const oppName = twoP ? (names[others[0]] || "your friend") : null;
-    const label = twoP ? ("vs " + oppName) : (total < 2 ? "Group game" : (total + "-player game"));
-    const closed = matchIsClosed(m);
+    const stale = !closed && !m.closesAt && (Date.now() - (m.updatedAt || 0) > IDLE_MS);
+
+    const label = twoP ? ("vs " + oppName)
+      : iHost ? "Your game"
+      : ((names[m.host] || "A friend") + "'s game");
+    const count = total + (total === 1 ? " player" : " players");
+    const myRank = () => "Finished " + ordinal(ranked.indexOf(myUid) + 1) + " of " + ranked.length;
 
     if (iLate) {
       if (!iFinished) return { group: "turn", vs: label, sub: "Play for fun", action: "play" };
-      return { group: "done", vs: label, sub: "Played for fun — " + (results[myUid] || 0) + " words", action: "open" };
+      return { group: "older", vs: label, sub: "Played for fun · " + (results[myUid] || 0) + " words", action: "open" };
     }
-    if (closed && !iFinished) {
-      return { group: "done", vs: label, sub: "Closed — you didn't play", action: "open" };
+    if (closed) {
+      if (!iFinished) return { group: "older", vs: label, sub: "Closed — you didn't play", action: "open" };
+      return { group: "older", vs: label, sub: twoP ? twoVerdict(results, myUid, others[0]) : myRank(), action: "open" };
     }
     if (total <= 1 && !iFinished) {
-      return { group: "waiting", vs: "Waiting for players", sub: "Tap for the invite link", action: "invite" };
+      return { group: "turn", vs: label, sub: "Waiting for players — tap to share", action: "invite" };
     }
     if (!iFinished) {
-      return { group: "turn", vs: label, sub: "Your turn to play", action: "play" };
+      return { group: "turn", vs: label, sub: twoP ? "Your turn to play" : ("Your turn · " + count), action: "play" };
     }
-    if (rankedUids.length < total && !closed) {
+    if (ranked.length < total) {
       const sub = twoP ? ("Waiting on " + oppName)
-        : (rankedUids.length + " of " + total + " finished");
-      return { group: "waiting", vs: label, sub: sub, action: "open" };
+        : ("You're " + ordinal(ranked.indexOf(myUid) + 1) + " so far · " + ranked.length + "/" + total + " done");
+      return { group: "live", vs: label, sub: sub, action: "open" };
     }
-    // Everyone's done, or the game closed with me among the finishers.
-    if (twoP) {
-      const mt = results[myUid] || 0, ot = results[others[0]] || 0;
-      const verdict = (mt === ot ? "Tied " : mt > ot ? "You won " : "You lost ") + mt + "–" + ot;
-      return { group: "done", vs: label, sub: verdict, action: "open" };
-    }
-    const order = m.doneUids || [];
-    const sorted = rankedUids.slice().sort((a, b) =>
-      (results[b] - results[a]) || (order.indexOf(a) - order.indexOf(b)));
-    const rank = sorted.indexOf(myUid) + 1;
-    return { group: "done", vs: label, sub: ordinal(rank) + " of " + rankedUids.length, action: "open" };
+    // Everyone's done.
+    const g = stale ? "older" : "done";
+    if (twoP) return { group: g, vs: label, sub: twoVerdict(results, myUid, others[0]), action: "open" };
+    return { group: g, vs: label, sub: myRank(), action: "open" };
   }
 
-  function gameCard(m, info) {
+  function gameCard(m, info, dim) {
     const card = document.createElement("button");
-    card.className = "gamecard";
+    card.className = "gamecard" + (dim ? " dim" : "");
     card.type = "button";
     const main = document.createElement("div");
     main.className = "gamecard-main";
@@ -1912,21 +1927,22 @@
 
     $("#home-empty").hidden = mine.length > 0;
 
-    const groups = { turn: [], waiting: [], done: [] };
+    const groups = { turn: [], live: [], done: [], older: [] };
     mine.forEach((m) => {
       const info = matchStatus(m);
-      groups[info.group].push({ m: m, info: info });
+      (groups[info.group] || groups.older).push({ m: m, info: info });
     });
 
-    [["turn", "Your turn"], ["waiting", "Waiting"], ["done", "Done"]].forEach(([key, label]) => {
+    [["turn", "Your turn"], ["live", "In progress"], ["done", "Done"], ["older", "Older"]].forEach(([key, label]) => {
       let items = groups[key];
       if (!items.length) return;
       if (key === "done") items = items.slice(0, 15);
+      if (key === "older") items = items.slice(0, 10);
       const head = document.createElement("div");
       head.className = "gamegroup";
       head.textContent = label;
       list.appendChild(head);
-      items.forEach(({ m, info }) => list.appendChild(gameCard(m, info)));
+      items.forEach(({ m, info }) => list.appendChild(gameCard(m, info, key === "older")));
     });
   }
 
