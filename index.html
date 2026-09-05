@@ -2060,7 +2060,17 @@
     }
 
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("sw.js").catch(() => {});
+      // A new SW calls skipWaiting + clients.claim, which fires controllerchange
+      // here — reload once so the freshly fetched page is the one on screen.
+      let swReloaded = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (swReloaded) return;
+        swReloaded = true;
+        location.reload();
+      });
+      navigator.serviceWorker.register("sw.js")
+        .then((reg) => { try { reg.update(); } catch (e) {} })
+        .catch(() => {});
     }
 
     setTimeout(() => {
