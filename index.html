@@ -2,8 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>3-2-1</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1c1917">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="3·2·1">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
 <style>
   :root {
     --bg: #f5f5f4;
@@ -400,8 +407,17 @@
   <main>
     <h1>3&middot;2&middot;1</h1>
 
+    <!-- NAME (first run / edit) -->
+    <section id="screen-name" hidden>
+      <p class="lede" id="name-lede">What should your friends see you as? You can change it later.</p>
+      <input class="nameinput" id="name-input" type="text" placeholder="Your name" maxlength="24" autocomplete="off">
+      <button class="primary" id="name-save" type="button">Continue</button>
+      <p class="note" id="name-note"></p>
+    </section>
+
     <!-- LANDING -->
     <section id="screen-landing">
+      <p class="note" id="landing-whoami" hidden></p>
       <p class="lede">Play solo against the clock, or challenge a friend to the same letters &mdash; results are revealed once you've both finished.</p>
       <button class="primary" id="btn-solo" type="button">Play Solo</button>
       <button class="ghost" id="btn-vs" type="button">Play a Friend</button>
@@ -410,7 +426,7 @@
 
     <!-- VS: create a match -->
     <section id="screen-vs-create" hidden>
-      <p class="lede">You and your friend get the exact same letters, all 3 rounds. Enter your name to create the match:</p>
+      <p class="lede">You and your friend get the exact same letters, all 3 rounds. Pick a difficulty and create the match:</p>
       <input class="nameinput" id="vs-name-create" type="text" placeholder="Your name" maxlength="24" autocomplete="off">
       <div class="diffrow" id="diff-picker-vs">
         <button class="diffbtn" data-diff="easy" type="button">Easy</button>
@@ -547,17 +563,35 @@
   // Friend" is disabled — solo play works either way.
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
   import {
-    getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, serverTimestamp,
+    getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, serverTimestamp, arrayUnion,
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+  import {
+    getAuth, signInAnonymously, onAuthStateChanged,
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
   const cfg = window.THREE21_FIREBASE_CONFIG;
-  let db = null;
+  let db = null, auth = null;
   if (cfg && cfg.apiKey && cfg.apiKey !== "REPLACE_ME") {
     try {
-      db = getFirestore(initializeApp(cfg));
+      const app = initializeApp(cfg);
+      db = getFirestore(app);
+      auth = getAuth(app);
     } catch (e) {
-      db = null;
+      db = null; auth = null;
     }
+  }
+
+  // Anonymous identity: each device gets a stable uid (persisted by the SDK)
+  // once Anonymous Auth is enabled in the Firebase console. Until it is, `uid`
+  // stays null and the game falls back to name-per-match with no history.
+  let uid = null;
+  const readyWaiters = [];
+  if (auth) {
+    signInAnonymously(auth).catch(() => {});
+    onAuthStateChanged(auth, (user) => {
+      uid = user ? user.uid : null;
+      if (uid) readyWaiters.splice(0).forEach((fn) => { try { fn(uid); } catch (e) {} });
+    });
   }
 
   const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I — easy to read aloud
@@ -593,17 +627,42 @@
 
   window.MatchDB = {
     ready: !!db,
+    get uid() { return uid; },
+    get hasAuth() { return !!uid; },
+
+    // Calls cb(uid) once signed in; if auth isn't available, never fires.
+    whenReady(cb) {
+      if (uid) cb(uid);
+      else if (auth) readyWaiters.push(cb);
+    },
+
+    async getPlayerName() {
+      if (!uid) return null;
+      try {
+        const snap = await getDoc(doc(db, "players", uid));
+        return snap.exists() ? (snap.data().name || null) : null;
+      } catch (e) { return null; }
+    },
+    async savePlayerName(name) {
+      if (!uid) return;
+      try {
+        await setDoc(doc(db, "players", uid), { name: name, updatedAt: Date.now() }, { merge: true });
+      } catch (e) {}
+    },
 
     async createMatch(name, difficulty) {
       const code = genCode();
       const seed = genSeed();
-      await setDoc(doc(db, "matches", code), {
+      const base = {
         seed,
         difficulty: difficulty || "medium",
         createdAt: serverTimestamp(),
+        updatedAt: Date.now(),
         p1: { name: name, done: false, total: 0, roundWords: [] },
         p2: null,
-      });
+      };
+      if (uid) { base.players = [uid]; base.uids = { p1: uid }; }
+      await setDoc(doc(db, "matches", code), base);
       return { code: code, seed: seed };
     },
 
@@ -617,8 +676,20 @@
       const snap = await getDoc(ref);
       if (!snap.exists()) return null;
       const data = snap.data();
+
+      // Re-opening a match I'm already part of — just hand it back.
+      if (uid && data.uids && (data.uids.p1 === uid || data.uids.p2 === uid)) {
+        return unwrapMatch(data);
+      }
       if (!data.p2) {
-        await updateDoc(ref, { p2: { name: name, done: false, total: 0, roundWords: [] } });
+        const patch = {
+          p2: { name: name, done: false, total: 0, roundWords: [] },
+          updatedAt: Date.now(),
+        };
+        if (uid) { patch["uids.p2"] = uid; patch.players = arrayUnion(uid); }
+        await updateDoc(ref, patch);
+        data.p2 = patch.p2;
+        if (uid) data.uids = Object.assign({}, data.uids, { p2: uid });
       }
       return unwrapMatch(data);
     },
@@ -630,6 +701,7 @@
       patch[slot + ".total"] = total;
       patch[slot + ".roundWords"] = wrapRoundWords(roundWords);
       patch[slot + ".finishedAt"] = Date.now();
+      patch.updatedAt = Date.now();
       await updateDoc(ref, patch);
     },
 
@@ -689,6 +761,8 @@
   let opponentName = "";
   let dictReady = false;
   let unwatchMatch = null;
+  let storedName = "";      // persistent display name (players/{uid}), once auth resolves
+  let pendingMatchCode = null;
 
   let WORD_SET = null;
   let ANA = null;          // sorted-letters key -> array of words with those letters
@@ -914,6 +988,7 @@
   const extraWords = new Map();         // word -> true/false, verified via Datamuse
 
   const screens = {
+    name: $("#screen-name"),
     landing: $("#screen-landing"),
     vscreate: $("#screen-vs-create"),
     vsinvite: $("#screen-vs-invite"),
@@ -1465,17 +1540,77 @@
     return !!(window.MatchDB && window.MatchDB.ready);
   }
 
+  // ---- identity ----
+  function prefillNames(name) {
+    if (name) {
+      $("#vs-name-create").value = name;
+      $("#vs-name-join").value = name;
+    }
+    const el = $("#landing-whoami");
+    if (name) {
+      el.textContent = "";
+      el.appendChild(document.createTextNode("Playing as "));
+      const b = document.createElement("b"); b.textContent = name; el.appendChild(b);
+      el.appendChild(document.createTextNode(" · "));
+      const btn = document.createElement("button");
+      btn.className = "linkbtn"; btn.type = "button"; btn.textContent = "change";
+      btn.addEventListener("click", showNameScreen);
+      el.appendChild(btn);
+      el.hidden = false;
+    } else {
+      el.hidden = true;
+    }
+  }
+
+  function showNameScreen() {
+    $("#name-input").value = storedName || "";
+    $("#name-note").textContent = "";
+    $("#name-lede").textContent = pendingMatchCode
+      ? "You've been challenged! Pick a name your friend will see."
+      : "What should your friends see you as? You can change it later.";
+    show("name");
+    $("#name-input").focus();
+  }
+
+  async function nameContinue() {
+    const val = $("#name-input").value.trim().slice(0, 24);
+    if (!val) { $("#name-note").textContent = "Enter a name to continue."; return; }
+    $("#name-save").disabled = true;
+    storedName = val;
+    playerName = val;
+    if (window.MatchDB) await window.MatchDB.savePlayerName(val);
+    $("#name-save").disabled = false;
+    prefillNames(val);
+    if (pendingMatchCode) { show("vsjoin"); loadJoinPreview(pendingMatchCode); }
+    else { show("landing"); $("#vs-note").hidden = dbReady(); }
+  }
+
+  function loadJoinPreview(code) {
+    if (!dbReady()) { $("#vs-join-note").textContent = "Multiplayer isn't set up on this site yet."; return; }
+    window.MatchDB.getMatch(code).then((data) => {
+      if (data && data.p1) {
+        $("#vs-join-lede").textContent = data.p1.name + " has challenged you to 3·2·1!";
+        const d = DIFF_INFO[data.difficulty] ? data.difficulty : "medium";
+        $("#vs-join-diff").textContent = "Difficulty: " + DIFF_INFO[d].label;
+      } else if (!data) {
+        $("#vs-join-note").textContent = "That invite link isn't valid.";
+      }
+    });
+  }
+
   function goLanding() {
     if (unwatchMatch) { unwatchMatch(); unwatchMatch = null; }
     mode = "solo";
     matchCode = null;
     matchSeed = 0;
     playerSlot = null;
-    playerName = "";
+    playerName = storedName || "";
     opponentName = "";
+    pendingMatchCode = null;
     history.replaceState(null, "", location.pathname);
     show("landing");
     $("#vs-note").hidden = dbReady();
+    prefillNames(storedName);
   }
 
   async function submitVersusResult() {
@@ -1607,6 +1742,7 @@
       playerSlot = "p1";
       playerName = name;
       opponentName = "";
+      if (name !== storedName) { storedName = name; window.MatchDB.savePlayerName(name); prefillNames(name); }
       history.replaceState(null, "", location.pathname + "?m=" + code);
       $("#vs-link").value = matchLink(code);
       $("#vs-copy-note").textContent = "";
@@ -1649,9 +1785,12 @@
       }
       matchSeed = data.seed;
       difficulty = DIFF_INFO[data.difficulty] ? data.difficulty : "medium";
-      playerSlot = "p2";
+      playerSlot = (data.uids && data.uids.p1 === window.MatchDB.uid) ? "p1" : "p2";
       playerName = name;
-      opponentName = (data.p1 && data.p1.name) || "your friend";
+      opponentName = playerSlot === "p2"
+        ? ((data.p1 && data.p1.name) || "your friend")
+        : ((data.p2 && data.p2.name) || "your friend");
+      if (name !== storedName) { storedName = name; window.MatchDB.savePlayerName(name); prefillNames(name); }
       mode = "versus";
       startSession();
     } catch (e) {
@@ -1664,30 +1803,36 @@
   });
 
   $("#btn-vs-again").addEventListener("click", goLanding);
+  $("#name-save").addEventListener("click", nameContinue);
+  $("#name-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); nameContinue(); }
+  });
 
   window.addEventListener("DOMContentLoaded", () => {
     setDifficulty("medium");
 
     const code = urlMatchCode();
-    if (code) {
-      matchCode = code;
-      show("vsjoin");
-      if (dbReady()) {
-        window.MatchDB.getMatch(code).then((data) => {
-          if (data && data.p1) {
-            $("#vs-join-lede").textContent = data.p1.name + " has challenged you to 3·2·1!";
-            const d = DIFF_INFO[data.difficulty] ? data.difficulty : "medium";
-            $("#vs-join-diff").textContent = "Difficulty: " + DIFF_INFO[d].label;
-          } else if (!data) {
-            $("#vs-join-note").textContent = "That invite link isn't valid.";
-          }
-        });
-      } else {
-        $("#vs-join-note").textContent = "Multiplayer isn't set up on this site yet.";
-      }
-    } else {
-      show("landing");
-      $("#vs-note").hidden = dbReady();
+    pendingMatchCode = code || null;
+    if (code) matchCode = code;
+
+    // Fast first paint — land somewhere sensible immediately.
+    if (code) { show("vsjoin"); loadJoinPreview(code); }
+    else { show("landing"); $("#vs-note").hidden = dbReady(); }
+
+    // Once anonymous auth resolves, adopt the stored name (or ask for one).
+    if (dbReady()) {
+      window.MatchDB.whenReady(async () => {
+        storedName = (await window.MatchDB.getPlayerName()) || "";
+        if (storedName) {
+          prefillNames(storedName);
+        } else if (!screens.landing.hidden || !screens.vsjoin.hidden) {
+          showNameScreen(); // first run — but don't yank someone mid-flow
+        }
+      });
+    }
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
     }
 
     setTimeout(() => {
