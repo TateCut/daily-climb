@@ -438,6 +438,26 @@
   .lb-row.pending .lb-score { font-weight: 400; font-size: 0.8rem; color: var(--muted); }
   .lb-detail { width: 100%; padding: 2px 4px 8px; }
 
+  /* Tutorial */
+  .tut-card {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 14px; width: 100%; min-height: 250px;
+  }
+  .tut-visual { min-height: 92px; display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+  .tut-h { margin: 0; font-size: 1.35rem; }
+  .tut-dots { display: flex; gap: 7px; }
+  .tut-dot { width: 7px; height: 7px; border-radius: 999px; background: var(--line); }
+  .tut-dot.on { background: var(--accent); }
+  .tut-tile {
+    width: 36px; height: 42px; display: flex; align-items: center; justify-content: center;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+    font-weight: 700; font-size: 1.15rem; text-transform: uppercase;
+  }
+  .tut-tile.accent { border-color: var(--accent); color: var(--accent); }
+  .tut-slot { width: 36px; height: 42px; border: 1px dashed var(--line); border-radius: 8px; }
+  .tut-arrow { color: var(--muted); font-size: 1.3rem; }
+  .tut-big { font-size: 1.5rem; font-weight: 700; letter-spacing: 0.08em; color: var(--accent); }
+
   .diffrow { display: flex; gap: 8px; width: 100%; }
   .diffbtn {
     flex: 1;
@@ -475,6 +495,20 @@
       <p class="note" id="name-note"></p>
     </section>
 
+    <!-- TUTORIAL (first run, or "How to play") -->
+    <section id="screen-tutorial" hidden>
+      <div class="tut-card">
+        <div class="tut-visual" id="tut-visual"></div>
+        <h2 class="tut-h" id="tut-h"></h2>
+        <p class="lede" id="tut-p"></p>
+      </div>
+      <div class="tut-dots" id="tut-dots"></div>
+      <div class="btnrow">
+        <button class="ghost" id="tut-skip" type="button">Skip</button>
+        <button class="primary" id="tut-next" type="button">Next</button>
+      </div>
+    </section>
+
     <!-- MY GAMES (home hub, once signed in with a name) -->
     <section id="screen-home" hidden>
       <p class="note whoami" id="home-whoami" hidden></p>
@@ -484,6 +518,7 @@
       </div>
       <p class="note" id="home-empty" hidden>No games yet. Start one and send the link to your family or friends.</p>
       <div id="home-list"></div>
+      <button class="linkbtn" id="btn-home-howto" type="button">How to play</button>
     </section>
 
     <!-- LANDING (fallback when there's no backend / no sign-in) -->
@@ -579,16 +614,7 @@
 
     <!-- START (solo) -->
     <section id="screen-start" hidden>
-      <p class="lede">Rearrange the letter pool into a real word before the timer runs out. Every stage the pool grows &mdash; and you have to use <b>every</b> letter.</p>
-      <ol class="rules">
-        <li>Stage 1: <b>3</b> letters &rarr; make a 3-letter word.</li>
-        <li>Stage 2: <b>+2</b> letters &rarr; make a 5-letter word.</li>
-        <li>Stage 3: <b>+1</b> letter &rarr; make a 6-letter word.</li>
-        <li>Every stage after that: <b>+1</b> letter, one longer word.</li>
-      </ol>
-      <p class="lede">Click a letter to move it into your word, click it again to send it back, and drag letters to reorder. Press <b>Enter</b> to submit.</p>
-      <p class="lede">Time left when you solve a word carries over to the next one, so solving fast banks you extra time.</p>
-      <p class="lede">You play <b>3 rounds</b>. Your score is the total words solved across all three.</p>
+      <div class="rowlabel">Difficulty</div>
       <div class="diffrow" id="diff-picker">
         <button class="diffbtn" data-diff="easy" type="button">Easy</button>
         <button class="diffbtn" data-diff="medium" type="button">Medium</button>
@@ -598,6 +624,7 @@
       <p class="lede">Best total: <b id="best-start">0</b> words.</p>
       <button class="primary" id="btn-start" disabled>Loading&hellip;</button>
       <p class="note" id="load-note">Loading dictionary&hellip;</p>
+      <button class="linkbtn" id="btn-start-howto" type="button">How to play</button>
       <button class="linkbtn tomenu" id="btn-start-home" type="button" hidden>&larr; My games</button>
     </section>
 
@@ -749,17 +776,28 @@
       else if (auth) readyWaiters.push(cb);
     },
 
-    async getPlayerName() {
+    // The players/{uid} profile — { name, tutorialSeen } — or null.
+    async getPlayer() {
       if (!uid) return null;
       try {
         const snap = await getDoc(doc(db, "players", uid));
-        return snap.exists() ? (snap.data().name || null) : null;
+        return snap.exists() ? snap.data() : null;
       } catch (e) { return null; }
+    },
+    async getPlayerName() {
+      const p = await this.getPlayer();
+      return (p && p.name) || null;
     },
     async savePlayerName(name) {
       if (!uid) return;
       try {
         await setDoc(doc(db, "players", uid), { name: name, updatedAt: Date.now() }, { merge: true });
+      } catch (e) {}
+    },
+    async markTutorialSeen() {
+      if (!uid) return;
+      try {
+        await setDoc(doc(db, "players", uid), { tutorialSeen: true }, { merge: true });
       } catch (e) {}
     },
 
@@ -929,6 +967,7 @@
   let unwatchEntrants = null;
   let unwatchHome = null;
   let storedName = "";      // persistent display name (players/{uid}), once auth resolves
+  let tutorialSeen = false; // players/{uid}.tutorialSeen, or the localStorage fallback
   let pendingMatchCode = null;
 
   let WORD_SET = null;
@@ -1156,6 +1195,7 @@
 
   const screens = {
     name: $("#screen-name"),
+    tutorial: $("#screen-tutorial"),
     home: $("#screen-home"),
     landing: $("#screen-landing"),
     vscreate: $("#screen-vs-create"),
@@ -1742,14 +1782,87 @@
   async function nameContinue() {
     const val = $("#name-input").value.trim().slice(0, 24);
     if (!val) { $("#name-note").textContent = "Enter a name to continue."; return; }
+    const firstEver = !storedName;
     $("#name-save").disabled = true;
     storedName = val;
     playerName = val;
     if (window.MatchDB) await window.MatchDB.savePlayerName(val);
     $("#name-save").disabled = false;
     prefillNames(val);
+    if (firstEver && !tutorialSeen) { showTutorial(); return; }
+    afterNameOrTutorial();
+  }
+  function afterNameOrTutorial() {
     if (pendingMatchCode) { show("vsjoin"); loadJoinPreview(pendingMatchCode); }
     else goHome();
+  }
+
+  // ---- tutorial ----
+  const TUTORIAL = [
+    {
+      h: "Make a word",
+      p: "You're handed a small pool of letters. Rearrange all of them into a real word before the timer runs out.",
+      visual: "pool",
+    },
+    {
+      h: "Build it",
+      p: "Tap a letter to drop it into your word. Tap it again to send it back. Drag letters to reorder — then press Enter.",
+      visual: "build",
+    },
+    {
+      h: "It keeps growing",
+      p: "Solve a word and the pool grows — 3 letters, then 5, then 6, 7… Every word has to use every letter.",
+      visual: "grow",
+    },
+    {
+      h: "Race the clock",
+      p: "Time you don't use rolls into the next word, so solving fast banks extra seconds. You play 3 rounds; your score is every word you solve.",
+      visual: "score",
+    },
+  ];
+  function tutVisual(kind) {
+    const tile = (ch, cls) => '<span class="tut-tile' + (cls ? " " + cls : "") + '">' + ch + "</span>";
+    if (kind === "pool") return tile("r") + tile("a") + tile("t");
+    if (kind === "build") return tile("a") + tile("c") + tile("t") +
+      '<span class="tut-arrow">&rarr;</span>' + tile("c", "accent") + tile("a", "accent") + tile("t", "accent");
+    if (kind === "grow") return '<span class="tut-big">3 &rarr; 5 &rarr; 6 &rarr; 7</span>';
+    if (kind === "score") return '<span class="tut-big">&#9201; &times; 3 rounds</span>';
+    return "";
+  }
+  let tutStep = 0;
+  let tutFrom = "home"; // "home" | "start" — where to return when done
+  function showTutorial(opts) {
+    tutStep = 0;
+    tutFrom = (opts && opts.from) || "home";
+    renderTut();
+    show("tutorial");
+  }
+  function renderTut() {
+    const s = TUTORIAL[tutStep];
+    $("#tut-visual").innerHTML = tutVisual(s.visual);
+    $("#tut-h").textContent = s.h;
+    $("#tut-p").textContent = s.p;
+    const dots = $("#tut-dots");
+    dots.innerHTML = "";
+    TUTORIAL.forEach((_, i) => {
+      const d = document.createElement("span");
+      d.className = "tut-dot" + (i === tutStep ? " on" : "");
+      dots.appendChild(d);
+    });
+    const last = tutStep === TUTORIAL.length - 1;
+    $("#tut-next").textContent = last ? "Start playing" : "Next";
+    $("#tut-skip").hidden = last;
+  }
+  function tutNext() {
+    if (tutStep < TUTORIAL.length - 1) { tutStep++; renderTut(); return; }
+    finishTutorial();
+  }
+  function finishTutorial() {
+    tutorialSeen = true;
+    if (window.MatchDB && window.MatchDB.markTutorialSeen) window.MatchDB.markTutorialSeen();
+    try { localStorage.setItem("three21.tut", "1"); } catch (e) {}
+    if (tutFrom === "start") { show("start"); return; }
+    afterNameOrTutorial();
   }
 
   function matchIsClosed(m) {
@@ -2187,6 +2300,7 @@
     if (!screens.play.hidden) { e.preventDefault(); submit(); }
     else if (!screens.roundend.hidden) { e.preventDefault(); roundEndContinue(); }
     else if (!screens.over.hidden) { e.preventDefault(); startSession(); }
+    else if (!screens.tutorial.hidden) { e.preventDefault(); tutNext(); }
     else if (!screens.start.hidden && !$("#btn-start").disabled) { e.preventDefault(); startSession(); }
   });
 
@@ -2360,6 +2474,11 @@
     if (e.key === "Enter") { e.preventDefault(); nameContinue(); }
   });
 
+  $("#tut-next").addEventListener("click", tutNext);
+  $("#tut-skip").addEventListener("click", finishTutorial);
+  $("#btn-home-howto").addEventListener("click", () => showTutorial({ from: "home" }));
+  $("#btn-start-howto").addEventListener("click", () => showTutorial({ from: "start" }));
+
   window.addEventListener("DOMContentLoaded", () => {
     setDifficulty("medium");
     setClose("24h");
@@ -2374,9 +2493,13 @@
 
     // Once anonymous auth resolves, adopt the stored name (or ask for one),
     // then swap the default landing for the My Games hub.
+    try { tutorialSeen = localStorage.getItem("three21.tut") === "1"; } catch (e) {}
+
     if (dbReady()) {
       window.MatchDB.whenReady(async () => {
-        storedName = (await window.MatchDB.getPlayerName()) || "";
+        const player = await window.MatchDB.getPlayer();
+        storedName = (player && player.name) || "";
+        if (player && player.tutorialSeen) tutorialSeen = true;
         if (!storedName) {
           if (!screens.landing.hidden || !screens.vsjoin.hidden) {
             showNameScreen(); // first run — but don't yank someone mid-flow
