@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>3-2-1</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#1c1917">
@@ -36,6 +36,13 @@
     }
   }
   * { box-sizing: border-box; }
+  /* No pinch- or double-tap-zoom — tapping tiles fast shouldn't zoom the page.
+     Set on the root so it covers every element (the draggable .tile opts back
+     out to touch-action:none for its custom pointer handling). */
+  html {
+    -webkit-text-size-adjust: 100%;
+    touch-action: manipulation;
+  }
   body {
     margin: 0;
     min-height: 100vh;
@@ -924,6 +931,11 @@
   const $ = (s) => document.querySelector(s);
   const ALPHA = "abcdefghijklmnopqrstuvwxyz".split("");
   const BEST_KEY = "three21.best";
+
+  // iOS Safari ignores user-scalable=no in a browser tab, so also block the
+  // pinch gesture directly — a word game shouldn't zoom under your fingers.
+  ["gesturestart", "gesturechange", "gestureend"].forEach((evt) =>
+    document.addEventListener(evt, (e) => e.preventDefault(), { passive: false }));
 
   const DIFF_INFO = {
     easy:   { label: "Easy",   desc: "More time, friendlier letters, and Datamuse can verify tricky words." },
