@@ -550,6 +550,12 @@
         <button class="diffbtn" data-diff="hard" type="button">Hard</button>
       </div>
       <p class="note" id="diff-desc-vs"></p>
+      <div class="rowlabel">Format</div>
+      <div class="diffrow" id="format-picker-vs">
+        <button class="diffbtn" data-format="timed" type="button">Timed</button>
+        <button class="diffbtn" data-format="guesses" type="button">5 Guesses</button>
+      </div>
+      <p class="note" id="format-desc-vs"></p>
       <div class="rowlabel">Closes</div>
       <div class="diffrow" id="close-picker">
         <button class="diffbtn" data-close="24h" type="button">24 hours</button>
@@ -819,7 +825,7 @@
     },
 
     // Create a game. `close` is "24h" (default) | "48h" | "1w" | "none" | a ms epoch.
-    async createMatch(name, difficulty, close) {
+    async createMatch(name, difficulty, format, close) {
       if (!uid) throw new Error("sign-in required");
       const code = genCode();
       const seed = genSeed();
@@ -829,6 +835,7 @@
       await setDoc(doc(db, "matches", code), {
         seed: seed,
         difficulty: difficulty || "easy",
+        format: format === "guesses" ? "guesses" : "timed",
         createdAt: serverTimestamp(),
         updatedAt: Date.now(),
         host: uid,
@@ -960,13 +967,16 @@
   const normDiff = (d) => (d === "easy" || d === "hard") ? d : "hard";
   let difficulty = "easy"; // "easy" | "hard" — see startRound() / nextStage()
 
-  // Solo format: "timed" (a countdown per stage) or "guesses" (no clock, 5 wrong
-  // words per round). Versus/group is always timed for now.
+  // Format: "timed" (a countdown per stage) or "guesses" (no clock, 5 wrong
+  // words per round). Solo: picked on the start screen. Versus/group: a
+  // match-level property, set by the host and inherited on join.
   const GUESS_BUDGET = 5;
+  const normFormat = (f) => (f === "guesses" ? "guesses" : "timed");
+  const FORMAT_LABEL = { timed: "Timed", guesses: "5 guesses" };
   let format = "timed";
   let guessesLeft = 0;   // reset each round in guess mode
   let hintUsed = false;  // one hint per session
-  const guessMode = () => format === "guesses" && mode === "solo";
+  const guessMode = () => format === "guesses";
 
   // Deterministic PRNG so two players in a versus match get the exact same
   // letters. `rand` is Math.random in solo mode, or reseeded per round from
@@ -2001,7 +2011,7 @@
         ? (hostName(data) + "'s game has closed — you can still play it for fun")
         : (hostName(data) + " started a game of 3·2·1");
       const count = (data.playerUids || []).length || (data.entrants || []).length;
-      let sub = "Difficulty: " + DIFF_INFO[normDiff(data.difficulty)].label;
+      let sub = DIFF_INFO[normDiff(data.difficulty)].label + " · " + FORMAT_LABEL[normFormat(data.format)];
       if (count > 1) sub += " · " + count + " playing so far";
       $("#vs-join-diff").textContent = sub;
       $("#btn-vs-join").textContent = closed ? "Play for fun" : "Play";
@@ -2182,6 +2192,7 @@
     matchCode = m.code;
     matchSeed = m.seed;
     difficulty = normDiff(m.difficulty);
+    setFormat(normFormat(m.format));
     matchMeta = m;
     matchEntrants = [];
     mode = "versus";
@@ -2194,8 +2205,8 @@
       history.replaceState(null, "", location.pathname + "?m=" + m.code);
       $("#vs-link").value = matchLink(m.code);
       $("#vs-copy-note").textContent = "";
-      $("#vs-invite-close").textContent = closesInText() === "no deadline"
-        ? "No deadline set." : ("Game " + closesInText() + ".");
+      $("#vs-invite-close").textContent =
+        DIFF_INFO[normDiff(difficulty)].label + " · " + FORMAT_LABEL[normFormat(format)] + " · " + closesInText() + ".";
       show("vsinvite");
     } else if (info.action === "play") {
       startSession(); // run the 3 rounds, submit at the end
@@ -2309,7 +2320,7 @@
 
     const diffLabel = DIFF_INFO[normDiff(difficulty)].label;
     $("#lb-title").textContent = closed ? "Final standings" : "Standings";
-    $("#lb-status").textContent = diffLabel + " · " + closesInText();
+    $("#lb-status").textContent = diffLabel + " · " + FORMAT_LABEL[normFormat(format)] + " · " + closesInText();
 
     const list = $("#lb-list");
     list.innerHTML = "";
@@ -2442,7 +2453,7 @@
     if (btn) setDifficulty(btn.dataset.diff);
   });
 
-  // ---- format wiring (solo) ----
+  // ---- format wiring ----
   const FORMAT_DESC = {
     timed: "A countdown each stage — leftover time carries into the next word.",
     guesses: "No clock. 5 wrong words ends a round. One hint for the whole session.",
@@ -2450,15 +2461,18 @@
   function setFormat(f) {
     if (!FORMAT_DESC[f]) return;
     format = f;
-    [].slice.call($("#format-picker").children).forEach((btn) =>
-      btn.classList.toggle("active", btn.dataset.format === f));
+    [$("#format-picker"), $("#format-picker-vs")].forEach((row) => {
+      [].slice.call(row.children).forEach((btn) => btn.classList.toggle("active", btn.dataset.format === f));
+    });
     $("#format-desc").textContent = FORMAT_DESC[f];
+    $("#format-desc-vs").textContent = FORMAT_DESC[f];
     $("#best-start").textContent = readBest(); // best is per difficulty+format
   }
-  $("#format-picker").addEventListener("click", (e) => {
-    const btn = e.target.closest(".diffbtn");
-    if (btn) setFormat(btn.dataset.format);
-  });
+  [$("#format-picker"), $("#format-picker-vs")].forEach((row) =>
+    row.addEventListener("click", (e) => {
+      const btn = e.target.closest(".diffbtn");
+      if (btn) setFormat(btn.dataset.format);
+    }));
 
   // ---- close-condition picker (versus create) ----
   let closeChoice = "24h";
@@ -2484,6 +2498,7 @@
   $("#btn-home-new").addEventListener("click", () => {
     $("#vs-name-create").value = storedName || "";
     $("#vs-create-note").textContent = "";
+    setFormat("timed");
     setClose("24h");
     show("vscreate");
   });
@@ -2521,6 +2536,7 @@
   $("#btn-vs").addEventListener("click", () => {
     if (!dbReady()) { $("#vs-note").hidden = false; return; }
     $("#vs-name-create").value = storedName || "";
+    setFormat("timed");
     setClose("24h");
     show("vscreate");
   });
@@ -2531,7 +2547,7 @@
     $("#btn-vs-create").disabled = true;
     $("#vs-create-note").textContent = "";
     try {
-      const { code, seed } = await window.MatchDB.createMatch(name, difficulty, closeChoice);
+      const { code, seed } = await window.MatchDB.createMatch(name, difficulty, format, closeChoice);
       matchCode = code;
       matchSeed = seed;
       playerName = name;
@@ -2542,9 +2558,11 @@
       history.replaceState(null, "", location.pathname + "?m=" + code);
       $("#vs-link").value = matchLink(code);
       $("#vs-copy-note").textContent = "";
-      $("#vs-invite-close").textContent = closeChoice === "none"
-        ? "No deadline — close it yourself whenever you're ready."
-        : ("Closes " + { "24h": "in 24 hours", "48h": "in 48 hours", "1w": "in a week" }[closeChoice] + " — after that the leaderboard is final.");
+      $("#vs-invite-close").textContent =
+        DIFF_INFO[normDiff(difficulty)].label + " · " + FORMAT_LABEL[normFormat(format)] + " · " +
+        (closeChoice === "none"
+          ? "no deadline — you close it when you're ready."
+          : ("closes " + { "24h": "in 24 hours", "48h": "in 48 hours", "1w": "in a week" }[closeChoice] + "."));
       show("vsinvite");
     } catch (e) {
       $("#vs-create-note").textContent = "Couldn't create a game — check your connection and try again.";
@@ -2584,6 +2602,7 @@
       }
       matchSeed = data.seed;
       difficulty = normDiff(data.difficulty);
+      setFormat(normFormat(data.format));
       matchMeta = data;
       matchEntrants = data.entrants || [];
       playerName = name;
