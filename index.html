@@ -159,6 +159,17 @@
   .guesspip { width: 11px; height: 11px; border-radius: 999px; background: var(--accent); }
   .guesspip.spent { background: var(--line); }
 
+  .wrongwords {
+    display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center;
+    gap: 4px 8px; width: 100%; margin-top: -6px;
+  }
+  .wrongwords-label {
+    font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted);
+  }
+  .wrongwords .chips span {
+    border-color: var(--warn); color: var(--muted); text-decoration: line-through;
+  }
+
   .rowlabel {
     width: 100%;
     text-align: left;
@@ -675,6 +686,7 @@
         <button class="ghost" id="btn-hint" type="button" hidden>Hint</button>
       </div>
       <div class="msg" id="msg"></div>
+      <div class="wrongwords" id="wrongwords" hidden></div>
       <button class="linkbtn" id="btn-endround" type="button">End round</button>
     </section>
 
@@ -977,6 +989,7 @@
   const FORMAT_LABEL = { timed: "Timed", guesses: "5 guesses" };
   let format = "timed";
   let guessesLeft = 0;   // reset each round in guess mode
+  let wrongGuesses = []; // invalid words tried this stage (guess mode) — no repeat penalty
   let hintUsed = false;  // one hint per session
   const guessMode = () => format === "guesses";
 
@@ -1300,7 +1313,7 @@
         roundWords: roundWords, currentRoundWords: currentRoundWords,
         poolChars: pool.map((t) => t.ch),
         newCount: pool.filter((t) => t.isNew).length,
-        guessesLeft: guessesLeft, hintUsed: hintUsed,
+        guessesLeft: guessesLeft, wrongGuesses: wrongGuesses, hintUsed: hintUsed,
       }));
     } catch (e) {}
   }
@@ -1383,6 +1396,8 @@
     if (!pool.length) { startRound(); return; }
     show("play");
     beginStage();
+    wrongGuesses = (s.wrongGuesses || []).slice(); // beginStage cleared it — restore
+    renderWrongWords();
     msg("Picked up where you left off.", "good");
   }
 
@@ -1472,6 +1487,8 @@
 
     ans = new Array(tiles.length).fill(null);
     checking = false;
+    wrongGuesses = []; // fresh pile, fresh list of dead ends
+    renderWrongWords();
 
     $("#stage-n").textContent = stage;
     $("#pool-n").textContent = tiles.length;
@@ -1522,7 +1539,28 @@
     }
   }
 
+  function renderWrongWords() {
+    const box = $("#wrongwords");
+    if (!guessMode() || !wrongGuesses.length) { box.hidden = true; box.innerHTML = ""; return; }
+    box.hidden = false;
+    box.innerHTML = "";
+    const label = document.createElement("span");
+    label.className = "wrongwords-label";
+    label.textContent = "Already tried";
+    const chips = document.createElement("span");
+    chips.className = "chips";
+    wrongGuesses.forEach((w) => {
+      const c = document.createElement("span");
+      c.textContent = w.toUpperCase();
+      chips.appendChild(c);
+    });
+    box.appendChild(label);
+    box.appendChild(chips);
+  }
+
   function loseGuess(word) {
+    if (wrongGuesses.indexOf(word) < 0) wrongGuesses.push(word);
+    renderWrongWords();
     guessesLeft = Math.max(0, guessesLeft - 1);
     renderPips();
     if (guessesLeft <= 0) {
@@ -1810,6 +1848,8 @@
     checking = false;
     clearInterval(timerId);
     marker.remove();
+    wrongGuesses = []; // solved it — clear the dead-end list
+    renderWrongWords();
     msg("Nice — “" + g.toUpperCase() + "”", "good");
     $("#solved-n").textContent = solved;
     setTimeout(nextStage, 750);
@@ -1822,6 +1862,11 @@
       return;
     }
     const g = ans.map((id) => tileMap[id].ch).join("").toLowerCase();
+
+    if (guessMode() && wrongGuesses.indexOf(g) > -1) {
+      msg("You already tried “" + g.toUpperCase() + "” — that one doesn't count.", "warn");
+      return;
+    }
 
     const reject = () => { if (guessMode()) loseGuess(g); else msg("“" + g.toUpperCase() + "” isn't a word.", "warn"); };
 
