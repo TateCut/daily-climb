@@ -155,9 +155,9 @@
 
   .secs { font-variant-numeric: tabular-nums; font-size: 0.85rem; color: var(--muted); }
 
-  .guesspips { display: flex; gap: 9px; justify-content: center; align-items: center; min-height: 14px; }
-  .guesspip { width: 11px; height: 11px; border-radius: 999px; background: var(--accent); }
-  .guesspip.spent { background: var(--line); }
+  .guesspips { display: flex; gap: 10px; justify-content: center; align-items: center; min-height: 15px; }
+  .guesspip { width: 12px; height: 12px; border-radius: 999px; background: var(--accent); }
+  .guesspip.spent { background: var(--warn); }
 
   .wrongwords {
     display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center;
@@ -455,7 +455,9 @@
   .lb-row.pending { opacity: 0.55; cursor: default; }
   .lb-rank { min-width: 1.4em; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--muted); }
   .lb-row.me .lb-rank { color: var(--accent); }
-  .lb-name { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lb-namewrap { flex: 1; min-width: 0; }
+  .lb-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lb-meta { font-size: 0.72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .lb-score { font-weight: 700; font-variant-numeric: tabular-nums; }
   .lb-row.pending .lb-score { font-weight: 400; font-size: 0.8rem; color: var(--muted); }
   .lb-detail { width: 100%; padding: 2px 4px 8px; }
@@ -565,7 +567,7 @@
       <div class="rowlabel">Format</div>
       <div class="diffrow" id="format-picker-vs">
         <button class="diffbtn" data-format="timed" type="button">Timed</button>
-        <button class="diffbtn" data-format="guesses" type="button">5 Guesses</button>
+        <button class="diffbtn" data-format="guesses" type="button">3 Strikes</button>
       </div>
       <p class="note" id="format-desc-vs"></p>
       <div class="rowlabel">Closes</div>
@@ -651,7 +653,7 @@
       <div class="rowlabel">Format</div>
       <div class="diffrow" id="format-picker">
         <button class="diffbtn" data-format="timed" type="button">Timed</button>
-        <button class="diffbtn" data-format="guesses" type="button">5 Guesses</button>
+        <button class="diffbtn" data-format="guesses" type="button">3 Strikes</button>
       </div>
       <p class="note" id="format-desc"></p>
       <p class="lede">Best total: <b id="best-start">0</b> words.</p>
@@ -711,6 +713,7 @@
         <span class="totalbox-count" id="over-totalcount">0 words</span>
       </div>
 
+      <p class="note" id="over-strikes" hidden></p>
       <p class="lede">Best total: <b id="best-over">0</b> words</p>
       <button class="primary" id="btn-again" type="button">Play again</button>
       <button class="linkbtn tomenu" id="btn-over-home" type="button" hidden>&larr; My games</button>
@@ -900,21 +903,30 @@
       return this.getMatch(code);
     },
 
-    async submitResult(code, total, roundWords) {
+    // `extra` (3-Strikes only): { strikes, solveMs } — the leaderboard tiebreaks.
+    async submitResult(code, total, roundWords, extra) {
       if (!uid) return;
+      const strikes = extra && typeof extra.strikes === "number";
       // setDoc+merge, not updateDoc — tolerate a missing entrant doc (e.g. a
       // late "play for fun" that skipped the normal join).
-      await setDoc(doc(db, "matches", code, "entrants", uid), {
+      const eDoc = {
         done: true,
         total: total,
         roundWords: wrapRoundWords(roundWords),
         finishedAt: Date.now(),
-      }, { merge: true });
-      await updateDoc(doc(db, "matches", code), {
+      };
+      if (strikes) { eDoc.strikes = extra.strikes; eDoc.solveMs = extra.solveMs || 0; }
+      await setDoc(doc(db, "matches", code, "entrants", uid), eDoc, { merge: true });
+      const patch = {
         ["results." + uid]: total,
         doneUids: arrayUnion(uid),
         updatedAt: Date.now(),
-      });
+      };
+      if (strikes) {
+        patch["strikes." + uid] = extra.strikes;
+        patch["solveMs." + uid] = extra.solveMs || 0;
+      }
+      await updateDoc(doc(db, "matches", code), patch);
     },
 
     async closeMatch(code) {
@@ -984,12 +996,15 @@
   // Format: "timed" (a countdown per stage) or "guesses" (no clock, 5 wrong
   // words per round). Solo: picked on the start screen. Versus/group: a
   // match-level property, set by the host and inherited on join.
-  const GUESS_BUDGET = 5;
+  const GUESS_BUDGET = 3; // "3 Strikes" — wrong words allowed per round
   const normFormat = (f) => (f === "guesses" ? "guesses" : "timed");
-  const FORMAT_LABEL = { timed: "Timed", guesses: "5 guesses" };
+  const FORMAT_LABEL = { timed: "Timed", guesses: "3 Strikes" };
   let format = "timed";
-  let guessesLeft = 0;   // reset each round in guess mode
-  let wrongGuesses = []; // invalid words tried this stage (guess mode) — no repeat penalty
+  let guessesLeft = 0;   // strikes left this round
+  let wrongGuesses = []; // invalid words tried this stage — no repeat penalty
+  let sessionStrikes = 0; // total wrong words this session — leaderboard tiebreak #1
+  let solveMs = 0;        // time actively spent solving (sum of solved stages) — tiebreak #2
+  let stageShownAt = 0;
   let hintUsed = false;  // one hint per session
   const guessMode = () => format === "guesses";
 
@@ -1314,6 +1329,7 @@
         poolChars: pool.map((t) => t.ch),
         newCount: pool.filter((t) => t.isNew).length,
         guessesLeft: guessesLeft, wrongGuesses: wrongGuesses, hintUsed: hintUsed,
+        sessionStrikes: sessionStrikes, solveMs: solveMs,
       }));
     } catch (e) {}
   }
@@ -1323,6 +1339,7 @@
         v: 1, savedAt: Date.now(), phase: "roundbreak",
         mode: mode, matchCode: matchCode, matchSeed: matchSeed,
         difficulty: difficulty, format: format,
+        sessionStrikes: sessionStrikes, solveMs: solveMs,
         round: nextRound, roundWords: roundWords, hintUsed: hintUsed,
       }));
     } catch (e) {}
@@ -1359,6 +1376,8 @@
     round = s.round || 1;
     roundWords = (s.roundWords || []).map((w) => (w || []).slice());
     hintUsed = !!s.hintUsed;
+    sessionStrikes = s.sessionStrikes || 0;
+    solveMs = s.solveMs || 0;
     locked = false;
     checking = false;
     carryMs = 0;
@@ -1407,6 +1426,8 @@
     round = 1;
     roundWords = [];
     hintUsed = false; // one hint per 3-round session
+    sessionStrikes = 0;
+    solveMs = 0;
     startRound();
   }
 
@@ -1415,7 +1436,7 @@
     currentRoundWords = [];
     stage = 1;
     carryMs = 0;
-    guessesLeft = GUESS_BUDGET; // fresh 5 every round in guess mode
+    guessesLeft = GUESS_BUDGET; // a fresh set of strikes every round
     locked = false;
     checking = false;
 
@@ -1489,6 +1510,7 @@
     checking = false;
     wrongGuesses = []; // fresh pile, fresh list of dead ends
     renderWrongWords();
+    stageShownAt = Date.now();
 
     $("#stage-n").textContent = stage;
     $("#pool-n").textContent = tiles.length;
@@ -1561,17 +1583,18 @@
   function loseGuess(word) {
     if (wrongGuesses.indexOf(word) < 0) wrongGuesses.push(word);
     renderWrongWords();
+    sessionStrikes++;
     guessesLeft = Math.max(0, guessesLeft - 1);
     renderPips();
     if (guessesLeft <= 0) {
-      msg("Out of guesses this round.", "warn");
+      msg("Three strikes — that's the round.", "warn");
       locked = true;
       clearInterval(timerId);
       setTimeout(() => finish(false), 1100);
     } else {
       saveProgress();
-      msg("“" + word.toUpperCase() + "” isn't a word — " +
-        guessesLeft + (guessesLeft === 1 ? " guess left" : " guesses left"), "warn");
+      const used = GUESS_BUDGET - guessesLeft;
+      msg("“" + word.toUpperCase() + "” isn't a word — strike " + used + " of " + GUESS_BUDGET, "warn");
     }
   }
 
@@ -1842,6 +1865,7 @@
 
   function acceptWord(g) {
     carryMs = guessMode() ? 0 : Math.max(0, endAt - Date.now()); // bank the leftover time
+    if (stageShownAt) solveMs += Date.now() - stageShownAt; // active solving time, for the tiebreak
     solved++;
     currentRoundWords.push(g);
     locked = true;
@@ -1864,7 +1888,7 @@
     const g = ans.map((id) => tileMap[id].ch).join("").toLowerCase();
 
     if (guessMode() && wrongGuesses.indexOf(g) > -1) {
-      msg("You already tried “" + g.toUpperCase() + "” — that one doesn't count.", "warn");
+      msg("You already tried “" + g.toUpperCase() + "” — no strike for that.", "warn");
       return;
     }
 
@@ -1980,7 +2004,7 @@
     const ex = maxedOut ? null : exampleWord(poolKey());
 
     $("#re-title").textContent = isLast
-      ? (guessMode() ? "Out of guesses!" : "Time's up!")
+      ? (guessMode() ? "Three strikes!" : "Time's up!")
       : "Round " + round + " of " + ROUNDS;
     $("#re-def").hidden = true;
     if (ex) {
@@ -2007,6 +2031,14 @@
     const best = Math.max(readBest(), total);
     writeBest(best);
     $("#best-over").textContent = best;
+    const st = $("#over-strikes");
+    if (guessMode()) {
+      st.hidden = false;
+      st.textContent = (sessionStrikes === 0 ? "No wrong words" : sessionStrikes + (sessionStrikes === 1 ? " wrong word" : " wrong words")) +
+        " · solved in " + fmtDuration(solveMs);
+    } else {
+      st.hidden = true;
+    }
     show("over");
   }
 
@@ -2100,7 +2132,7 @@
     },
     {
       h: "Two ways to play",
-      p: "Beat the clock (leftover time carries over), or take your time with 5 guesses a round. Either way it's 3 rounds — your score is every word you solve.",
+      p: "Beat the clock (leftover time carries over), or take your time — three wrong words ends a round. Either way it's 3 rounds; your score is every word you solve.",
       visual: "score",
     },
   ];
@@ -2252,7 +2284,13 @@
 
     const ranked = order.filter((u) => !lateSet[u] && (u in results));
     Object.keys(results).forEach((u) => { if (!lateSet[u] && ranked.indexOf(u) < 0) ranked.push(u); });
-    ranked.sort((a, b) => (results[b] - results[a]) || (order.indexOf(a) - order.indexOf(b)));
+    const strk = m.strikes || {}, sms = m.solveMs || {};
+    const isStrikes = normFormat(m.format) === "guesses";
+    ranked.sort((a, b) =>
+      (results[b] - results[a]) ||
+      (isStrikes ? ((strk[a] || 0) - (strk[b] || 0)) : 0) ||
+      (isStrikes ? ((sms[a] || 0) - (sms[b] || 0)) : 0) ||
+      (order.indexOf(a) - order.indexOf(b)));
 
     const iFinished = Object.prototype.hasOwnProperty.call(results, myUid);
     const iLate = !!lateSet[myUid];
@@ -2445,20 +2483,38 @@
     return "closes in " + Math.round(h / 24) + "d";
   }
 
+  function fmtDuration(ms) {
+    const s = Math.round((ms || 0) / 1000);
+    return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+  }
+
   function lbRow(rank, e, isMe) {
     const row = document.createElement("div");
     row.className = "lb-row" + (isMe ? " me" : "") + (e.done ? "" : " pending");
     const r = document.createElement("div");
     r.className = "lb-rank";
     r.textContent = rank == null ? "·" : rank;
+
+    const nmwrap = document.createElement("div");
+    nmwrap.className = "lb-namewrap";
     const nm = document.createElement("div");
     nm.className = "lb-name";
     nm.textContent = (e.name || "?") + (isMe ? " (you)" : "") + (e.late && e.done ? " · for fun" : "");
+    nmwrap.appendChild(nm);
+    if (e.done && normFormat(format) === "guesses" && typeof e.strikes === "number") {
+      const meta = document.createElement("div");
+      meta.className = "lb-meta";
+      const st = e.strikes;
+      meta.textContent = (st === 0 ? "clean" : st + (st === 1 ? " wrong word" : " wrong words")) +
+        " · " + fmtDuration(e.solveMs);
+      nmwrap.appendChild(meta);
+    }
+
     const sc = document.createElement("div");
     sc.className = "lb-score";
     sc.textContent = e.done ? (e.total || 0) : "playing…";
     row.appendChild(r);
-    row.appendChild(nm);
+    row.appendChild(nmwrap);
     row.appendChild(sc);
     if (e.done) row.addEventListener("click", () => toggleLbDetail(row, e));
     return row;
@@ -2477,10 +2533,23 @@
     row.after(d);
   }
 
+  // Leaderboard order: most words first. Ties in 3-Strikes break on fewest wrong
+  // words, then fastest solving time; in Timed, on who submitted first.
+  function entrantRankCmp(a, b) {
+    const t = (b.total || 0) - (a.total || 0);
+    if (t) return t;
+    if (normFormat(format) === "guesses") {
+      const s = (a.strikes || 0) - (b.strikes || 0);
+      if (s) return s;
+      return (a.solveMs || 0) - (b.solveMs || 0);
+    }
+    return (a.finishedAt || 0) - (b.finishedAt || 0);
+  }
+
   function renderLeaderboard(entrants, total) {
     const myUid = window.MatchDB.uid;
     const closed = matchIsClosed(matchMeta);
-    const byScore = (a, b) => (b.total || 0) - (a.total || 0) || (a.finishedAt || 0) - (b.finishedAt || 0);
+    const byScore = entrantRankCmp;
     const ranked = entrants.filter((e) => e.done && !e.late).sort(byScore);
     const forFun = entrants.filter((e) => e.done && e.late).sort(byScore);
     const pending = entrants.filter((e) => !e.done && !e.late);
@@ -2526,6 +2595,7 @@
   async function submitVersusResult() {
     defToken++;
     const total = roundWords.reduce((a, w) => a + w.length, 0);
+    const extra = guessMode() ? { strikes: sessionStrikes, solveMs: solveMs } : null;
 
     $("#vs-wait-lede").textContent = "You solved " + total + " words. Saving…";
     $("#vs-wait-note").textContent = "";
@@ -2533,10 +2603,10 @@
     show("vswaiting");
 
     try {
-      await window.MatchDB.submitResult(matchCode, total, roundWords);
+      await window.MatchDB.submitResult(matchCode, total, roundWords, extra);
     } catch (e) {
       $("#vs-wait-note").textContent = "Couldn't save your result — check your connection. It'll retry.";
-      try { await window.MatchDB.submitResult(matchCode, total, roundWords); }
+      try { await window.MatchDB.submitResult(matchCode, total, roundWords, extra); }
       catch (e2) { return; }
       $("#vs-wait-note").textContent = "";
     }
@@ -2552,14 +2622,17 @@
     const opp = entrants.find((e) => e.uid !== myUid) || { name: opponentName, total: 0, roundWords: [] };
     const meTotal = me.total || 0;
     const oppTotal = opp.total || 0;
-    const winner = meTotal === oppTotal ? -1 : (meTotal > oppTotal ? 0 : 1);
+    // In 3-Strikes a tie on words breaks on fewer wrong words, then faster time.
+    const cmp = entrantRankCmp(me, opp); // <0 = me ahead, >0 = opp ahead, 0 = dead heat
+    const winner = cmp < 0 ? 0 : cmp > 0 ? 1 : -1;
 
     $("#vs-reveal-title").textContent =
       winner === -1 ? "It's a tie!" : winner === 0 ? "You win!" : (opp.name || "Your opponent") + " wins!";
 
+    const strikesMatch = normFormat(format) === "guesses";
     const grid = $("#vs-reveal-grid");
     grid.innerHTML = "";
-    [{ name: (me.name || "You") + " (you)", total: meTotal }, { name: opp.name || "Opponent", total: oppTotal }]
+    [{ name: (me.name || "You") + " (you)", total: meTotal, e: me }, { name: opp.name || "Opponent", total: oppTotal, e: opp }]
       .forEach((c, i) => {
         const card = document.createElement("div");
         card.className = "vscard" + (i === winner ? " winner" : "");
@@ -2567,6 +2640,12 @@
         const sc = document.createElement("div"); sc.className = "vsscore"; sc.textContent = c.total;
         card.appendChild(nm);
         card.appendChild(sc);
+        if (strikesMatch && typeof c.e.strikes === "number") {
+          const meta = document.createElement("div");
+          meta.className = "vsname";
+          meta.textContent = (c.e.strikes === 0 ? "clean" : c.e.strikes + " wrong") + " · " + fmtDuration(c.e.solveMs);
+          card.appendChild(meta);
+        }
         if (i === winner) {
           const crown = document.createElement("div");
           crown.className = "vscrown";
@@ -2628,7 +2707,7 @@
   // ---- format wiring ----
   const FORMAT_DESC = {
     timed: "A countdown each stage — leftover time carries into the next word.",
-    guesses: "No clock. 5 wrong words ends a round. One hint for the whole session.",
+    guesses: "No clock. Three wrong words ends a round. One hint for the whole session. Ties break on fewest wrong words, then speed.",
   };
   function setFormat(f) {
     if (!FORMAT_DESC[f]) return;
