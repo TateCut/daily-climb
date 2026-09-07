@@ -155,6 +155,10 @@
 
   .secs { font-variant-numeric: tabular-nums; font-size: 0.85rem; color: var(--muted); }
 
+  .guesspips { display: flex; gap: 9px; justify-content: center; align-items: center; min-height: 14px; }
+  .guesspip { width: 11px; height: 11px; border-radius: 999px; background: var(--accent); }
+  .guesspip.spent { background: var(--line); }
+
   .rowlabel {
     width: 100%;
     text-align: left;
@@ -626,6 +630,12 @@
         <button class="diffbtn" data-diff="hard" type="button">Hard</button>
       </div>
       <p class="note" id="diff-desc"></p>
+      <div class="rowlabel">Format</div>
+      <div class="diffrow" id="format-picker">
+        <button class="diffbtn" data-format="timed" type="button">Timed</button>
+        <button class="diffbtn" data-format="guesses" type="button">5 Guesses</button>
+      </div>
+      <p class="note" id="format-desc"></p>
       <p class="lede">Best total: <b id="best-start">0</b> words.</p>
       <button class="primary" id="btn-start" disabled>Loading&hellip;</button>
       <p class="note" id="load-note">Loading dictionary&hellip;</p>
@@ -640,8 +650,9 @@
         <span>Stage <b id="stage-n">1</b> &middot; <b id="pool-n">3</b> letters</span>
         <span><b id="solved-n">0</b> this round</span>
       </div>
-      <div class="timerbar"><div class="timerbar-fill" id="bar"></div></div>
-      <div class="secs"><span id="secs">30</span>s left</div>
+      <div class="timerbar" id="timerbar"><div class="timerbar-fill" id="bar"></div></div>
+      <div class="secs" id="secline"><span id="secs">30</span>s left</div>
+      <div class="guesspips" id="guesspips" hidden></div>
 
       <div class="rowlabel">Letters</div>
       <div class="row" id="tray"></div>
@@ -653,6 +664,7 @@
         <button class="primary" id="btn-enter" type="button">Enter</button>
         <button class="ghost" id="btn-return" type="button">Return all</button>
         <button class="ghost" id="btn-shuffle" type="button">Shuffle</button>
+        <button class="ghost" id="btn-hint" type="button" hidden>Hint</button>
       </div>
       <div class="msg" id="msg"></div>
       <button class="linkbtn" id="btn-endround" type="button">End round</button>
@@ -936,8 +948,8 @@
     document.addEventListener(evt, (e) => e.preventDefault(), { passive: false }));
 
   const DIFF_INFO = {
-    easy: { label: "Easy", desc: "One new letter each round, letters that spell common words, and a generous clock." },
-    hard: { label: "Hard", desc: "Letters jump 3 → 5, picked at pure random — any real word counts, but the clock is tight." },
+    easy: { label: "Easy", desc: "One new letter each round, and the letters always spell a common word." },
+    hard: { label: "Hard", desc: "Letters jump 3 → 5 and are picked at pure random — but any real word counts." },
   };
   const TIMER_BY_DIFF = {
     easy: { base: 40, step: 8, cap: 120 },
@@ -947,6 +959,14 @@
   // versus matches) onto the closest surviving tier.
   const normDiff = (d) => (d === "easy" || d === "hard") ? d : "hard";
   let difficulty = "easy"; // "easy" | "hard" — see startRound() / nextStage()
+
+  // Solo format: "timed" (a countdown per stage) or "guesses" (no clock, 5 wrong
+  // words per round). Versus/group is always timed for now.
+  const GUESS_BUDGET = 5;
+  let format = "timed";
+  let guessesLeft = 0;   // reset each round in guess mode
+  let hintUsed = false;  // one hint per session
+  const guessMode = () => format === "guesses" && mode === "solo";
 
   // Deterministic PRNG so two players in a versus match get the exact same
   // letters. `rand` is Math.random in solo mode, or reseeded per round from
@@ -1244,7 +1264,7 @@
     for (const k in screens) screens[k].hidden = k !== name;
   }
 
-  function bestKey() { return BEST_KEY + "." + difficulty; }
+  function bestKey() { return BEST_KEY + "." + difficulty + (guessMode() ? ".g" : ""); }
   function readBest() {
     try { return parseInt(localStorage.getItem(bestKey()), 10) || 0; } catch (e) { return 0; }
   }
@@ -1256,6 +1276,7 @@
     if (!dictReady) { setTimeout(startSession, 100); return; }
     round = 1;
     roundWords = [];
+    hintUsed = false; // one hint per 3-round session
     startRound();
   }
 
@@ -1264,6 +1285,7 @@
     currentRoundWords = [];
     stage = 1;
     carryMs = 0;
+    guessesLeft = GUESS_BUDGET; // fresh 5 every round in guess mode
     locked = false;
     checking = false;
 
@@ -1341,6 +1363,24 @@
     $("#solved-n").textContent = solved;
     render(true);
 
+    clearInterval(timerId);
+    timerId = null;
+
+    if (guessMode()) {
+      $("#timerbar").hidden = true;
+      $("#secline").hidden = true;
+      $("#guesspips").hidden = false;
+      $("#btn-hint").hidden = hintUsed;
+      renderPips();
+      msg("");
+      return;
+    }
+
+    $("#timerbar").hidden = false;
+    $("#secline").hidden = false;
+    $("#guesspips").hidden = true;
+    $("#btn-hint").hidden = true;
+
     // Base time for the stage, plus whatever was left on the clock last word.
     const t = TIMER_BY_DIFF[difficulty] || TIMER_BY_DIFF.hard;
     const base = Math.min(t.base + t.step * (tiles.length - 3), t.cap);
@@ -1348,12 +1388,45 @@
     carryMs = 0;
     duration = base + carriedSec;
     endAt = Date.now() + duration * 1000;
-    clearInterval(timerId);
     timerId = setInterval(tick, 100);
     tick();
 
     if (carriedSec >= 1) msg("+" + Math.round(carriedSec) + "s carried over", "good");
     else msg("");
+  }
+
+  function renderPips() {
+    const box = $("#guesspips");
+    box.innerHTML = "";
+    for (let i = 0; i < GUESS_BUDGET; i++) {
+      const d = document.createElement("span");
+      d.className = "guesspip" + (i >= guessesLeft ? " spent" : "");
+      box.appendChild(d);
+    }
+  }
+
+  function loseGuess(word) {
+    guessesLeft = Math.max(0, guessesLeft - 1);
+    renderPips();
+    if (guessesLeft <= 0) {
+      msg("Out of guesses this round.", "warn");
+      locked = true;
+      clearInterval(timerId);
+      setTimeout(() => finish(false), 1100);
+    } else {
+      msg("“" + word.toUpperCase() + "” isn't a word — " +
+        guessesLeft + (guessesLeft === 1 ? " guess left" : " guesses left"), "warn");
+    }
+  }
+
+  function useHint() {
+    if (hintUsed || !guessMode() || locked || checking) return;
+    const ex = exampleWord(poolKey());
+    if (!ex) return;
+    const reveal = ex.length >= 5 ? ex.slice(0, 2) : ex.slice(0, 1);
+    hintUsed = true;
+    $("#btn-hint").hidden = true;
+    msg("Hint: a word here starts with “" + reveal.toUpperCase() + "”", "good");
   }
 
   function tick() {
@@ -1612,7 +1685,7 @@
   }
 
   function acceptWord(g) {
-    carryMs = Math.max(0, endAt - Date.now()); // bank the leftover time
+    carryMs = guessMode() ? 0 : Math.max(0, endAt - Date.now()); // bank the leftover time
     solved++;
     currentRoundWords.push(g);
     locked = true;
@@ -1632,17 +1705,19 @@
     }
     const g = ans.map((id) => tileMap[id].ch).join("").toLowerCase();
 
+    const reject = () => { if (guessMode()) loseGuess(g); else msg("“" + g.toUpperCase() + "” isn't a word.", "warn"); };
+
     if (WORD_SET.has(g) || extraWords.get(g) === true) {
       acceptWord(g);
       return;
     }
     if (extraWords.get(g) === false) {
-      msg("“" + g.toUpperCase() + "” isn't a word.", "warn");
+      reject();
       return;
     }
 
     // Not in the bundled list — check it online (Datamuse), both difficulties.
-    // The board is frozen while we wait; the timer keeps running.
+    // The board is frozen while we wait.
     checking = true;
     const atStage = stage;
     msg("Checking “" + g.toUpperCase() + "”…");
@@ -1654,7 +1729,7 @@
         acceptWord(g);
       } else if (result === false) {
         extraWords.set(g, false);
-        msg("“" + g.toUpperCase() + "” isn't a word.", "warn");
+        reject();
       } else {
         msg("Couldn't check “" + g.toUpperCase() + "” — try a word from the built-in list.", "warn");
       }
@@ -1741,7 +1816,9 @@
 
     const ex = maxedOut ? null : exampleWord(poolKey());
 
-    $("#re-title").textContent = isLast ? "Time's up!" : "Round " + round + " of " + ROUNDS;
+    $("#re-title").textContent = isLast
+      ? (guessMode() ? "Out of guesses!" : "Time's up!")
+      : "Round " + round + " of " + ROUNDS;
     $("#re-def").hidden = true;
     if (ex) {
       $("#re-sub").textContent = isLast
@@ -1856,8 +1933,8 @@
       visual: "grow",
     },
     {
-      h: "Race the clock",
-      p: "Time you don't use rolls into the next word, so solving fast banks extra seconds. You play 3 rounds; your score is every word you solve.",
+      h: "Two ways to play",
+      p: "Beat the clock (leftover time carries over), or take your time with 5 guesses a round. Either way it's 3 rounds — your score is every word you solve.",
       visual: "score",
     },
   ];
@@ -2330,6 +2407,7 @@
   $("#btn-enter").addEventListener("click", submit);
   $("#btn-return").addEventListener("click", returnAll);
   $("#btn-shuffle").addEventListener("click", doShuffle);
+  $("#btn-hint").addEventListener("click", useHint);
   $("#btn-endround").addEventListener("click", endRound);
   $("#btn-start").addEventListener("click", startSession);
   $("#re-btn").addEventListener("click", roundEndContinue);
@@ -2362,6 +2440,24 @@
   $("#diff-picker-vs").addEventListener("click", (e) => {
     const btn = e.target.closest(".diffbtn");
     if (btn) setDifficulty(btn.dataset.diff);
+  });
+
+  // ---- format wiring (solo) ----
+  const FORMAT_DESC = {
+    timed: "A countdown each stage — leftover time carries into the next word.",
+    guesses: "No clock. 5 wrong words ends a round. One hint for the whole session.",
+  };
+  function setFormat(f) {
+    if (!FORMAT_DESC[f]) return;
+    format = f;
+    [].slice.call($("#format-picker").children).forEach((btn) =>
+      btn.classList.toggle("active", btn.dataset.format === f));
+    $("#format-desc").textContent = FORMAT_DESC[f];
+    $("#best-start").textContent = readBest(); // best is per difficulty+format
+  }
+  $("#format-picker").addEventListener("click", (e) => {
+    const btn = e.target.closest(".diffbtn");
+    if (btn) setFormat(btn.dataset.format);
   });
 
   // ---- close-condition picker (versus create) ----
@@ -2521,6 +2617,7 @@
 
   window.addEventListener("DOMContentLoaded", () => {
     setDifficulty("easy");
+    setFormat("timed");
     setClose("24h");
 
     const code = urlMatchCode();
