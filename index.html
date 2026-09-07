@@ -523,6 +523,7 @@
     <!-- MY GAMES (home hub, once signed in with a name) -->
     <section id="screen-home" hidden>
       <p class="note whoami" id="home-whoami" hidden></p>
+      <button class="primary" id="btn-home-resume" type="button" hidden>Resume game</button>
       <div class="homeactions">
         <button class="primary" id="btn-home-new" type="button">+ New game</button>
         <button class="ghost" id="btn-home-solo" type="button">Play solo</button>
@@ -645,6 +646,7 @@
       <p class="lede">Best total: <b id="best-start">0</b> words.</p>
       <button class="primary" id="btn-start" disabled>Loading&hellip;</button>
       <p class="note" id="load-note">Loading dictionary&hellip;</p>
+      <button class="linkbtn" id="btn-start-resume" type="button" hidden>Resume where you left off</button>
       <button class="linkbtn" id="btn-start-howto" type="button">How to play</button>
       <button class="linkbtn tomenu" id="btn-start-home" type="button" hidden>&larr; My games</button>
     </section>
@@ -1282,8 +1284,111 @@
     try { localStorage.setItem(bestKey(), String(n)); } catch (e) {}
   }
 
+  // ---- save & resume an in-progress game (localStorage, per device) ----
+  const RESUME_KEY = "three21.resume";
+  const RESUME_TTL = 36 * 3600 * 1000; // drop a stale save after a day and a half
+  let resumeState = null;
+
+  function saveProgress() {
+    if (screens.play.hidden) return;
+    try {
+      localStorage.setItem(RESUME_KEY, JSON.stringify({
+        v: 1, savedAt: Date.now(), phase: "stage",
+        mode: mode, matchCode: matchCode, matchSeed: matchSeed,
+        difficulty: difficulty, format: format,
+        round: round, stage: stage,
+        roundWords: roundWords, currentRoundWords: currentRoundWords,
+        poolChars: pool.map((t) => t.ch),
+        newCount: pool.filter((t) => t.isNew).length,
+        guessesLeft: guessesLeft, hintUsed: hintUsed,
+      }));
+    } catch (e) {}
+  }
+  function saveRoundBreak(nextRound) {
+    try {
+      localStorage.setItem(RESUME_KEY, JSON.stringify({
+        v: 1, savedAt: Date.now(), phase: "roundbreak",
+        mode: mode, matchCode: matchCode, matchSeed: matchSeed,
+        difficulty: difficulty, format: format,
+        round: nextRound, roundWords: roundWords, hintUsed: hintUsed,
+      }));
+    } catch (e) {}
+  }
+  function clearResume() {
+    resumeState = null;
+    try { localStorage.removeItem(RESUME_KEY); } catch (e) {}
+  }
+  function loadResume() {
+    try {
+      const s = JSON.parse(localStorage.getItem(RESUME_KEY) || "null");
+      if (s && s.v === 1 && (Date.now() - s.savedAt) < RESUME_TTL &&
+          (s.mode === "solo" || s.mode === "versus")) {
+        resumeState = s;
+      } else if (s) {
+        localStorage.removeItem(RESUME_KEY);
+      }
+    } catch (e) { resumeState = null; }
+  }
+  function resumeMatches(code) {
+    return !!(resumeState && resumeState.mode === "versus" && resumeState.matchCode === code);
+  }
+
+  async function resumeGame() {
+    const s = resumeState;
+    if (!s) { goHome(); return; }
+    if (!dictReady) { setTimeout(resumeGame, 100); return; }
+
+    mode = s.mode;
+    matchCode = s.matchCode || null;
+    matchSeed = s.matchSeed || 0;
+    difficulty = normDiff(s.difficulty);
+    setFormat(normFormat(s.format));
+    round = s.round || 1;
+    roundWords = (s.roundWords || []).map((w) => (w || []).slice());
+    hintUsed = !!s.hintUsed;
+    locked = false;
+    checking = false;
+    carryMs = 0;
+
+    if (mode === "versus" && matchCode && dbReady()) {
+      let data = null;
+      try { data = await window.MatchDB.getMatch(matchCode); } catch (e) {}
+      const myUid = window.MatchDB.uid;
+      const me = data && (data.entrants || []).find((e) => e.uid === myUid);
+      if (!data || matchIsClosed(data) || (me && me.done)) { clearResume(); goHome(); return; }
+      matchMeta = data;
+      matchEntrants = data.entrants || [];
+      const names = data.names || {};
+      const others = (data.playerUids || []).filter((u) => u !== myUid);
+      playerName = names[myUid] || storedName || "You";
+      opponentName = others.length === 1 ? (names[others[0]] || "your friend") : "the others";
+    }
+
+    rand = mode === "versus" ? mulberry32(mixSeed(matchSeed, round)) : Math.random;
+    $("#round-n").textContent = round;
+    $("#round-diff").textContent = DIFF_INFO[difficulty].label;
+
+    if (s.phase === "roundbreak") {
+      startRound(); // was between rounds — the saved round hasn't been seen yet
+      return;
+    }
+
+    stage = s.stage || 1;
+    currentRoundWords = (s.currentRoundWords || []).slice();
+    solved = currentRoundWords.length;
+    guessesLeft = (typeof s.guessesLeft === "number") ? s.guessesLeft : GUESS_BUDGET;
+    const chars = s.poolChars || [];
+    const nc = s.newCount || 0;
+    pool = chars.map((ch, i) => ({ ch: ch, isNew: nc > 0 && i >= chars.length - nc }));
+    if (!pool.length) { startRound(); return; }
+    show("play");
+    beginStage();
+    msg("Picked up where you left off.", "good");
+  }
+
   function startSession() {
     if (!dictReady) { setTimeout(startSession, 100); return; }
+    clearResume();
     round = 1;
     roundWords = [];
     hintUsed = false; // one hint per 3-round session
@@ -1383,6 +1488,7 @@
       $("#btn-hint").hidden = hintUsed;
       renderPips();
       msg("");
+      saveProgress();
       return;
     }
 
@@ -1403,6 +1509,7 @@
 
     if (carriedSec >= 1) msg("+" + Math.round(carriedSec) + "s carried over", "good");
     else msg("");
+    saveProgress();
   }
 
   function renderPips() {
@@ -1424,6 +1531,7 @@
       clearInterval(timerId);
       setTimeout(() => finish(false), 1100);
     } else {
+      saveProgress();
       msg("“" + word.toUpperCase() + "” isn't a word — " +
         guessesLeft + (guessesLeft === 1 ? " guess left" : " guesses left"), "warn");
     }
@@ -1843,6 +1951,8 @@
       $("#re-word").textContent = "";
     }
     $("#re-btn").textContent = isLast ? "Continue" : "Start round " + (round + 1);
+    if (isLast) clearResume();
+    else saveRoundBreak(round + 1);
     show("roundend");
   }
 
@@ -1858,6 +1968,7 @@
   // All 3 rounds are done: solo goes to the personal summary; versus submits
   // this player's result and waits for (or reveals against) the opponent.
   function afterAllRounds() {
+    clearResume(); // all 3 rounds done — nothing left to resume
     if (mode === "versus") submitVersusResult();
     else showFinalSummary();
   }
@@ -2042,13 +2153,26 @@
     if (dbReady() && window.MatchDB.hasAuth && storedName) {
       prefillNames(storedName);
       document.querySelectorAll(".tomenu").forEach((el) => { el.hidden = false; });
+      renderResumeButton();
       show("home");
       startHomeWatch();
     } else {
+      renderResumeButton();
       show("landing");
       $("#vs-note").hidden = dbReady();
       prefillNames(storedName);
     }
+  }
+
+  function renderResumeButton() {
+    const home = $("#btn-home-resume");
+    const start = $("#btn-start-resume");
+    if (!resumeState) { home.hidden = true; start.hidden = true; return; }
+    const where = "Round " + (resumeState.round || 1) + " of " + ROUNDS;
+    home.textContent = (resumeState.mode === "versus" ? "Resume your game · " : "Resume solo game · ") + where;
+    home.hidden = false;
+    // The start screen's link only makes sense for a solo save.
+    start.hidden = resumeState.mode !== "solo";
   }
   function startHomeWatch() {
     if (unwatchHome) { unwatchHome(); unwatchHome = null; }
@@ -2209,7 +2333,8 @@
         DIFF_INFO[normDiff(difficulty)].label + " · " + FORMAT_LABEL[normFormat(format)] + " · " + closesInText() + ".";
       show("vsinvite");
     } else if (info.action === "play") {
-      startSession(); // run the 3 rounds, submit at the end
+      if (resumeMatches(m.code)) resumeGame(); // pick up an interrupted run
+      else startSession(); // run the 3 rounds, submit at the end
     } else {
       openResults(); // "open" — finished/closed; show results, live
     }
@@ -2423,6 +2548,8 @@
   $("#btn-start").addEventListener("click", startSession);
   $("#re-btn").addEventListener("click", roundEndContinue);
   $("#btn-again").addEventListener("click", startSession);
+  $("#btn-home-resume").addEventListener("click", resumeGame);
+  $("#btn-start-resume").addEventListener("click", resumeGame);
 
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Enter") return;
@@ -2502,7 +2629,7 @@
     setClose("24h");
     show("vscreate");
   });
-  $("#btn-home-solo").addEventListener("click", () => { mode = "solo"; show("start"); });
+  $("#btn-home-solo").addEventListener("click", () => { mode = "solo"; renderResumeButton(); show("start"); });
   $("#btn-vs-invite-home").addEventListener("click", goHome);
   $("#btn-vs-wait-home").addEventListener("click", goHome);
   $("#btn-start-home").addEventListener("click", goHome);
@@ -2532,7 +2659,7 @@
     $("#btn-lb-close").disabled = false;
   });
 
-  $("#btn-solo").addEventListener("click", () => { mode = "solo"; show("start"); });
+  $("#btn-solo").addEventListener("click", () => { mode = "solo"; renderResumeButton(); show("start"); });
   $("#btn-vs").addEventListener("click", () => {
     if (!dbReady()) { $("#vs-note").hidden = false; return; }
     $("#vs-name-create").value = storedName || "";
@@ -2613,6 +2740,7 @@
       mode = "versus";
       const me = (data.entrants || []).find((e) => e.uid === myUid);
       if (me && me.done) openResults(); // already played this one — show standings
+      else if (resumeMatches(matchCode)) resumeGame(); // pick up an interrupted run
       else startSession();
     } catch (e) {
       $("#vs-join-note").textContent = "Couldn't join — check your connection and try again.";
@@ -2638,6 +2766,7 @@
     setDifficulty("easy");
     setFormat("timed");
     setClose("24h");
+    loadResume();
 
     const code = urlMatchCode();
     pendingMatchCode = code || null;
