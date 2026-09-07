@@ -205,6 +205,16 @@ service cloud.firestore {
         allow delete: if false;
       }
     }
+
+    // Game of the Day — one write-once result per player per local day.
+    match /dailies/{day} {
+      allow read: if true;
+      match /entrants/{uid} {
+        allow read: if true;
+        allow create: if request.auth != null && request.auth.uid == uid;
+        allow update, delete: if false;   // one attempt, no do-overs
+      }
+    }
   }
 }
 ```

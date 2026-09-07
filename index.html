@@ -430,6 +430,23 @@
   .gamecard:hover { border-color: var(--accent); }
   .gamecard.dim { opacity: 0.6; }
   .gamecard.dim:hover { opacity: 1; }
+
+  /* Game of the Day card */
+  .dailycard {
+    width: 100%;
+    display: flex; flex-direction: column; gap: 10px;
+    padding: 16px;
+    border: 1px solid var(--accent);
+    border-radius: 14px;
+    background: var(--surface);
+  }
+  .dailycard-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .dailycard-title {
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
+  }
+  .dailycard-streak { font-size: 0.8rem; font-weight: 700; color: var(--text); }
+  #daily-yesterday { display: flex; flex-direction: column; gap: 6px; }
+  #daily-yesterday .lb-row { cursor: default; }
   .gamecard-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
   .gamecard-vs { font-weight: 650; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .gamecard-sub { font-size: 0.8rem; color: var(--muted); }
@@ -537,6 +554,21 @@
     <section id="screen-home" hidden>
       <p class="note whoami" id="home-whoami" hidden></p>
       <button class="primary" id="btn-home-resume" type="button" hidden>Resume game</button>
+
+      <div class="dailycard" id="dailycard" hidden>
+        <div class="dailycard-head">
+          <span class="dailycard-title">Game of the Day</span>
+          <span class="dailycard-streak" id="daily-streak" hidden></span>
+        </div>
+        <p class="note" id="daily-meta"></p>
+        <button class="primary" id="btn-daily-play" type="button">Play today's game</button>
+        <div id="daily-yesterday" hidden>
+          <div class="gamegroup">Yesterday</div>
+          <div class="lb-list" id="daily-yst-list"></div>
+          <button class="linkbtn" id="btn-daily-yst-full" type="button">See full board</button>
+        </div>
+      </div>
+
       <div class="homeactions">
         <button class="primary" id="btn-home-new" type="button">+ New game</button>
         <button class="ghost" id="btn-home-solo" type="button">Play solo</button>
@@ -544,6 +576,24 @@
       <p class="note" id="home-empty" hidden>No games yet. Start one and send the link to your family or friends.</p>
       <div id="home-list"></div>
       <button class="linkbtn" id="btn-home-howto" type="button">How to play</button>
+    </section>
+
+    <!-- GAME OF THE DAY: intro / one-shot confirm -->
+    <section id="screen-daily-intro" hidden>
+      <h2 style="margin:0;font-size:1.3rem;">Game of the Day</h2>
+      <p class="lede" id="daily-intro-date"></p>
+      <p class="lede">Easy · 3 Strikes · everyone plays the same letters. <b>One attempt</b> — make it count.</p>
+      <button class="primary" id="btn-daily-start" type="button">Start</button>
+      <button class="linkbtn" id="btn-daily-intro-back" type="button">&larr; My games</button>
+    </section>
+
+    <!-- GAME OF THE DAY: leaderboard -->
+    <section id="screen-daily-board" hidden>
+      <h2 id="daily-board-title" style="margin:0;font-size:1.3rem;">Game of the Day</h2>
+      <p class="note" id="daily-board-sub"></p>
+      <div class="lb-list" id="daily-board-list"></div>
+      <p class="note" id="daily-board-foot"></p>
+      <button class="linkbtn" id="btn-daily-board-home" type="button">&larr; My games</button>
     </section>
 
     <!-- LANDING (fallback when there's no backend / no sign-in) -->
@@ -963,6 +1013,51 @@
         () => cb(null)
       );
     },
+
+    // ---- Game of the Day ----
+    // dailies/{day}/entrants/{uid} — one write-once result per player per day.
+    async getDailyEntrant(day) {
+      if (!uid) return null;
+      try {
+        const s = await getDoc(doc(db, "dailies", day, "entrants", uid));
+        return s.exists() ? unwrapEntrant(Object.assign({ uid: uid }, s.data())) : null;
+      } catch (e) { return null; }
+    },
+    async submitDaily(day, r) {
+      if (!uid) throw new Error("sign-in required");
+      await setDoc(doc(db, "dailies", day, "entrants", uid), {
+        name: r.name || "Player",
+        total: r.total || 0,
+        strikes: r.strikes || 0,
+        solveMs: r.solveMs || 0,
+        roundWords: wrapRoundWords(r.roundWords),
+        finishedAt: Date.now(),
+      });
+    },
+    async getDailyBoard(day) {
+      try {
+        const es = await getDocs(collection(db, "dailies", day, "entrants"));
+        return es.docs.map((d) => unwrapEntrant(Object.assign({ uid: d.id }, d.data())));
+      } catch (e) { return null; }
+    },
+    watchDailyBoard(day, cb) {
+      return onSnapshot(
+        collection(db, "dailies", day, "entrants"),
+        (snap) => cb(snap.docs.map((d) => unwrapEntrant(Object.assign({ uid: d.id }, d.data())))),
+        () => cb(null)
+      );
+    },
+    // Streak lives on the player doc; caller passes today's key + the prior day's.
+    async bumpStreak(day, prevDay) {
+      if (!uid) return;
+      try {
+        const snap = await getDoc(doc(db, "players", uid));
+        const p = snap.exists() ? snap.data() : {};
+        if (p.dailyLastDay === day) return; // already counted
+        const streak = (p.dailyLastDay === prevDay) ? (p.dailyStreak || 0) + 1 : 1;
+        await setDoc(doc(db, "players", uid), { dailyStreak: streak, dailyLastDay: day }, { merge: true });
+      } catch (e) {}
+    },
   };
 </script>
 <script src="freq.js"></script>
@@ -1025,10 +1120,43 @@
   }
   let rand = Math.random;
 
+  // ---- Game of the Day: the puzzle IS the local calendar date ----
+  function dayKeyOf(d) {
+    d = d || new Date();
+    return d.getFullYear() + "-" +
+      String(d.getMonth() + 1).padStart(2, "0") + "-" +
+      String(d.getDate()).padStart(2, "0");
+  }
+  function shiftDayKey(key, delta) {
+    const p = key.split("-");
+    const d = new Date(+p[0], +p[1] - 1, +p[2] + delta, 12); // noon — dodge DST edges
+    return dayKeyOf(d);
+  }
+  function seedForDay(key) { // FNV-1a over the date string → 32-bit
+    let h = 2166136261 >>> 0;
+    for (let i = 0; i < key.length; i++) {
+      h ^= key.charCodeAt(i);
+      h = Math.imul(h, 16777619) >>> 0;
+    }
+    return h >>> 0;
+  }
+  function msUntilLocalMidnight() {
+    const now = new Date();
+    const nextMid = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    return nextMid - now;
+  }
+  function dailyResetText() {
+    const h = Math.round(msUntilLocalMidnight() / 3600000);
+    return h <= 1 ? "new puzzle within the hour" : "new puzzle in " + h + "h";
+  }
+  // Modes whose letters come from a shared seed, not Math.random.
+  function seededMode() { return mode === "versus" || mode === "daily"; }
+
   // ---- versus / group-mode state ----
-  let mode = "solo";        // "solo" | "versus"
+  let mode = "solo";        // "solo" | "versus" | "daily"
   let matchCode = null;
-  let matchSeed = 0;
+  let matchSeed = 0;        // versus match seed, or the Game of the Day seed
+  let dailyDay = null;      // "YYYY-MM-DD" (local) when mode === "daily"
   let playerName = "";
   let opponentName = "";     // the one other player's name, in a 2-player game
   let matchMeta = null;      // latest matches/{code} parent doc
@@ -1295,6 +1423,8 @@
     vswaiting: $("#screen-vs-waiting"),
     leaderboard: $("#screen-leaderboard"),
     vsreveal: $("#screen-vs-reveal"),
+    dailyintro: $("#screen-daily-intro"),
+    dailyboard: $("#screen-daily-board"),
     start: $("#screen-start"),
     play: $("#screen-play"),
     roundend: $("#screen-roundend"),
@@ -1322,7 +1452,7 @@
     try {
       localStorage.setItem(RESUME_KEY, JSON.stringify({
         v: 1, savedAt: Date.now(), phase: "stage",
-        mode: mode, matchCode: matchCode, matchSeed: matchSeed,
+        mode: mode, matchCode: matchCode, matchSeed: matchSeed, dailyDay: dailyDay,
         difficulty: difficulty, format: format,
         round: round, stage: stage,
         roundWords: roundWords, currentRoundWords: currentRoundWords,
@@ -1337,7 +1467,7 @@
     try {
       localStorage.setItem(RESUME_KEY, JSON.stringify({
         v: 1, savedAt: Date.now(), phase: "roundbreak",
-        mode: mode, matchCode: matchCode, matchSeed: matchSeed,
+        mode: mode, matchCode: matchCode, matchSeed: matchSeed, dailyDay: dailyDay,
         difficulty: difficulty, format: format,
         sessionStrikes: sessionStrikes, solveMs: solveMs,
         round: nextRound, roundWords: roundWords, hintUsed: hintUsed,
@@ -1352,7 +1482,7 @@
     try {
       const s = JSON.parse(localStorage.getItem(RESUME_KEY) || "null");
       if (s && s.v === 1 && (Date.now() - s.savedAt) < RESUME_TTL &&
-          (s.mode === "solo" || s.mode === "versus")) {
+          (s.mode === "solo" || s.mode === "versus" || s.mode === "daily")) {
         resumeState = s;
       } else if (s) {
         localStorage.removeItem(RESUME_KEY);
@@ -1371,6 +1501,7 @@
     mode = s.mode;
     matchCode = s.matchCode || null;
     matchSeed = s.matchSeed || 0;
+    dailyDay = s.dailyDay || null;
     difficulty = normDiff(s.difficulty);
     setFormat(normFormat(s.format));
     round = s.round || 1;
@@ -1381,6 +1512,17 @@
     locked = false;
     checking = false;
     carryMs = 0;
+
+    if (mode === "daily") {
+      // The daily puzzle only exists for its own calendar day. If midnight has
+      // passed, that run is gone; if it's still today but already submitted,
+      // send them to the board instead of back into the game.
+      if (dailyDay !== dayKeyOf()) { clearResume(); goHome(); return; }
+      matchSeed = seedForDay(dailyDay);
+      let mine = null;
+      if (dbReady()) { try { mine = await window.MatchDB.getDailyEntrant(dailyDay); } catch (e) {} }
+      if (mine) { clearResume(); showDailyBoard(dailyDay, { live: true }); return; }
+    }
 
     if (mode === "versus" && matchCode && dbReady()) {
       let data = null;
@@ -1396,7 +1538,7 @@
       opponentName = others.length === 1 ? (names[others[0]] || "your friend") : "the others";
     }
 
-    rand = mode === "versus" ? mulberry32(mixSeed(matchSeed, round)) : Math.random;
+    rand = seededMode() ? mulberry32(mixSeed(matchSeed, round)) : Math.random;
     $("#round-n").textContent = round;
     $("#round-diff").textContent = DIFF_INFO[difficulty].label;
 
@@ -1440,10 +1582,10 @@
     locked = false;
     checking = false;
 
-    // Versus mode: reseed fresh for every round so the letter sequence only
-    // depends on the shared match seed + round number, never on how many
-    // stages either player reached in an earlier round.
-    rand = mode === "versus" ? mulberry32(mixSeed(matchSeed, round)) : Math.random;
+    // Versus / daily: reseed fresh for every round so the letter sequence only
+    // depends on the shared seed + round number, never on how many stages
+    // either player reached in an earlier round.
+    rand = seededMode() ? mulberry32(mixSeed(matchSeed, round)) : Math.random;
 
     const easy = difficulty === "easy";
     const startPool = easy ? easyStarts() : goodWords3();
@@ -2047,6 +2189,7 @@
   function afterAllRounds() {
     clearResume(); // all 3 rounds done — nothing left to resume
     if (mode === "versus") submitVersusResult();
+    else if (mode === "daily") submitDailyResult();
     else showFinalSummary();
   }
 
@@ -2217,9 +2360,11 @@
 
   function goHome() {
     teardownMatchWatches();
+    teardownDailyWatch();
     mode = "solo";
     matchCode = null;
     matchSeed = 0;
+    dailyDay = null;
     playerName = storedName || "";
     opponentName = "";
     matchMeta = null;
@@ -2231,6 +2376,7 @@
       prefillNames(storedName);
       document.querySelectorAll(".tomenu").forEach((el) => { el.hidden = false; });
       renderResumeButton();
+      renderDailyCard();
       show("home");
       startHomeWatch();
     } else {
@@ -2246,11 +2392,192 @@
     const start = $("#btn-start-resume");
     if (!resumeState) { home.hidden = true; start.hidden = true; return; }
     const where = "Round " + (resumeState.round || 1) + " of " + ROUNDS;
-    home.textContent = (resumeState.mode === "versus" ? "Resume your game · " : "Resume solo game · ") + where;
+    const label = resumeState.mode === "versus" ? "Resume your game · "
+      : resumeState.mode === "daily" ? "Resume Game of the Day · "
+      : "Resume solo game · ";
+    home.textContent = label + where;
     home.hidden = false;
     // The start screen's link only makes sense for a solo save.
     start.hidden = resumeState.mode !== "solo";
   }
+  // ---- Game of the Day ----
+  let myDailyStreak = 0;      // players/{uid}.dailyStreak, loaded once auth resolves
+  let myDailyLastDay = null;  // players/{uid}.dailyLastDay ("YYYY-MM-DD")
+  let unwatchDaily = null;
+
+  function teardownDailyWatch() {
+    if (unwatchDaily) { unwatchDaily(); unwatchDaily = null; }
+  }
+  const capFirst = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
+  function dateLabel(key) {
+    const p = key.split("-");
+    const d = new Date(+p[0], +p[1] - 1, +p[2], 12);
+    return d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+  }
+
+  // Daily is always Easy · 3 Strikes, so the order is fixed: most words, then
+  // fewest wrong words, then fastest solve, then whoever finished first.
+  function dailyCmp(a, b) {
+    return ((b.total || 0) - (a.total || 0)) ||
+      ((a.strikes || 0) - (b.strikes || 0)) ||
+      ((a.solveMs || 0) - (b.solveMs || 0)) ||
+      ((a.finishedAt || 0) - (b.finishedAt || 0));
+  }
+
+  function dailyRow(rank, e, isMe) {
+    const row = document.createElement("div");
+    row.className = "lb-row" + (isMe ? " me" : "");
+    const r = document.createElement("div");
+    r.className = "lb-rank";
+    r.textContent = rank == null ? "·" : rank;
+    const nmwrap = document.createElement("div");
+    nmwrap.className = "lb-namewrap";
+    const nm = document.createElement("div");
+    nm.className = "lb-name";
+    nm.textContent = (e.name || "?") + (isMe ? " (you)" : "");
+    nmwrap.appendChild(nm);
+    const meta = document.createElement("div");
+    meta.className = "lb-meta";
+    const st = e.strikes || 0;
+    meta.textContent = (st === 0 ? "clean" : st + (st === 1 ? " wrong word" : " wrong words")) +
+      " · " + fmtDuration(e.solveMs);
+    nmwrap.appendChild(meta);
+    const sc = document.createElement("div");
+    sc.className = "lb-score";
+    sc.textContent = e.total || 0;
+    row.appendChild(r); row.appendChild(nmwrap); row.appendChild(sc);
+    return row;
+  }
+
+  function startDailySession() {
+    dailyDay = dayKeyOf();
+    mode = "daily";
+    matchCode = null;
+    matchSeed = seedForDay(dailyDay);
+    setDifficulty("easy");
+    setFormat("guesses");
+    playerName = storedName || "You";
+    startSession();
+  }
+
+  async function submitDailyResult() {
+    defToken++;
+    const total = roundWords.reduce((a, w) => a + w.length, 0);
+    const prevDay = shiftDayKey(dailyDay, -1);
+    try {
+      await window.MatchDB.submitDaily(dailyDay, {
+        name: storedName || playerName || "Player",
+        total: total, strikes: sessionStrikes, solveMs: solveMs, roundWords: roundWords,
+      });
+      await window.MatchDB.bumpStreak(dailyDay, prevDay);
+      const p = await window.MatchDB.getPlayer();
+      if (p) { myDailyStreak = p.dailyStreak || 0; myDailyLastDay = p.dailyLastDay || null; }
+    } catch (e) {}
+    clearResume();
+    showDailyBoard(dailyDay, { live: true, justFinished: true });
+  }
+
+  function renderDailyBoard(entrants, dayKey, opts) {
+    opts = opts || {};
+    const myUid = window.MatchDB && window.MatchDB.uid;
+    const done = entrants.slice().sort(dailyCmp);
+    const list = $("#daily-board-list");
+    list.innerHTML = "";
+    if (!done.length) {
+      list.innerHTML = "<p class='note'>No one's finished this one yet.</p>";
+    } else {
+      done.forEach((e, i) => list.appendChild(dailyRow(i + 1, e, e.uid === myUid)));
+    }
+    const mine = done.findIndex((e) => e.uid === myUid);
+    let foot = done.length + (done.length === 1 ? " player" : " players");
+    if (mine >= 0) foot += " · you're " + ordinal(mine + 1);
+    if (opts.justFinished && mine >= 0) {
+      foot = "You finished " + ordinal(mine + 1) + " of " + done.length +
+        (myDailyStreak > 1 ? " · " + myDailyStreak + "-day streak 🔥" : "");
+    }
+    $("#daily-board-foot").textContent = foot;
+  }
+
+  function showDailyBoard(dayKey, opts) {
+    opts = opts || {};
+    teardownDailyWatch();
+    const isToday = dayKey === dayKeyOf();
+    $("#daily-board-title").textContent = isToday ? "Today's game" : dateLabel(dayKey);
+    $("#daily-board-sub").textContent = "Easy · 3 Strikes" + (isToday ? " · " + dailyResetText() : "");
+    $("#daily-board-list").innerHTML = "<p class='note'>Loading…</p>";
+    $("#daily-board-foot").textContent = "";
+    show("dailyboard");
+
+    const paint = (entrants) => {
+      if (!entrants) { $("#daily-board-list").innerHTML = "<p class='note'>Couldn't load the board.</p>"; return; }
+      renderDailyBoard(entrants, dayKey, opts);
+    };
+    if (!dbReady()) { paint(null); return; }
+    if (isToday) unwatchDaily = window.MatchDB.watchDailyBoard(dayKey, paint);
+    else window.MatchDB.getDailyBoard(dayKey).then(paint);
+  }
+
+  async function renderDailyCard() {
+    const card = $("#dailycard");
+    if (!card) return;
+    const today = dayKeyOf();
+    const yst = shiftDayKey(today, -1);
+
+    const pill = $("#daily-streak");
+    if (myDailyStreak > 0 && (myDailyLastDay === today || myDailyLastDay === yst)) {
+      pill.textContent = myDailyStreak + " day" + (myDailyStreak === 1 ? "" : "s") + " 🔥";
+      pill.hidden = false;
+    } else {
+      pill.hidden = true;
+    }
+
+    const playedToday = myDailyLastDay === today;
+    const canResume = resumeState && resumeState.mode === "daily" && resumeState.dailyDay === today;
+    const btn = $("#btn-daily-play");
+    const meta = $("#daily-meta");
+    if (playedToday) {
+      btn.textContent = "See today's standings";
+      meta.textContent = "You've played today. " + capFirst(dailyResetText()) + ".";
+    } else if (canResume) {
+      btn.textContent = "Resume today's game";
+      meta.textContent = "You're partway through. " + capFirst(dailyResetText()) + ".";
+    } else {
+      btn.textContent = "Play today's game";
+      meta.textContent = "Easy · 3 Strikes · one attempt. " + capFirst(dailyResetText()) + ".";
+    }
+    card.hidden = false;
+
+    const box = $("#daily-yesterday");
+    box.hidden = true;
+    if (!dbReady()) return;
+    let board = null;
+    try { board = await window.MatchDB.getDailyBoard(yst); } catch (e) {}
+    if (!board || !board.length) return;
+    const myUid = window.MatchDB.uid;
+    const done = board.slice().sort(dailyCmp);
+    const wrap = $("#daily-yst-list");
+    wrap.innerHTML = "";
+    done.slice(0, 3).forEach((e, i) => wrap.appendChild(dailyRow(i + 1, e, e.uid === myUid)));
+    const mineIdx = done.findIndex((e) => e.uid === myUid);
+    if (mineIdx >= 3) wrap.appendChild(dailyRow(mineIdx + 1, done[mineIdx], true));
+    box.hidden = false;
+  }
+
+  $("#btn-daily-play").addEventListener("click", async () => {
+    const today = dayKeyOf();
+    if (myDailyLastDay === today) { showDailyBoard(today, { live: true }); return; }
+    if (resumeState && resumeState.mode === "daily" && resumeState.dailyDay === today) { resumeGame(); return; }
+    let mine = null;
+    if (dbReady()) { try { mine = await window.MatchDB.getDailyEntrant(today); } catch (e) {} }
+    if (mine) { showDailyBoard(today, { live: true }); return; }
+    $("#daily-intro-date").textContent = dateLabel(today) + " · " + dailyResetText();
+    show("dailyintro");
+  });
+  $("#btn-daily-start").addEventListener("click", startDailySession);
+  $("#btn-daily-intro-back").addEventListener("click", goHome);
+  $("#btn-daily-board-home").addEventListener("click", goHome);
+  $("#btn-daily-yst-full").addEventListener("click", () => showDailyBoard(shiftDayKey(dayKeyOf(), -1)));
+
   function startHomeWatch() {
     if (unwatchHome) { unwatchHome(); unwatchHome = null; }
     $("#home-list").innerHTML = "<p class='note'>Loading your games…</p>";
@@ -2909,6 +3236,8 @@
         const player = await window.MatchDB.getPlayer();
         storedName = (player && player.name) || "";
         if (player && player.tutorialSeen) tutorialSeen = true;
+        myDailyStreak = (player && player.dailyStreak) || 0;
+        myDailyLastDay = (player && player.dailyLastDay) || null;
         if (!storedName) {
           if (!screens.landing.hidden || !screens.vsjoin.hidden) {
             showNameScreen(); // first run — but don't yank someone mid-flow
