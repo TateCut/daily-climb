@@ -1116,27 +1116,39 @@
   // words the pile spells (you trip over one) and how common the best of them
   // is. `easyScore` rewards both; hard mode ignores it and picks uniformly.
   const keyOf = (chars) => chars.slice().sort().join("");
+  function bestRankFor(key) {
+    const arr = ANA.get(key);
+    if (!arr || !arr.length) return Infinity;
+    let best = Infinity;
+    for (let i = 0; i < arr.length; i++) {
+      const r = FREQ.has(arr[i]) ? FREQ.get(arr[i]) : Infinity;
+      if (r < best) best = r;
+    }
+    return best;
+  }
+  // Does this pile spell a word an everyday player would actually know? FREQ is
+  // now a ~21k conversational-frequency list, so "in FREQ at all" is a fair bar.
+  const hasCommonWord = (key) => bestRankFor(key) !== Infinity;
+
   function easyScore(key) {
     const arr = ANA.get(key);
     if (!arr || !arr.length) return 0;
     // Lever 2 — fan-out. Squared so a 6-word pile clearly beats a 3-word one.
     const fanOut = arr.length * arr.length;
-    // Lever 3 — commonness of the best word. FREQ rank 0 = most common; cap the
-    // influence so a merely-decent word still counts.
-    let bestRank = Infinity;
-    for (let i = 0; i < arr.length; i++) {
-      const r = FREQ.has(arr[i]) ? FREQ.get(arr[i]) : Infinity;
-      if (r < bestRank) bestRank = r;
-    }
+    // Lever 3 — commonness of the best word. FREQ rank 0 = most common.
+    const bestRank = bestRankFor(key);
     const commonBonus = bestRank === Infinity ? 1 : (1 + 9 * (1 - Math.min(bestRank, 5000) / 5000));
     return fanOut * commonBonus;
   }
 
-  // 3-letter starting words whose pile spells 2+ words — the easy-mode pool.
+  // 3-letter starting words whose pile spells 2+ words *and* a common one.
   let EASY_STARTS = null;
   function easyStarts() {
     if (!EASY_STARTS) {
-      EASY_STARTS = goodWords3().filter((w) => (ANA.get(keyOf(w.split(""))) || []).length >= 2);
+      EASY_STARTS = goodWords3().filter((w) => {
+        const k = keyOf(w.split(""));
+        return (ANA.get(k) || []).length >= 2 && hasCommonWord(k);
+      });
       if (!EASY_STARTS.length) EASY_STARTS = goodWords3();
     }
     return EASY_STARTS;
@@ -1295,6 +1307,15 @@
       if (!singles.length) { finish(true); return; }
       const better = singles.filter((c) => validSingles(chars.concat(c)).length);
       if (better.length) singles = better;
+      if (easy) {
+        // Guarantee: the next pile spells a common word — and, if possible, the
+        // one after that too, so easy never walks into an obscure-only corner.
+        const nowOK = singles.filter((c) => hasCommonWord(keyOf(chars.concat(c))));
+        const alsoNextOK = nowOK.filter((c) =>
+          validSingles(chars.concat(c)).some((c2) => hasCommonWord(keyOf(chars.concat(c, c2)))));
+        if (alsoNextOK.length) singles = alsoNextOK;
+        else if (nowOK.length) singles = nowOK;
+      }
       const weight = easy ? (c) => easyScore(keyOf(chars.concat(c))) : () => 1;
       const c = weightedPick(singles, weight, rand);
       pool.push({ ch: c, isNew: true });
