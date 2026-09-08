@@ -580,8 +580,10 @@
       <p class="note" id="daily-board-sub"></p>
       <div class="lb-list" id="daily-board-list"></div>
       <p class="note" id="daily-board-foot"></p>
-      <button class="linkbtn" id="btn-daily-board-flip" type="button" hidden></button>
-      <button class="linkbtn" id="btn-daily-board-home" type="button">&larr; Home</button>
+      <div class="homelinks">
+        <button class="ghost" id="btn-daily-board-flip" type="button" hidden></button>
+        <button class="ghost" id="btn-daily-board-home" type="button">&larr; Home</button>
+      </div>
     </section>
 
     <!-- LANDING (fallback when there's no backend / no sign-in) -->
@@ -2537,7 +2539,7 @@
     const flip = $("#btn-daily-board-flip");
     if (flip) {
       flip.hidden = false;
-      flip.textContent = isToday ? "See yesterday's board" : "Back to today's game";
+      flip.textContent = isToday ? "See yesterday's board" : "See today's board";
       flip.onclick = isToday ? () => showDailyBoard(yst) : () => showDailyBoard(today, { live: true });
     }
     $("#daily-board-list").innerHTML = "<p class='note'>Loading…</p>";
