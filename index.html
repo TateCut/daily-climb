@@ -800,7 +800,9 @@
         <div class="chips" id="climb-over-words"></div>
         <span class="totalbox-count" id="climb-over-count"></span>
       </div>
-      <p class="note" id="climb-over-ladder"></p>
+      <p class="lede" id="climb-over-sub" hidden>A word that would have worked on rung <b id="climb-over-rung"></b>:</p>
+      <p class="missed-word" id="climb-over-word" hidden></p>
+      <p class="def" id="climb-over-def" hidden></p>
       <p class="lede">Best: <b id="climb-best">0</b> rungs</p>
       <button class="primary" id="btn-climb-again" type="button">Play again</button>
       <button class="linkbtn" id="btn-climb-home" type="button">&larr; Home</button>
@@ -2667,6 +2669,19 @@
     }
   }
 
+  // The most common valid word for the current pool that isn't an inflection of
+  // what the player last played — i.e. a word that would actually have counted.
+  function climbExample() {
+    const arr = ANA.get(poolKey()) || [];
+    let best = null, bestRank = Infinity;
+    for (const w of arr) {
+      if (isInflectionOf(w, climbPrev)) continue;
+      const r = FREQ.has(w) ? FREQ.get(w) : Infinity;
+      if (best === null || r < bestRank) { best = w; bestRank = r; }
+    }
+    return best || (climbPuzzle && climbPuzzle.c[climbStage - 1]) || null;
+  }
+
   function climbFinish(completed) {
     clearInterval(timerId);
     checking = false;
@@ -2682,9 +2697,18 @@
     $("#climb-over-label").textContent = completed ? "Your ladder" : "You cleared";
     fillChips($("#climb-over-words"), got);
     $("#climb-over-count").textContent = completed ? "all 6 rungs" : rungs + " of 6 rungs";
-    $("#climb-over-ladder").textContent =
-      "One way up: " + climbPuzzle.c.map(function (w) { return w.toUpperCase(); }).join(" → ");
     $("#climb-best").textContent = best;
+
+    const showEx = !completed;
+    $("#climb-over-sub").hidden = !showEx;
+    $("#climb-over-word").hidden = !showEx;
+    $("#climb-over-def").hidden = true;
+    if (showEx) {
+      const ex = climbExample();
+      $("#climb-over-rung").textContent = climbStage;
+      $("#climb-over-word").textContent = ex ? ex.toUpperCase() : "";
+      if (ex) showDefinition(ex, $("#climb-over-def"));
+    }
     clearResume();
     show("climbover");
   }
