@@ -64,6 +64,16 @@
     align-items: center;
     gap: 16px;
   }
+  /* Growing-bars mark above the wordmark — each step longer, like the words. */
+  .brandmark {
+    display: block;
+    width: 72px;
+    height: auto;
+    margin: 0 auto 16px;
+  }
+  .brandmark rect { fill: var(--accent); }
+  /* Keep gameplay tight — the mark drops away on the play screen. */
+  body:has(#screen-play:not([hidden])) .brandmark { display: none; }
   h1 {
     margin: 0 0 22px;
     font-size: 2rem;
@@ -513,6 +523,11 @@
 </head>
 <body>
   <main>
+    <svg class="brandmark" viewBox="0 0 90 39" aria-hidden="true">
+      <rect x="3" y="1" width="33" height="11" rx="5"/>
+      <rect x="3" y="14" width="57" height="11" rx="5"/>
+      <rect x="3" y="27" width="84" height="11" rx="5"/>
+    </svg>
     <h1>3&middot;2&middot;1</h1>
 
     <!-- NAME (first run / edit) -->
