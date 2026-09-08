@@ -81,6 +81,24 @@
     letter-spacing: 0.06em;
   }
   .lede { margin: 0; color: var(--muted); font-size: 0.95rem; line-height: 1.5; }
+
+  /* Loading — three dots, shown while we work out where to route on open. */
+  #screen-loading { min-height: 96px; justify-content: center; }
+  .loader { display: flex; gap: 9px; }
+  .loader span {
+    width: 9px; height: 9px; border-radius: 999px;
+    background: var(--accent);
+    animation: loader-pulse 1s ease-in-out infinite;
+  }
+  .loader span:nth-child(2) { animation-delay: 0.15s; }
+  .loader span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes loader-pulse {
+    0%, 100% { opacity: 0.25; transform: translateY(0); }
+    40% { opacity: 1; transform: translateY(-3px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .loader span { animation: none; opacity: 0.55; }
+  }
   .rules {
     margin: 0;
     padding-left: 20px;
@@ -526,6 +544,13 @@
     </svg>
     <h1>3&middot;2&middot;1</h1>
 
+    <!-- LOADING — the screen shown at rest, before we know where to route -->
+    <section id="screen-loading">
+      <div class="loader" role="status" aria-label="Loading">
+        <span></span><span></span><span></span>
+      </div>
+    </section>
+
     <!-- NAME (first run / edit) -->
     <section id="screen-name" hidden>
       <p class="lede" id="name-lede">What should your friends see you as? You can change it later.</p>
@@ -588,7 +613,7 @@
     </section>
 
     <!-- LANDING (fallback when there's no backend / no sign-in) -->
-    <section id="screen-landing">
+    <section id="screen-landing" hidden>
       <p class="note whoami" id="landing-whoami" hidden></p>
       <p class="lede">A new word puzzle every day &mdash; same letters for everyone.</p>
       <button class="primary" id="btn-solo" type="button">Play</button>
@@ -757,6 +782,19 @@
     </section>
   </main>
 
+<script>
+  // Pre-paint routing: a returning player (cached profile) jumps straight to the
+  // home card, so there's no loader or landing flash between first paint and the
+  // main script. The main script fills in the details and reconciles the server.
+  try {
+    var _prof = JSON.parse(localStorage.getItem("three21.profile") || "null");
+    if (_prof && _prof.name) {
+      var _load = document.getElementById("screen-loading");
+      var _home = document.getElementById("screen-home");
+      if (_load && _home) { _load.hidden = true; _home.hidden = false; }
+    }
+  } catch (e) {}
+</script>
 <script src="firebase-config.js"></script>
 <script type="module">
   // Thin adapter around Firestore for versus-mode match state. Exposes
@@ -1402,6 +1440,7 @@
   const extraWords = new Map();         // word -> true/false, verified via Datamuse
 
   const screens = {
+    loading: $("#screen-loading"),
     name: $("#screen-name"),
     tutorial: $("#screen-tutorial"),
     home: $("#screen-home"),
@@ -3293,16 +3332,30 @@
     const code = null;
     pendingMatchCode = null;
 
-    // Fast first paint. A returning player (cached name) goes straight to the
-    // Game of the Day card; only a genuine first-run sees the landing screen.
-    // The async auth check below still runs and reconciles anything stale.
+    // First paint. A returning player (cached name) goes straight to the Game of
+    // the Day card. Otherwise hold on the loader while auth resolves — the
+    // landing screen is only the destination when there's no backend at all.
+    // Either way the async check below reconciles anything stale.
     try { tutorialSeen = localStorage.getItem("three21.tut") === "1"; } catch (e) {}
+    let loadingSince = 0;
+    const MIN_LOADING_MS = 450; // if the loader shows, let it settle before switching
+    function leaveLoading(go) {
+      if (screens.loading.hidden) { go(); return; }
+      setTimeout(go, Math.max(0, MIN_LOADING_MS - (Date.now() - loadingSince)));
+    }
     if (storedName) {
       prefillNames(storedName);
       document.querySelectorAll(".tomenu").forEach((el) => { el.hidden = false; });
       renderResumeButton();
       renderDailyCard();
       show("home");
+    } else if (dbReady()) {
+      show("loading");
+      loadingSince = Date.now();
+      // Safety net: never sit on the loader forever if auth never resolves.
+      setTimeout(() => {
+        if (!screens.loading.hidden) show(storedName ? "home" : "landing");
+      }, 7000);
     } else {
       show("landing");
     }
@@ -3322,13 +3375,13 @@
         if (player && player.name) storedName = player.name;
         cacheProfile();
         if (!storedName) {
-          if (!screens.landing.hidden || !screens.vsjoin.hidden) {
-            showNameScreen(); // genuine first run — but don't yank someone mid-flow
+          if (!screens.loading.hidden || !screens.landing.hidden || !screens.vsjoin.hidden) {
+            leaveLoading(showNameScreen); // genuine first run — but don't yank someone mid-flow
           }
           return;
         }
         prefillNames(storedName);
-        if (!code && !screens.landing.hidden) goHome();          // promote from landing
+        if (!code && (!screens.loading.hidden || !screens.landing.hidden)) leaveLoading(goHome);
         else if (!code && !screens.home.hidden) renderDailyCard(); // refresh the optimistic home
       });
     }
