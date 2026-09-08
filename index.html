@@ -2591,7 +2591,7 @@
     const today = dayKeyOf();
     // Dev replay: skip the "already played" guards, always offer a fresh run.
     if (isDev()) {
-      $("#daily-intro-date").textContent = dateLabel(today) + " · dev replay";
+      $("#daily-intro-date").textContent = dateLabel(today);
       show("dailyintro");
       return;
     }
