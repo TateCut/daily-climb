@@ -1196,10 +1196,18 @@
       String(d.getMonth() + 1).padStart(2, "0") + "-" +
       String(d.getDate()).padStart(2, "0");
   }
+  // Bump DAILY_SALT to reset the Game of the Day for EVERYONE — a new seed (new
+  // climbs), an empty board, and nobody counts as "already played". It only
+  // changes the day *key*, still under `dailies/{key}`, so no Firestore rule
+  // change. "" = the plain calendar date.
+  const DAILY_SALT = "-r2";
+  function dailyKeyOf(d) { return dayKeyOf(d) + DAILY_SALT; }
+  function dayBase(key) { const m = /^\d{4}-\d{2}-\d{2}/.exec(key || ""); return m ? m[0] : (key || ""); }
   function shiftDayKey(key, delta) {
-    const p = key.split("-");
+    const base = dayBase(key), salt = key.slice(base.length);
+    const p = base.split("-");
     const d = new Date(+p[0], +p[1] - 1, +p[2] + delta, 12); // noon — dodge DST edges
-    return dayKeyOf(d);
+    return dayKeyOf(d) + salt;
   }
   function seedForDay(key) { // FNV-1a over the date string → 32-bit
     let h = 2166136261 >>> 0;
@@ -1613,7 +1621,7 @@
       // The daily puzzle only exists for its own calendar day. If midnight has
       // passed, that run is gone; if it's still today but already submitted,
       // send them to the board instead of back into the game.
-      if (dailyDay !== dayKeyOf()) { clearResume(); goHome(); return; }
+      if (dailyDay !== dailyKeyOf()) { clearResume(); goHome(); return; }
       matchSeed = seedForDay(dailyDay);
       let mine = null;
       if (dbReady()) { try { mine = await window.MatchDB.getDailyEntrant(dailyDay); } catch (e) {} }
@@ -2575,7 +2583,7 @@
   }
   const capFirst = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
   function dateLabel(key) {
-    const p = key.split("-");
+    const p = dayBase(key).split("-");
     const d = new Date(+p[0], +p[1] - 1, +p[2], 12);
     return d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
   }
@@ -2827,7 +2835,7 @@
   function startDailySession() {
     if (!dictReady || !CLIMBS.length) { setTimeout(startDailySession, 100); return; }
     clearResume();
-    dailyDay = dayKeyOf();
+    dailyDay = dailyKeyOf();
     mode = "daily";
     matchCode = null;
     matchSeed = seedForDay(dailyDay);
@@ -2881,7 +2889,7 @@
   function showDailyBoard(dayKey, opts) {
     opts = opts || {};
     teardownDailyWatch();
-    const today = dayKeyOf();
+    const today = dailyKeyOf();
     const yst = shiftDayKey(today, -1);
     const isToday = dayKey === today;
     $("#daily-board-title").textContent = isToday ? "Today's game" : dateLabel(dayKey);
@@ -2922,7 +2930,7 @@
       meta.textContent = "Dev mode — replay enabled. " + capFirst(dailyResetText()) + ".";
       return;
     }
-    const today = dayKeyOf();
+    const today = dailyKeyOf();
     const playedToday = myDailyLastDay === today;
     const canResume = resumeState && resumeState.mode === "daily" && resumeState.dailyDay === today;
     if (playedToday) btn.textContent = "See today's standings";
@@ -2932,7 +2940,7 @@
   }
 
   $("#btn-daily-play").addEventListener("click", async () => {
-    const today = dayKeyOf();
+    const today = dailyKeyOf();
     // Dev replay: skip the "already played" guards, always offer a fresh run.
     if (isDev()) {
       $("#daily-intro-date").textContent = dateLabel(today);
