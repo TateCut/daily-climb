@@ -2248,6 +2248,7 @@
     $("#name-save").disabled = true;
     storedName = val;
     playerName = val;
+    cacheProfile();
     if (window.MatchDB) await window.MatchDB.savePlayerName(val);
     $("#name-save").disabled = false;
     prefillNames(val);
@@ -2410,6 +2411,31 @@
   let myDailyLastDay = null;  // players/{uid}.dailyLastDay ("YYYY-MM-DD")
   let unwatchDaily = null;
 
+  // Cache the bits of the profile the home screen needs (name + daily state) so a
+  // returning player lands on the Game of the Day card immediately, instead of
+  // flashing the fallback landing screen while Firebase auth + the players/{uid}
+  // read complete. The async check in DOMContentLoaded still runs and corrects
+  // anything stale.
+  const PROFILE_KEY = "three21.profile";
+  function cacheProfile() {
+    try {
+      localStorage.setItem(PROFILE_KEY, JSON.stringify({
+        name: storedName || "",
+        dailyLastDay: myDailyLastDay || null,
+        dailyStreak: myDailyStreak || 0,
+      }));
+    } catch (e) {}
+  }
+  function loadCachedProfile() {
+    try {
+      const p = JSON.parse(localStorage.getItem(PROFILE_KEY) || "null");
+      if (!p) return;
+      if (p.name) storedName = p.name;
+      if (typeof p.dailyStreak === "number") myDailyStreak = p.dailyStreak;
+      if (p.dailyLastDay) myDailyLastDay = p.dailyLastDay;
+    } catch (e) {}
+  }
+
   function teardownDailyWatch() {
     if (unwatchDaily) { unwatchDaily(); unwatchDaily = null; }
   }
@@ -2504,6 +2530,7 @@
       await window.MatchDB.bumpStreak(dailyDay, prevDay);
       const p = await window.MatchDB.getPlayer();
       if (p) { myDailyStreak = p.dailyStreak || 0; myDailyLastDay = p.dailyLastDay || null; }
+      cacheProfile();
     } catch (e) {}
     clearResume();
     showDailyBoard(dailyDay, { live: true, justFinished: true });
@@ -3248,6 +3275,7 @@
     setFormat("timed");
     setClose("24h");
     loadResume();
+    loadCachedProfile(); // name + daily state from the last session, for a flash-free first paint
 
     // Dev replay switch: ?dev=1 turns on unlimited Game-of-the-Day replays for
     // this device (persisted), ?dev=0 turns it back off. Users never see it.
@@ -3265,29 +3293,43 @@
     const code = null;
     pendingMatchCode = null;
 
-    // Fast first paint — land somewhere sensible immediately.
-    show("landing");
+    // Fast first paint. A returning player (cached name) goes straight to the
+    // Game of the Day card; only a genuine first-run sees the landing screen.
+    // The async auth check below still runs and reconciles anything stale.
+    try { tutorialSeen = localStorage.getItem("three21.tut") === "1"; } catch (e) {}
+    if (storedName) {
+      prefillNames(storedName);
+      document.querySelectorAll(".tomenu").forEach((el) => { el.hidden = false; });
+      renderResumeButton();
+      renderDailyCard();
+      show("home");
+    } else {
+      show("landing");
+    }
     $("#vs-note").hidden = true;
 
-    // Once anonymous auth resolves, adopt the stored name (or ask for one),
-    // then swap the default landing for the My Games hub.
-    try { tutorialSeen = localStorage.getItem("three21.tut") === "1"; } catch (e) {}
-
+    // Once anonymous auth resolves, adopt the real profile (or ask for a name).
     if (dbReady()) {
       window.MatchDB.whenReady(async () => {
         const player = await window.MatchDB.getPlayer();
-        storedName = (player && player.name) || "";
-        if (player && player.tutorialSeen) tutorialSeen = true;
-        myDailyStreak = (player && player.dailyStreak) || 0;
-        myDailyLastDay = (player && player.dailyLastDay) || null;
+        if (player) {
+          if (player.tutorialSeen) tutorialSeen = true;
+          myDailyStreak = player.dailyStreak || 0;
+          myDailyLastDay = player.dailyLastDay || null;
+        }
+        // Keep the cached name if the server read failed (offline) — don't blow
+        // away a valid identity and bounce the player to the name screen.
+        if (player && player.name) storedName = player.name;
+        cacheProfile();
         if (!storedName) {
           if (!screens.landing.hidden || !screens.vsjoin.hidden) {
-            showNameScreen(); // first run — but don't yank someone mid-flow
+            showNameScreen(); // genuine first run — but don't yank someone mid-flow
           }
           return;
         }
         prefillNames(storedName);
-        if (!code && !screens.landing.hidden) goHome();
+        if (!code && !screens.landing.hidden) goHome();          // promote from landing
+        else if (!code && !screens.home.hidden) renderDailyCard(); // refresh the optimistic home
       });
     }
 
