@@ -49,21 +49,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 56px 16px 40px;
+    padding: 40px 16px;
     background: var(--bg);
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
-  .back {
-    position: fixed;
-    top: 16px;
-    left: 16px;
-    font-size: 0.85rem;
-    color: var(--muted);
-    text-decoration: none;
-  }
-  .back:hover { color: var(--text); }
-
   main {
     width: min(94vw, 460px);
     text-align: center;
@@ -522,8 +512,6 @@
 </style>
 </head>
 <body>
-  <a class="back" href="../../index.html">&larr; Portfolio</a>
-
   <main>
     <h1>3&middot;2&middot;1</h1>
 
@@ -2522,16 +2510,10 @@
     const today = dayKeyOf();
     const playedToday = myDailyLastDay === today;
     const canResume = resumeState && resumeState.mode === "daily" && resumeState.dailyDay === today;
-    if (playedToday) {
-      btn.textContent = "See today's standings";
-      meta.textContent = "You've played today. " + capFirst(dailyResetText()) + ".";
-    } else if (canResume) {
-      btn.textContent = "Resume today's game";
-      meta.textContent = "You're partway through. " + capFirst(dailyResetText()) + ".";
-    } else {
-      btn.textContent = "Play";
-      meta.textContent = "Easy · 3 Strikes · one attempt. " + capFirst(dailyResetText()) + ".";
-    }
+    if (playedToday) btn.textContent = "See today's standings";
+    else if (canResume) btn.textContent = "Resume today's game";
+    else btn.textContent = "Play";
+    meta.textContent = capFirst(dailyResetText()) + ".";
   }
 
   $("#btn-daily-play").addEventListener("click", async () => {
