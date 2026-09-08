@@ -445,6 +445,9 @@
     font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
   }
   .dailycard-streak { font-size: 0.8rem; font-weight: 700; color: var(--text); }
+  /* Secondary home actions — clearly tappable, but quieter than the daily card. */
+  .homelinks { display: flex; gap: 10px; width: 100%; margin-top: 2px; }
+  .homelinks button { flex: 1; padding: 10px 12px; font-size: 0.9rem; }
   #daily-board-list .lb-row { cursor: default; }
   .gamecard-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
   .gamecard-vs { font-weight: 650; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -562,8 +565,10 @@
         <button class="primary" id="btn-daily-play" type="button">Play</button>
         <p class="note" id="daily-meta"></p>
       </div>
-      <button class="linkbtn" id="btn-home-solo" type="button">Practice</button>
-      <button class="linkbtn" id="btn-home-howto" type="button">How to play</button>
+      <div class="homelinks">
+        <button class="ghost" id="btn-home-solo" type="button">Practice</button>
+        <button class="ghost" id="btn-home-howto" type="button">How to play</button>
+      </div>
     </section>
 
     <!-- GAME OF THE DAY: intro / one-shot confirm -->
