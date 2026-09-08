@@ -439,7 +439,8 @@
   /* Secondary home actions — clearly tappable, but quieter than the daily card. */
   .homelinks { display: flex; gap: 10px; width: 100%; margin-top: 2px; }
   .homelinks button { flex: 1; padding: 10px 12px; font-size: 0.9rem; }
-  #daily-board-list .lb-row { cursor: default; }
+  #daily-board-list .lb-row:hover { border-color: var(--muted); }
+  #daily-board-list .lb-row.me:hover { border-color: var(--accent); }
   .gamecard-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
   .gamecard-vs { font-weight: 650; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .gamecard-sub { font-size: 0.8rem; color: var(--muted); }
@@ -2439,6 +2440,8 @@
     sc.className = "lb-score";
     sc.textContent = e.total || 0;
     row.appendChild(r); row.appendChild(nmwrap); row.appendChild(sc);
+    // Tap a finisher's row to expand their words, round by round.
+    row.addEventListener("click", () => toggleLbDetail(row, e));
     return row;
   }
 
