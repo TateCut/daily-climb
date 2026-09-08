@@ -128,15 +128,6 @@
   button.linkbtn:hover { color: var(--text); }
   .note { font-size: 0.8rem; color: var(--muted); min-height: 1.2em; }
 
-  .hud {
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
-    font-size: 0.85rem;
-    color: var(--muted);
-  }
-  .hud b { color: var(--text); }
-
   .timerbar {
     width: 100%;
     height: 8px;
@@ -711,11 +702,7 @@
 
     <!-- PLAY -->
     <section id="screen-play" hidden>
-      <div class="roundline"><span id="roundline-rounds">Round <b id="round-n">1</b> of <b id="round-total">3</b></span><span id="roundline-practice" hidden>Practice</span> &middot; <b id="round-diff">Easy</b></div>
-      <div class="hud">
-        <span>Stage <b id="stage-n">1</b> &middot; <b id="pool-n">3</b> letters</span>
-        <span><b id="solved-n">0</b> this round</span>
-      </div>
+      <div class="roundline"><span id="roundline-rounds">Round <b id="round-n">1</b> of <b id="round-total">3</b></span><span id="roundline-practice" hidden>Practice</span></div>
       <div class="timerbar" id="timerbar"><div class="timerbar-fill" id="bar"></div></div>
       <div class="secs" id="secline"><span id="secs">30</span>s left</div>
       <div class="guesspips" id="guesspips" hidden></div>
@@ -1583,7 +1570,6 @@
     $("#roundline-rounds").hidden = !multiRound;
     $("#roundline-practice").hidden = multiRound;
     $("#btn-play-home").hidden = mode !== "solo"; // daily is one-shot; versus restarts anyway
-    $("#round-diff").textContent = DIFF_INFO[difficulty].label;
   }
 
   function startRound() {
@@ -1666,9 +1652,6 @@
     renderWrongWords();
     stageShownAt = Date.now();
 
-    $("#stage-n").textContent = stage;
-    $("#pool-n").textContent = tiles.length;
-    $("#solved-n").textContent = solved;
     render(true);
 
     clearInterval(timerId);
@@ -2029,7 +2012,6 @@
     wrongGuesses = []; // solved it — clear the dead-end list
     renderWrongWords();
     msg("Nice — “" + g.toUpperCase() + "”", "good");
-    $("#solved-n").textContent = solved;
     setTimeout(nextStage, 750);
   }
 
