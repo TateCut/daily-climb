@@ -2262,34 +2262,42 @@
   // ---- tutorial ----
   const TUTORIAL = [
     {
-      h: "Make a word",
-      p: "You're handed a small pool of letters. Rearrange all of them into a real word before the timer runs out.",
+      h: "Use every letter",
+      p: "Each round starts with a few letters. Rearrange all of them into one real word.",
       visual: "pool",
     },
     {
-      h: "Build it",
-      p: "Tap a letter to drop it into your word. Tap it again to send it back. Drag letters to reorder — then press Enter.",
+      h: "Build your word",
+      p: "Tap a letter to add it, tap it again to take it back. Drag tiles to reorder, then press Enter.",
       visual: "build",
     },
     {
-      h: "It keeps growing",
-      p: "Solve a word and the pool grows — each round you make a longer word, and every word has to use every letter.",
+      h: "It grows each round",
+      p: "Solve the word and one new letter drops in. Reuse the rest into a longer word — rounds run 3, 4, 5, 6 letters.",
       visual: "grow",
     },
     {
-      h: "Two ways to play",
-      p: "Beat the clock (leftover time carries over), or take your time — three wrong words ends a round. Either way it's 3 rounds; your score is every word you solve.",
-      visual: "score",
+      h: "Three strikes",
+      p: "No clock, so take your time. Three words that don't work ends the round. Stuck? You get one hint per game.",
+      visual: "strikes",
+    },
+    {
+      h: "The Game of the Day",
+      p: "One puzzle a day, the same letters for everyone, over three rounds. Finish to land on the leaderboard. Practice is a single round, any time.",
+      visual: "daily",
     },
   ];
   function tutVisual(kind) {
     const tile = (ch, cls) => '<span class="tut-tile' + (cls ? " " + cls : "") + '">' + ch + "</span>";
-    if (kind === "pool") return tile("r") + tile("a") + tile("t");
-    if (kind === "build") return tile("a") + tile("c") + tile("t") +
-      '<span class="tut-arrow">&rarr;</span>' + tile("c", "accent") + tile("a", "accent") + tile("t", "accent");
-    if (kind === "grow") return tile("c", "accent") + tile("a", "accent") + tile("t", "accent") +
-      '<span class="tut-arrow">&rarr;</span>' + tile("c") + tile("h") + tile("a") + tile("t") + tile("s");
-    if (kind === "score") return '<span class="tut-big">&#9201; &times; 3 rounds</span>';
+    const arrow = '<span class="tut-arrow">&rarr;</span>';
+    if (kind === "pool") return tile("e") + tile("a") + tile("r");
+    if (kind === "build") return tile("r") + tile("a") + tile("e") + arrow +
+      tile("e", "accent") + tile("a", "accent") + tile("r", "accent");
+    if (kind === "grow") return tile("e") + tile("a") + tile("r") + arrow +
+      tile("e") + tile("a") + tile("r") + tile("s", "accent");
+    if (kind === "strikes") return '<span class="guesspip spent"></span>' +
+      '<span class="guesspip spent"></span><span class="guesspip"></span>';
+    if (kind === "daily") return '<span class="tut-big">1 puzzle &middot; 3 rounds</span>';
     return "";
   }
   let tutStep = 0;
