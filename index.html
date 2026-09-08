@@ -736,6 +736,7 @@
       <div class="msg" id="msg"></div>
       <div class="wrongwords" id="wrongwords" hidden></div>
       <button class="linkbtn" id="btn-endround" type="button">End round</button>
+      <button class="linkbtn" id="btn-play-home" type="button">Quit to menu</button>
     </section>
 
     <!-- ROUND END (after every round) -->
@@ -2439,6 +2440,22 @@
     return row;
   }
 
+  // Practice: the Game of the Day ruleset (Easy · 3 Strikes) but with fresh
+  // random letters instead of the daily seed. Drops straight into a game — no
+  // difficulty / format screen.
+  function startPractice() {
+    mode = "solo";            // solo => Math.random letters (not seededMode)
+    matchCode = null;
+    matchSeed = 0;
+    dailyDay = null;
+    setDifficulty("easy");
+    setFormat("guesses");
+    playerName = storedName || "You";
+    document.querySelectorAll(".tomenu").forEach((el) => { el.hidden = false; });
+    clearResume();
+    startSession();
+  }
+
   function startDailySession() {
     dailyDay = dayKeyOf();
     mode = "daily";
@@ -2969,6 +2986,23 @@
   $("#btn-hint").addEventListener("click", useHint);
   $("#btn-endround").addEventListener("click", endRound);
   $("#btn-start").addEventListener("click", startSession);
+
+  // Quit to menu (shown during play) — two taps so a stray tap can't drop the game.
+  let quitArmed = false;
+  $("#btn-play-home").addEventListener("click", () => {
+    const b = $("#btn-play-home");
+    if (!quitArmed) {
+      quitArmed = true;
+      b.textContent = "Tap again to quit";
+      setTimeout(() => { quitArmed = false; b.textContent = "Quit to menu"; }, 4000);
+      return;
+    }
+    quitArmed = false;
+    b.textContent = "Quit to menu";
+    clearInterval(timerId);
+    clearResume();
+    goHome();
+  });
   $("#re-btn").addEventListener("click", roundEndContinue);
   $("#btn-again").addEventListener("click", startSession);
   $("#btn-start-resume").addEventListener("click", resumeGame);
@@ -3045,8 +3079,9 @@
 
   // ---- home / versus wiring ----
   // Versus ("New game") is hidden for now — the home screen is Game of the Day
-  // only. #btn-home-solo is the small "Practice" link into the solo start screen.
-  $("#btn-home-solo").addEventListener("click", () => { mode = "solo"; renderResumeButton(); show("start"); });
+  // only. #btn-home-solo is the small "Practice" link — it drops straight into a
+  // practice game (Easy · 3 Strikes, random letters), no setup screen.
+  $("#btn-home-solo").addEventListener("click", startPractice);
   $("#btn-vs-invite-home").addEventListener("click", goHome);
   $("#btn-vs-wait-home").addEventListener("click", goHome);
   $("#btn-start-home").addEventListener("click", goHome);
@@ -3076,7 +3111,7 @@
     $("#btn-lb-close").disabled = false;
   });
 
-  $("#btn-solo").addEventListener("click", () => { mode = "solo"; renderResumeButton(); show("start"); });
+  $("#btn-solo").addEventListener("click", startPractice);
   $("#btn-vs-create-back").addEventListener("click", goHome);
 
   $("#btn-vs-create").addEventListener("click", async () => {
