@@ -712,7 +712,7 @@
 
     <!-- PLAY -->
     <section id="screen-play" hidden>
-      <div class="roundline">Round <b id="round-n">1</b> of 3 &middot; <b id="round-diff">Easy</b></div>
+      <div class="roundline"><span id="roundline-rounds">Round <b id="round-n">1</b> of <b id="round-total">3</b></span><span id="roundline-practice" hidden>Practice</span> &middot; <b id="round-diff">Easy</b></div>
       <div class="hud">
         <span>Stage <b id="stage-n">1</b> &middot; <b id="pool-n">3</b> letters</span>
         <span><b id="solved-n">0</b> this round</span>
@@ -1396,6 +1396,8 @@
   let trayCells = [];   // [{type:"letter", id} | {type:"gap", for:id}]
   let ans = [];         // length N: letterId, or null for a gap
   const ROUNDS = 3;
+  // Practice (mode "solo") is a single round; daily / versus run the full 3.
+  const sessionRounds = () => (mode === "solo" ? 1 : ROUNDS);
   let round = 0;                        // 1..ROUNDS
   let roundWords = [];                  // [[word,…], …] — one entry per finished round
   let currentRoundWords = [];           // words solved so far in the current round
@@ -1431,7 +1433,11 @@
     for (const k in screens) screens[k].hidden = k !== name;
   }
 
-  function bestKey() { return BEST_KEY + "." + difficulty + (guessMode() ? ".g" : ""); }
+  // Practice ("solo") is one round, so its best is tracked under its own key —
+  // not comparable to the old 3-round solo bests.
+  function bestKey() {
+    return BEST_KEY + "." + difficulty + (guessMode() ? ".g" : "") + (mode === "solo" ? ".p" : "");
+  }
   function readBest() {
     try { return parseInt(localStorage.getItem(bestKey()), 10) || 0; } catch (e) { return 0; }
   }
@@ -1536,8 +1542,7 @@
     }
 
     rand = seededMode() ? mulberry32(mixSeed(matchSeed, round)) : Math.random;
-    $("#round-n").textContent = round;
-    $("#round-diff").textContent = DIFF_INFO[difficulty].label;
+    syncRoundChrome();
 
     if (s.phase === "roundbreak") {
       startRound(); // was between rounds — the saved round hasn't been seen yet
@@ -1570,6 +1575,18 @@
     startRound();
   }
 
+  // Round line + practice-only "Quit to menu" — kept in sync from both a fresh
+  // startRound and a resumeGame.
+  function syncRoundChrome() {
+    const multiRound = sessionRounds() > 1;
+    $("#round-n").textContent = round;
+    $("#round-total").textContent = sessionRounds();
+    $("#roundline-rounds").hidden = !multiRound;
+    $("#roundline-practice").hidden = multiRound;
+    $("#btn-play-home").hidden = mode !== "solo"; // daily is one-shot; versus restarts anyway
+    $("#round-diff").textContent = DIFF_INFO[difficulty].label;
+  }
+
   function startRound() {
     solved = 0;
     currentRoundWords = [];
@@ -1589,14 +1606,13 @@
     const startWeight = easy ? (w) => easyScore(keyOf(w.split(""))) : () => 1;
     const chosen = weightedPick(startPool, startWeight, rand).split("");
     pool = chosen.map((ch) => ({ ch, isNew: true }));
-    $("#round-n").textContent = round;
-    $("#round-diff").textContent = DIFF_INFO[difficulty].label;
+    syncRoundChrome();
     show("play");
     beginStage();
   }
 
   function roundEndContinue() {
-    if (round >= ROUNDS) afterAllRounds();
+    if (round >= sessionRounds()) afterAllRounds();
     else { round++; startRound(); }
   }
 
@@ -2119,7 +2135,11 @@
 
   // Final screen (solo): the words from every stage of every round, plus a Total box.
   function renderFinal() {
-    renderRoundsBlock($("#over-rounds"), roundWords);
+    // One-round practice: the per-round block just duplicates the Total box.
+    const multi = sessionRounds() > 1;
+    $("#over-rounds").hidden = !multi;
+    $("#over-rounds").innerHTML = "";
+    if (multi) renderRoundsBlock($("#over-rounds"), roundWords);
     const all = roundWords.reduce((acc, w) => acc.concat(w), []);
     fillChips($("#over-totalwords"), all);
     $("#over-totalcount").textContent = wordsLabel(all.length);
@@ -2135,7 +2155,8 @@
     roundWords[round - 1] = currentRoundWords.slice();
     defToken++;
 
-    const isLast = round >= ROUNDS;
+    const isLast = round >= sessionRounds();
+    const multiRound = sessionRounds() > 1;
 
     // Nothing to show when the last round is cleared (maxed out) — go to summary.
     if (isLast && maxedOut) { afterAllRounds(); return; }
@@ -2144,10 +2165,10 @@
 
     $("#re-title").textContent = isLast
       ? (guessMode() ? "Three strikes!" : "Time's up!")
-      : "Round " + round + " of " + ROUNDS;
+      : "Round " + round + " of " + sessionRounds();
     $("#re-def").hidden = true;
     if (ex) {
-      $("#re-sub").textContent = isLast
+      $("#re-sub").textContent = (isLast && multiRound)
         ? "That's the end of the last round. A word that could have worked:"
         : "A word that could have worked:";
       $("#re-word").hidden = false;
