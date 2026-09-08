@@ -445,8 +445,7 @@
     font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
   }
   .dailycard-streak { font-size: 0.8rem; font-weight: 700; color: var(--text); }
-  #daily-yesterday { display: flex; flex-direction: column; gap: 6px; }
-  #daily-yesterday .lb-row { cursor: default; }
+  #daily-board-list .lb-row { cursor: default; }
   .gamecard-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
   .gamecard-vs { font-weight: 650; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .gamecard-sub { font-size: 0.8rem; color: var(--muted); }
@@ -550,31 +549,17 @@
       </div>
     </section>
 
-    <!-- MY GAMES (home hub, once signed in with a name) -->
+    <!-- HOME (once signed in with a name) -->
     <section id="screen-home" hidden>
       <p class="note whoami" id="home-whoami" hidden></p>
-      <button class="primary" id="btn-home-resume" type="button" hidden>Resume game</button>
-
-      <div class="dailycard" id="dailycard" hidden>
+      <div class="dailycard" id="dailycard">
         <div class="dailycard-head">
           <span class="dailycard-title">Game of the Day</span>
-          <span class="dailycard-streak" id="daily-streak" hidden></span>
         </div>
+        <button class="primary" id="btn-daily-play" type="button">Play</button>
         <p class="note" id="daily-meta"></p>
-        <button class="primary" id="btn-daily-play" type="button">Play today's game</button>
-        <div id="daily-yesterday" hidden>
-          <div class="gamegroup">Yesterday</div>
-          <div class="lb-list" id="daily-yst-list"></div>
-          <button class="linkbtn" id="btn-daily-yst-full" type="button">See full board</button>
-        </div>
       </div>
-
-      <div class="homeactions">
-        <button class="primary" id="btn-home-new" type="button">+ New game</button>
-        <button class="ghost" id="btn-home-solo" type="button">Play solo</button>
-      </div>
-      <p class="note" id="home-empty" hidden>No games yet. Start one and send the link to your family or friends.</p>
-      <div id="home-list"></div>
+      <button class="linkbtn" id="btn-home-solo" type="button">Practice</button>
       <button class="linkbtn" id="btn-home-howto" type="button">How to play</button>
     </section>
 
@@ -584,25 +569,28 @@
       <p class="lede" id="daily-intro-date"></p>
       <p class="lede">Easy · 3 Strikes · everyone plays the same letters. <b>One attempt</b> — make it count.</p>
       <button class="primary" id="btn-daily-start" type="button">Start</button>
-      <button class="linkbtn" id="btn-daily-intro-back" type="button">&larr; My games</button>
+      <button class="linkbtn" id="btn-daily-intro-back" type="button">&larr; Home</button>
     </section>
 
     <!-- GAME OF THE DAY: leaderboard -->
     <section id="screen-daily-board" hidden>
-      <h2 id="daily-board-title" style="margin:0;font-size:1.3rem;">Game of the Day</h2>
+      <div class="dailycard-head">
+        <h2 id="daily-board-title" style="margin:0;font-size:1.3rem;">Game of the Day</h2>
+        <span class="dailycard-streak" id="daily-board-streak" hidden></span>
+      </div>
       <p class="note" id="daily-board-sub"></p>
       <div class="lb-list" id="daily-board-list"></div>
       <p class="note" id="daily-board-foot"></p>
-      <button class="linkbtn" id="btn-daily-board-home" type="button">&larr; My games</button>
+      <button class="linkbtn" id="btn-daily-board-flip" type="button" hidden></button>
+      <button class="linkbtn" id="btn-daily-board-home" type="button">&larr; Home</button>
     </section>
 
     <!-- LANDING (fallback when there's no backend / no sign-in) -->
     <section id="screen-landing">
       <p class="note whoami" id="landing-whoami" hidden></p>
-      <p class="lede">Play solo against the clock, or challenge a friend to the same letters &mdash; results are revealed once you've both finished.</p>
-      <button class="primary" id="btn-solo" type="button">Play Solo</button>
-      <button class="ghost" id="btn-vs" type="button">Play a Friend</button>
-      <p class="note" id="vs-note" hidden>Multiplayer isn't set up on this site yet.</p>
+      <p class="lede">A new word puzzle every day &mdash; same letters for everyone.</p>
+      <button class="primary" id="btn-solo" type="button">Play</button>
+      <p class="note" id="vs-note" hidden></p>
     </section>
 
     <!-- VS: create a game -->
@@ -711,7 +699,7 @@
       <p class="note" id="load-note">Loading dictionary&hellip;</p>
       <button class="linkbtn" id="btn-start-resume" type="button" hidden>Resume where you left off</button>
       <button class="linkbtn" id="btn-start-howto" type="button">How to play</button>
-      <button class="linkbtn tomenu" id="btn-start-home" type="button" hidden>&larr; My games</button>
+      <button class="linkbtn tomenu" id="btn-start-home" type="button" hidden>&larr; Home</button>
     </section>
 
     <!-- PLAY -->
@@ -766,7 +754,7 @@
       <p class="note" id="over-strikes" hidden></p>
       <p class="lede">Best total: <b id="best-over">0</b> words</p>
       <button class="primary" id="btn-again" type="button">Play again</button>
-      <button class="linkbtn tomenu" id="btn-over-home" type="button" hidden>&larr; My games</button>
+      <button class="linkbtn tomenu" id="btn-over-home" type="button" hidden>&larr; Home</button>
     </section>
   </main>
 
@@ -2378,7 +2366,6 @@
       renderResumeButton();
       renderDailyCard();
       show("home");
-      startHomeWatch();
     } else {
       renderResumeButton();
       show("landing");
@@ -2388,17 +2375,12 @@
   }
 
   function renderResumeButton() {
-    const home = $("#btn-home-resume");
+    // The home screen's resume affordance is the Play button itself now
+    // (renderDailyCard flips it to "Resume today's game"). This only drives
+    // the solo-practice start screen's little "resume" link.
     const start = $("#btn-start-resume");
-    if (!resumeState) { home.hidden = true; start.hidden = true; return; }
-    const where = "Round " + (resumeState.round || 1) + " of " + ROUNDS;
-    const label = resumeState.mode === "versus" ? "Resume your game · "
-      : resumeState.mode === "daily" ? "Resume Game of the Day · "
-      : "Resume solo game · ";
-    home.textContent = label + where;
-    home.hidden = false;
-    // The start screen's link only makes sense for a solo save.
-    start.hidden = resumeState.mode !== "solo";
+    if (!start) return;
+    start.hidden = !(resumeState && resumeState.mode === "solo");
   }
   // ---- Game of the Day ----
   let myDailyStreak = 0;      // players/{uid}.dailyStreak, loaded once auth resolves
@@ -2501,9 +2483,24 @@
   function showDailyBoard(dayKey, opts) {
     opts = opts || {};
     teardownDailyWatch();
-    const isToday = dayKey === dayKeyOf();
+    const today = dayKeyOf();
+    const yst = shiftDayKey(today, -1);
+    const isToday = dayKey === today;
     $("#daily-board-title").textContent = isToday ? "Today's game" : dateLabel(dayKey);
     $("#daily-board-sub").textContent = "Easy · 3 Strikes" + (isToday ? " · " + dailyResetText() : "");
+
+    const pill = $("#daily-board-streak");
+    if (pill) {
+      const alive = myDailyStreak > 0 && (myDailyLastDay === today || myDailyLastDay === yst);
+      pill.textContent = alive ? myDailyStreak + " day" + (myDailyStreak === 1 ? "" : "s") + " 🔥" : "";
+      pill.hidden = !alive;
+    }
+    const flip = $("#btn-daily-board-flip");
+    if (flip) {
+      flip.hidden = false;
+      flip.textContent = isToday ? "See yesterday's board" : "Back to today's game";
+      flip.onclick = isToday ? () => showDailyBoard(yst) : () => showDailyBoard(today, { live: true });
+    }
     $("#daily-board-list").innerHTML = "<p class='note'>Loading…</p>";
     $("#daily-board-foot").textContent = "";
     show("dailyboard");
@@ -2517,24 +2514,14 @@
     else window.MatchDB.getDailyBoard(dayKey).then(paint);
   }
 
-  async function renderDailyCard() {
-    const card = $("#dailycard");
-    if (!card) return;
-    const today = dayKeyOf();
-    const yst = shiftDayKey(today, -1);
-
-    const pill = $("#daily-streak");
-    if (myDailyStreak > 0 && (myDailyLastDay === today || myDailyLastDay === yst)) {
-      pill.textContent = myDailyStreak + " day" + (myDailyStreak === 1 ? "" : "s") + " 🔥";
-      pill.hidden = false;
-    } else {
-      pill.hidden = true;
-    }
-
-    const playedToday = myDailyLastDay === today;
-    const canResume = resumeState && resumeState.mode === "daily" && resumeState.dailyDay === today;
+  // The single home Play button: label + one-line status for today's puzzle.
+  function renderDailyCard() {
     const btn = $("#btn-daily-play");
     const meta = $("#daily-meta");
+    if (!btn) return;
+    const today = dayKeyOf();
+    const playedToday = myDailyLastDay === today;
+    const canResume = resumeState && resumeState.mode === "daily" && resumeState.dailyDay === today;
     if (playedToday) {
       btn.textContent = "See today's standings";
       meta.textContent = "You've played today. " + capFirst(dailyResetText()) + ".";
@@ -2542,25 +2529,9 @@
       btn.textContent = "Resume today's game";
       meta.textContent = "You're partway through. " + capFirst(dailyResetText()) + ".";
     } else {
-      btn.textContent = "Play today's game";
+      btn.textContent = "Play";
       meta.textContent = "Easy · 3 Strikes · one attempt. " + capFirst(dailyResetText()) + ".";
     }
-    card.hidden = false;
-
-    const box = $("#daily-yesterday");
-    box.hidden = true;
-    if (!dbReady()) return;
-    let board = null;
-    try { board = await window.MatchDB.getDailyBoard(yst); } catch (e) {}
-    if (!board || !board.length) return;
-    const myUid = window.MatchDB.uid;
-    const done = board.slice().sort(dailyCmp);
-    const wrap = $("#daily-yst-list");
-    wrap.innerHTML = "";
-    done.slice(0, 3).forEach((e, i) => wrap.appendChild(dailyRow(i + 1, e, e.uid === myUid)));
-    const mineIdx = done.findIndex((e) => e.uid === myUid);
-    if (mineIdx >= 3) wrap.appendChild(dailyRow(mineIdx + 1, done[mineIdx], true));
-    box.hidden = false;
   }
 
   $("#btn-daily-play").addEventListener("click", async () => {
@@ -2576,7 +2547,6 @@
   $("#btn-daily-start").addEventListener("click", startDailySession);
   $("#btn-daily-intro-back").addEventListener("click", goHome);
   $("#btn-daily-board-home").addEventListener("click", goHome);
-  $("#btn-daily-yst-full").addEventListener("click", () => showDailyBoard(shiftDayKey(dayKeyOf(), -1)));
 
   function startHomeWatch() {
     if (unwatchHome) { unwatchHome(); unwatchHome = null; }
@@ -2999,7 +2969,6 @@
   $("#btn-start").addEventListener("click", startSession);
   $("#re-btn").addEventListener("click", roundEndContinue);
   $("#btn-again").addEventListener("click", startSession);
-  $("#btn-home-resume").addEventListener("click", resumeGame);
   $("#btn-start-resume").addEventListener("click", resumeGame);
 
   document.addEventListener("keydown", (e) => {
@@ -3073,13 +3042,8 @@
   });
 
   // ---- home / versus wiring ----
-  $("#btn-home-new").addEventListener("click", () => {
-    $("#vs-name-create").value = storedName || "";
-    $("#vs-create-note").textContent = "";
-    setFormat("timed");
-    setClose("24h");
-    show("vscreate");
-  });
+  // Versus ("New game") is hidden for now — the home screen is Game of the Day
+  // only. #btn-home-solo is the small "Practice" link into the solo start screen.
   $("#btn-home-solo").addEventListener("click", () => { mode = "solo"; renderResumeButton(); show("start"); });
   $("#btn-vs-invite-home").addEventListener("click", goHome);
   $("#btn-vs-wait-home").addEventListener("click", goHome);
@@ -3111,13 +3075,6 @@
   });
 
   $("#btn-solo").addEventListener("click", () => { mode = "solo"; renderResumeButton(); show("start"); });
-  $("#btn-vs").addEventListener("click", () => {
-    if (!dbReady()) { $("#vs-note").hidden = false; return; }
-    $("#vs-name-create").value = storedName || "";
-    setFormat("timed");
-    setClose("24h");
-    show("vscreate");
-  });
   $("#btn-vs-create-back").addEventListener("click", goHome);
 
   $("#btn-vs-create").addEventListener("click", async () => {
@@ -3219,13 +3176,14 @@
     setClose("24h");
     loadResume();
 
-    const code = urlMatchCode();
-    pendingMatchCode = code || null;
-    if (code) matchCode = code;
+    // Versus / invite links are off for now: ignore any ?m= and clean the URL.
+    if (location.search) history.replaceState(null, "", location.pathname);
+    const code = null;
+    pendingMatchCode = null;
 
     // Fast first paint — land somewhere sensible immediately.
-    if (code) { show("vsjoin"); loadJoinPreview(code); }
-    else { show("landing"); $("#vs-note").hidden = dbReady(); }
+    show("landing");
+    $("#vs-note").hidden = true;
 
     // Once anonymous auth resolves, adopt the stored name (or ask for one),
     // then swap the default landing for the My Games hub.
