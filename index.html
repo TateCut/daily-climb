@@ -2401,8 +2401,8 @@
   // ---- tutorial ----
   const TUTORIAL = [
     {
-      h: "Use every letter",
-      p: "Each round starts with a few letters. Rearrange all of them into one real word.",
+      h: "Start with three letters",
+      p: "Every climb opens with a 3-letter word. Rearrange the letters into a real word to clear the first rung.",
       visual: "pool",
     },
     {
@@ -2411,18 +2411,18 @@
       visual: "build",
     },
     {
-      h: "It grows each round",
-      p: "Solve the word and one new letter drops in. Reuse the rest into a longer word.",
+      h: "Climb to eight",
+      p: "Clear a rung and one new letter drops in — make a longer word from all of them, up to eight. No cheap steps: a rung can't be the one below it plus -s, -d, -r or -n.",
       visual: "grow",
     },
     {
-      h: "Three strikes",
-      p: "No clock, so take your time. Three words that don't work ends the round. Stuck? You get one hint per game.",
+      h: "Three strikes, no clock",
+      p: "Take your time. Three words that don't work ends the climb. One hint per game if you're stuck.",
       visual: "strikes",
     },
     {
       h: "The Game of the Day",
-      p: "One puzzle a day, the same letters for everyone, over three rounds. Finish to land on the leaderboard. Practice is a single round, any time.",
+      p: "Three climbs back to back, the same puzzles for everyone. Your score is how many rungs you clear. Practice runs a single climb, any time.",
       visual: "daily",
     },
   ];
@@ -2433,10 +2433,10 @@
     if (kind === "build") return tile("r") + tile("a") + tile("e") + arrow +
       tile("e", "accent") + tile("a", "accent") + tile("r", "accent");
     if (kind === "grow") return tile("e") + tile("a") + tile("r") + arrow +
-      tile("e") + tile("a") + tile("r") + tile("s", "accent");
+      tile("n", "accent") + tile("e") + tile("a") + tile("r");
     if (kind === "strikes") return '<span class="guesspip spent"></span>' +
       '<span class="guesspip spent"></span><span class="guesspip"></span>';
-    if (kind === "daily") return '<span class="tut-big">1 puzzle &middot; 3 rounds</span>';
+    if (kind === "daily") return '<span class="tut-big">3 climbs &middot; rungs = score</span>';
     return "";
   }
   let tutStep = 0;
