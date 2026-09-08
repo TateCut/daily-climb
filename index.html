@@ -575,7 +575,7 @@
     <section id="screen-daily-intro" hidden>
       <h2 style="margin:0;font-size:1.3rem;">Game of the Day</h2>
       <p class="lede" id="daily-intro-date"></p>
-      <p class="lede">Easy · 3 Strikes · everyone plays the same letters. <b>One attempt</b> — make it count.</p>
+      <p class="lede" id="daily-intro-rules">Easy · 3 Strikes · everyone plays the same letters. <b>One attempt</b> — make it count.</p>
       <button class="primary" id="btn-daily-start" type="button">Start</button>
       <button class="linkbtn" id="btn-daily-intro-back" type="button">&larr; Home</button>
     </section>
@@ -2477,6 +2477,13 @@
     startSession();
   }
 
+  // Dev-only: when on, the Game of the Day can be replayed any number of times
+  // and none of the replays write to Firestore (real board / streak untouched).
+  // Toggled via ?dev=1 / ?dev=0, persisted in localStorage per device.
+  function isDev() {
+    try { return localStorage.getItem("three21.dev") === "1"; } catch (e) { return false; }
+  }
+
   function startDailySession() {
     dailyDay = dayKeyOf();
     mode = "daily";
@@ -2490,6 +2497,8 @@
 
   async function submitDailyResult() {
     defToken++;
+    // Dev replay: don't touch Firestore — just show the real board read-only.
+    if (isDev()) { clearResume(); showDailyBoard(dailyDay, { live: true }); return; }
     const total = roundWords.reduce((a, w) => a + w.length, 0);
     const prevDay = shiftDayKey(dailyDay, -1);
     try {
@@ -2565,6 +2574,11 @@
     const btn = $("#btn-daily-play");
     const meta = $("#daily-meta");
     if (!btn) return;
+    if (isDev()) {
+      btn.textContent = "Play (dev replay)";
+      meta.textContent = "Dev mode — replay enabled. " + capFirst(dailyResetText()) + ".";
+      return;
+    }
     const today = dayKeyOf();
     const playedToday = myDailyLastDay === today;
     const canResume = resumeState && resumeState.mode === "daily" && resumeState.dailyDay === today;
@@ -2576,6 +2590,13 @@
 
   $("#btn-daily-play").addEventListener("click", async () => {
     const today = dayKeyOf();
+    // Dev replay: skip the "already played" guards, always offer a fresh run.
+    if (isDev()) {
+      $("#daily-intro-date").textContent = dateLabel(today) + " · " + dailyResetText();
+      $("#daily-intro-rules").innerHTML = "Easy · 3 Strikes · today's letters. <b>Dev mode</b> — replay as often as you like, nothing is saved.";
+      show("dailyintro");
+      return;
+    }
     if (myDailyLastDay === today) { showDailyBoard(today, { live: true }); return; }
     if (resumeState && resumeState.mode === "daily" && resumeState.dailyDay === today) { resumeGame(); return; }
     let mine = null;
@@ -3233,6 +3254,17 @@
     setFormat("timed");
     setClose("24h");
     loadResume();
+
+    // Dev replay switch: ?dev=1 turns on unlimited Game-of-the-Day replays for
+    // this device (persisted), ?dev=0 turns it back off. Users never see it.
+    try {
+      const q = new URLSearchParams(location.search);
+      if (q.has("dev")) {
+        if (q.get("dev") === "0") localStorage.removeItem("three21.dev");
+        else localStorage.setItem("three21.dev", "1");
+      }
+    } catch (e) {}
+    if (isDev()) console.log("[3-2-1] dev mode ON — Game of the Day is replayable. ?dev=0 to disable.");
 
     // Versus / invite links are off for now: ignore any ?m= and clean the URL.
     if (location.search) history.replaceState(null, "", location.pathname);
