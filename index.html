@@ -1290,13 +1290,26 @@
     }
   }
 
+  // A Datamuse/Wiktionary definition that just points at another form — a
+  // misspelling, an archaic/alt spelling, an acronym, a name. Not a word we want.
+  const XREF_DEF = /\b(?:(?:mis)?spelling|form|acronym|initialism|abbreviation|contraction|clipping|ellipsis) of\b|\bsynonym of\b/i;
+  const NAME_DEF = /^(?:an? )?(?:surname|(?:fore|first|last|male|female|given|place|nick|pet) ?name|diminutive|patronymic|placename|river|city|town|village|hamlet|county|district|province|region|lake|island|commune|parish|borough)\b|\ba (?:\w+ )?(?:municipality|census-designated place)\b|\b(?:organi[sz]ation|trademark|brand name)\b/i;
+  function defIsXref(raw) {
+    let t = raw.indexOf("\t") > -1 ? raw.slice(raw.indexOf("\t") + 1) : raw;
+    t = t.trim().replace(/^\([^)]*\)\s*/, ""); // drop a leading "(usage label)"
+    return XREF_DEF.test(t) || NAME_DEF.test(t);
+  }
+
   // true = real word, false = not a word, null = couldn't check (offline etc.)
   async function verifyWord(word) {
     const data = await datamuseSpell(word);
     if (data === null) return null;
     const hit = data[0];
     if (!hit || hit.word !== word) return false;
-    return !!((hit.defs && hit.defs.length) || hit.score >= 2000);
+    const defs = hit.defs || [];
+    if (!defs.some((d) => !defIsXref(d))) return false;      // needs one genuine definition
+    if (hit.defHeadword && hit.defHeadword !== word) return false; // acronym / brand / proper noun
+    return true;
   }
 
   async function fetchDefinition(word) {
@@ -1304,7 +1317,7 @@
       const data = await datamuseSpell(word);
       const defs = data && data[0] && data[0].defs;
       if (!defs || !defs.length) return null;
-      const raw = defs[0];
+      const raw = defs.find((d) => !defIsXref(d)) || defs[0];
       const tab = raw.indexOf("\t");
       let pos = "", text = raw;
       if (tab > -1) { pos = raw.slice(0, tab); text = raw.slice(tab + 1); }
