@@ -575,7 +575,6 @@
     <section id="screen-daily-intro" hidden>
       <h2 style="margin:0;font-size:1.3rem;">Game of the Day</h2>
       <p class="lede" id="daily-intro-date"></p>
-      <p class="lede" id="daily-intro-rules">Easy · 3 Strikes · everyone plays the same letters. <b>One attempt</b> — make it count.</p>
       <button class="primary" id="btn-daily-start" type="button">Start</button>
       <button class="linkbtn" id="btn-daily-intro-back" type="button">&larr; Home</button>
     </section>
@@ -2592,8 +2591,7 @@
     const today = dayKeyOf();
     // Dev replay: skip the "already played" guards, always offer a fresh run.
     if (isDev()) {
-      $("#daily-intro-date").textContent = dateLabel(today) + " · " + dailyResetText();
-      $("#daily-intro-rules").innerHTML = "Easy · 3 Strikes · today's letters. <b>Dev mode</b> — replay as often as you like, nothing is saved.";
+      $("#daily-intro-date").textContent = dateLabel(today) + " · dev replay";
       show("dailyintro");
       return;
     }
@@ -2602,7 +2600,7 @@
     let mine = null;
     if (dbReady()) { try { mine = await window.MatchDB.getDailyEntrant(today); } catch (e) {} }
     if (mine) { showDailyBoard(today, { live: true }); return; }
-    $("#daily-intro-date").textContent = dateLabel(today) + " · " + dailyResetText();
+    $("#daily-intro-date").textContent = dateLabel(today);
     show("dailyintro");
   });
   $("#btn-daily-start").addEventListener("click", startDailySession);
