@@ -585,7 +585,6 @@
       </div>
       <div class="homelinks">
         <button class="ghost" id="btn-home-solo" type="button">Practice</button>
-        <button class="ghost" id="btn-home-climb" type="button">Climb</button>
         <button class="ghost" id="btn-home-howto" type="button">How to play</button>
       </div>
     </section>
@@ -594,6 +593,8 @@
     <section id="screen-daily-intro" hidden>
       <h2 style="margin:0;font-size:1.3rem;">Game of the Day</h2>
       <p class="lede" id="daily-intro-date"></p>
+      <p class="lede">Three climbs, 3 letters up to 8. Your score is how many rungs you clear.</p>
+      <p class="note">One attempt.</p>
       <button class="primary" id="btn-daily-start" type="button">Start</button>
       <button class="linkbtn" id="btn-daily-intro-back" type="button">&larr; Home</button>
     </section>
@@ -806,6 +807,20 @@
       <p class="lede">Best: <b id="climb-best">0</b> rungs</p>
       <button class="primary" id="btn-climb-again" type="button">Play again</button>
       <button class="linkbtn" id="btn-climb-home" type="button">&larr; Home</button>
+    </section>
+
+    <!-- CLIMB: between climbs (daily) -->
+    <section id="screen-climb-roundend" hidden>
+      <h2 id="cre-title" style="margin:0;font-size:1.3rem;">Climb 1 of 3</h2>
+      <div class="totalbox" id="cre-box">
+        <span class="totalbox-label" id="cre-label">You cleared</span>
+        <div class="chips" id="cre-words"></div>
+        <span class="totalbox-count" id="cre-count"></span>
+      </div>
+      <p class="lede" id="cre-sub" hidden>A word that would have worked on rung <b id="cre-rung"></b>:</p>
+      <p class="missed-word" id="cre-word" hidden></p>
+      <p class="def" id="cre-def" hidden></p>
+      <button class="primary" id="btn-cre-next" type="button">Next climb</button>
     </section>
   </main>
 
@@ -1207,10 +1222,11 @@
   function seededMode() { return mode === "versus" || mode === "daily"; }
 
   // ---- versus / group-mode state ----
-  let mode = "solo";        // "solo" | "versus" | "daily" | "climb"
+  let mode = "solo";        // "solo" | "versus" | "daily" (3 climbs) | "climb" (1, practice)
   let climbPuzzle = null;   // the current CLIMBS entry
   let climbStage = 0;       // 1..6 rungs (letters = climbStage + 2)
   let climbPrev = null;     // the word played on the rung below (for the inflection rule)
+  let dailyClimbs = null;   // [puzzle, puzzle, puzzle] for today's daily, from the day seed
   let matchCode = null;
   let matchSeed = 0;        // versus match seed, or the Game of the Day seed
   let dailyDay = null;      // "YYYY-MM-DD" (local) when mode === "daily"
@@ -1500,6 +1516,7 @@
     dailyboard: $("#screen-daily-board"),
     climbintro: $("#screen-climb-intro"),
     climbover: $("#screen-climb-over"),
+    climbroundend: $("#screen-climb-roundend"),
     start: $("#screen-start"),
     play: $("#screen-play"),
     roundend: $("#screen-roundend"),
@@ -1527,10 +1544,10 @@
   let resumeState = null;
 
   function saveProgress() {
-    if (screens.play.hidden || mode === "climb") return; // climb has no mid-session resume yet
+    if (screens.play.hidden || mode === "climb") return; // practice climb doesn't resume
     try {
       localStorage.setItem(RESUME_KEY, JSON.stringify({
-        v: 1, savedAt: Date.now(), phase: "stage",
+        v: 2, savedAt: Date.now(), phase: "stage",
         mode: mode, matchCode: matchCode, matchSeed: matchSeed, dailyDay: dailyDay,
         difficulty: difficulty, format: format,
         round: round, stage: stage,
@@ -1545,7 +1562,7 @@
   function saveRoundBreak(nextRound) {
     try {
       localStorage.setItem(RESUME_KEY, JSON.stringify({
-        v: 1, savedAt: Date.now(), phase: "roundbreak",
+        v: 2, savedAt: Date.now(), phase: "roundbreak",
         mode: mode, matchCode: matchCode, matchSeed: matchSeed, dailyDay: dailyDay,
         difficulty: difficulty, format: format,
         sessionStrikes: sessionStrikes, solveMs: solveMs,
@@ -1560,8 +1577,8 @@
   function loadResume() {
     try {
       const s = JSON.parse(localStorage.getItem(RESUME_KEY) || "null");
-      if (s && s.v === 1 && (Date.now() - s.savedAt) < RESUME_TTL &&
-          (s.mode === "solo" || s.mode === "versus" || s.mode === "daily")) {
+      if (s && s.v === 2 && (Date.now() - s.savedAt) < RESUME_TTL &&
+          (s.mode === "versus" || s.mode === "daily")) {
         resumeState = s;
       } else if (s) {
         localStorage.removeItem(RESUME_KEY);
@@ -1601,6 +1618,8 @@
       let mine = null;
       if (dbReady()) { try { mine = await window.MatchDB.getDailyEntrant(dailyDay); } catch (e) {} }
       if (mine) { clearResume(); showDailyBoard(dailyDay, { live: true }); return; }
+      dailyClimbs = pickDailyClimbs(dailyDay);
+      climbPuzzle = dailyClimbs[round - 1];
     }
 
     if (mode === "versus" && matchCode && dbReady()) {
@@ -1621,7 +1640,8 @@
     syncRoundChrome();
 
     if (s.phase === "roundbreak") {
-      startRound(); // was between rounds — the saved round hasn't been seen yet
+      // between rounds — the saved round hasn't been seen yet
+      if (mode === "daily") beginClimbRound(); else startRound();
       return;
     }
 
@@ -1632,7 +1652,12 @@
     const chars = s.poolChars || [];
     const nc = s.newCount || 0;
     pool = chars.map((ch, i) => ({ ch: ch, isNew: nc > 0 && i >= chars.length - nc }));
-    if (!pool.length) { startRound(); return; }
+    if (!pool.length) { if (mode === "daily") beginClimbRound(); else startRound(); return; }
+    if (mode === "daily") {
+      climbStage = stage;
+      climbPrev = currentRoundWords[currentRoundWords.length - 1] || null;
+      syncRoundChrome();
+    }
     show("play");
     beginStage();
     wrongGuesses = (s.wrongGuesses || []).slice(); // beginStage cleared it — restore
@@ -1654,16 +1679,20 @@
   // Round line + practice-only "Quit to menu" — kept in sync from both a fresh
   // startRound and a resumeGame.
   function syncRoundChrome() {
-    const climb = mode === "climb";
+    const climb = isClimb();
     const multiRound = sessionRounds() > 1;
     $("#round-n").textContent = round;
     $("#round-total").textContent = sessionRounds();
     $("#roundline-rounds").hidden = climb || !multiRound;
     $("#roundline-practice").hidden = climb || multiRound;
     $("#roundline-climb").hidden = !climb;
-    if (climb) $("#roundline-climb").textContent = "Climb · rung " + climbStage + " of 6";
-    // "Quit to menu" shows in practice + climb; daily is one-shot, versus restarts.
-    $("#btn-play-home").hidden = mode !== "solo" && !climb;
+    if (climb) {
+      $("#roundline-climb").textContent = climbRounds() > 1
+        ? "Climb " + round + " of " + climbRounds() + " · rung " + climbStage
+        : "Climb · rung " + climbStage + " of 6";
+    }
+    // "Quit to menu" shows in practice; the daily is one attempt, versus restarts.
+    $("#btn-play-home").hidden = mode !== "solo" && mode !== "climb";
     $("#btn-endround").textContent = climb ? "End climb" : "End round";
   }
 
@@ -1819,10 +1848,10 @@
     guessesLeft = Math.max(0, guessesLeft - 1);
     renderPips();
     if (guessesLeft <= 0) {
-      msg(mode === "climb" ? "Three strikes — that's the climb." : "Three strikes — that's the round.", "warn");
+      msg(isClimb() ? "Three strikes — that's the climb." : "Three strikes — that's the round.", "warn");
       locked = true;
       clearInterval(timerId);
-      setTimeout(() => (mode === "climb" ? climbFinish(false) : finish(false)), 1100);
+      setTimeout(() => (isClimb() ? climbRoundDone(false) : finish(false)), 1100);
     } else {
       saveProgress();
       const used = GUESS_BUDGET - guessesLeft;
@@ -1832,7 +1861,7 @@
 
   function useHint() {
     if (hintUsed || !guessMode() || locked || checking) return;
-    const ex = mode === "climb"
+    const ex = isClimb()
       ? (climbPuzzle && climbPuzzle.c[climbStage - 1])
       : exampleWord(poolKey());
     if (!ex) return;
@@ -2126,12 +2155,12 @@
     }
 
     // Climb: a rung can't just be the rung below it plus an ending. Not a strike.
-    if (mode === "climb" && isInflectionOf(g, climbPrev)) {
+    if (isClimb() && isInflectionOf(g, climbPrev)) {
       msg("“" + g.toUpperCase() + "” is just “" + climbPrev.toUpperCase() + "” plus a letter — find another word.", "warn");
       return;
     }
 
-    const accept = mode === "climb" ? climbAccept : acceptWord;
+    const accept = isClimb() ? climbAccept : acceptWord;
     const reject = () => { if (guessMode()) loseGuess(g); else msg("“" + g.toUpperCase() + "” isn't a word.", "warn"); };
 
     if (WORD_SET.has(g) || extraWords.get(g) === true) {
@@ -2182,7 +2211,7 @@
 
   function endRound() {
     if (locked || checking || screens.play.hidden) return;
-    if (mode === "climb") { climbFinish(false); return; }
+    if (isClimb()) { climbRoundDone(false); return; }
     finish(false);
   }
 
@@ -2481,6 +2510,7 @@
     climbPuzzle = null;
     climbStage = 0;
     climbPrev = null;
+    dailyClimbs = null;
     playerName = storedName || "";
     opponentName = "";
     matchMeta = null;
@@ -2604,7 +2634,11 @@
 
   // ---- Climb: from a 3-letter word up to an 8-letter one, +1 letter per rung,
   // rearrange freely.  A rung can't be the rung below it plus a grammatical
-  // single-letter ending.  Standalone for now; the plan is to make it the daily.
+  // single-letter ending.  Practice = one climb (mode "climb"); the Game of the
+  // Day = three climbs back to back (mode "daily"), score = total rungs cleared.
+  function isClimb() { return mode === "climb" || mode === "daily"; }
+  function climbRounds() { return mode === "daily" ? 3 : 1; }
+
   function isInflectionOf(word, prev) {
     if (!prev || !word) return false;
     if (word === prev + "s") return true;                                   // plural / 3rd-person
@@ -2615,6 +2649,17 @@
   function climbBest() { try { return parseInt(localStorage.getItem(CLIMB_BEST_KEY), 10) || 0; } catch (e) { return 0; } }
   function climbWriteBest(n) { try { localStorage.setItem(CLIMB_BEST_KEY, String(n)); } catch (e) {} }
 
+  // Three distinct climb puzzles for a given day, from the day's seed.
+  function pickDailyClimbs(day) {
+    const rnd = mulberry32(seedForDay(day));
+    const n = CLIMBS.length, picks = [];
+    while (picks.length < 3 && picks.length < n) {
+      const i = Math.floor(rnd() * n);
+      if (picks.indexOf(i) < 0) picks.push(i);
+    }
+    return picks.map((i) => CLIMBS[i]);
+  }
+
   function showClimbIntro() {
     mode = "climb";
     $("#btn-climb-start").disabled = !CLIMBS.length;
@@ -2622,34 +2667,44 @@
     show("climbintro");
   }
 
-  function startClimb() {
+  // Reset the per-round state and drop into the first rung. `climbPuzzle` and
+  // `round` are already set by the caller.
+  function beginClimbRound() {
+    climbStage = 1;
+    climbPrev = null;
+    stage = 1;
+    solved = 0;
+    currentRoundWords = [];
+    guessesLeft = GUESS_BUDGET;
+    carryMs = 0;
+    locked = false;
+    checking = false;
+    pool = climbPuzzle.c[0].split("").map((ch) => ({ ch: ch, isNew: true }));
+    syncRoundChrome();
+    show("play");
+    beginStage();
+  }
+
+  function startClimbSession() {
+    round = 1;
+    roundWords = [];
+    sessionStrikes = 0;
+    solveMs = 0;
+    hintUsed = false;                    // one hint for the whole session
+    format = "guesses";                  // 3 strikes, no clock
+    playerName = storedName || "You";
+    document.querySelectorAll(".tomenu").forEach((el) => { el.hidden = false; });
+  }
+
+  function startClimb() {                // Practice: one random climb
     if (!dictReady) { setTimeout(startClimb, 100); return; }
     if (!CLIMBS.length) { showClimbIntro(); return; }
     clearResume();
     mode = "climb";
     matchCode = null; matchSeed = 0; dailyDay = null;
+    startClimbSession();
     climbPuzzle = CLIMBS[Math.floor(Math.random() * CLIMBS.length)];
-    climbStage = 1;
-    climbPrev = null;
-    stage = 1;
-    round = 1;
-    solved = 0;
-    currentRoundWords = [];
-    roundWords = [];
-    guessesLeft = GUESS_BUDGET;
-    sessionStrikes = 0;
-    solveMs = 0;
-    hintUsed = false;
-    carryMs = 0;
-    locked = false;
-    checking = false;
-    format = "guesses";                 // 3 strikes, no clock
-    playerName = storedName || "You";
-    document.querySelectorAll(".tomenu").forEach((el) => { el.hidden = false; });
-    pool = climbPuzzle.c[0].split("").map((ch) => ({ ch: ch, isNew: true }));
-    syncRoundChrome();
-    show("play");
-    beginStage();
+    beginClimbRound();
   }
 
   function climbNext() {
@@ -2675,7 +2730,7 @@
     renderWrongWords();
     if (climbStage >= 6) {
       msg("“" + g.toUpperCase() + "” — top of the climb!", "good");
-      setTimeout(function () { climbFinish(true); }, 950);
+      setTimeout(function () { climbRoundDone(true); }, 950);
     } else {
       msg("Nice — “" + g.toUpperCase() + "”", "good");
       setTimeout(climbNext, 750);
@@ -2695,21 +2750,57 @@
     return best || (climbPuzzle && climbPuzzle.c[climbStage - 1]) || null;
   }
 
-  function climbFinish(completed) {
+  // A climb (round) has ended — completed all 6 rungs, or struck out / gave up.
+  function climbRoundDone(completed) {
     clearInterval(timerId);
     checking = false;
     locked = true;
     marker.remove();
     defToken++;
-    const got = currentRoundWords.slice();
-    const rungs = got.length;
-    const best = Math.max(climbBest(), rungs);
-    climbWriteBest(best);
+    roundWords[round - 1] = currentRoundWords.slice();
 
+    if (round >= climbRounds()) { climbSessionDone(); return; }
+
+    // between-climb screen (daily only)
+    const rungs = currentRoundWords.length;
+    $("#cre-title").textContent = "Climb " + round + " of " + climbRounds();
+    $("#cre-label").textContent = completed ? "Cleared" : "You cleared";
+    fillChips($("#cre-words"), currentRoundWords);
+    $("#cre-count").textContent = completed ? "all 6 rungs" : rungs + " of 6 rungs";
+    const showEx = !completed;
+    $("#cre-sub").hidden = !showEx;
+    $("#cre-word").hidden = !showEx;
+    $("#cre-def").hidden = true;
+    if (showEx) {
+      const ex = climbExample();
+      $("#cre-rung").textContent = climbStage;
+      $("#cre-word").textContent = ex ? ex.toUpperCase() : "";
+      if (ex) showDefinition(ex, $("#cre-def"));
+    }
+    $("#btn-cre-next").textContent = "Climb " + (round + 1) + " of " + climbRounds();
+    saveRoundBreak(round + 1);
+    show("climbroundend");
+  }
+
+  function climbRoundContinue() {
+    round++;
+    climbPuzzle = dailyClimbs[round - 1];
+    beginClimbRound();
+  }
+
+  function climbSessionDone() {
+    const totalRungs = roundWords.reduce((a, w) => a + w.length, 0);
+    if (mode === "daily") { submitDailyResult(totalRungs); return; }
+
+    // Practice summary.
+    const best = Math.max(climbBest(), totalRungs);
+    climbWriteBest(best);
+    const got = roundWords[0] || [];
+    const completed = got.length === 6;
     $("#climb-over-title").textContent = completed ? "Full climb!" : "Climb over";
     $("#climb-over-label").textContent = completed ? "Your ladder" : "You cleared";
     fillChips($("#climb-over-words"), got);
-    $("#climb-over-count").textContent = completed ? "all 6 rungs" : rungs + " of 6 rungs";
+    $("#climb-over-count").textContent = completed ? "all 6 rungs" : got.length + " of 6 rungs";
     $("#climb-best").textContent = best;
 
     const showEx = !completed;
@@ -2734,21 +2825,23 @@
   }
 
   function startDailySession() {
+    if (!dictReady || !CLIMBS.length) { setTimeout(startDailySession, 100); return; }
+    clearResume();
     dailyDay = dayKeyOf();
     mode = "daily";
     matchCode = null;
     matchSeed = seedForDay(dailyDay);
-    setDifficulty("easy");
-    setFormat("guesses");
-    playerName = storedName || "You";
-    startSession();
+    dailyClimbs = pickDailyClimbs(dailyDay);
+    startClimbSession();
+    climbPuzzle = dailyClimbs[0];
+    beginClimbRound();
   }
 
-  async function submitDailyResult() {
+  async function submitDailyResult(totalRungs) {
     defToken++;
     // Dev replay: don't touch Firestore — just show the real board read-only.
     if (isDev()) { clearResume(); showDailyBoard(dailyDay, { live: true }); return; }
-    const total = roundWords.reduce((a, w) => a + w.length, 0);
+    const total = totalRungs;
     const prevDay = shiftDayKey(dailyDay, -1);
     try {
       await window.MatchDB.submitDaily(dailyDay, {
@@ -2792,7 +2885,7 @@
     const yst = shiftDayKey(today, -1);
     const isToday = dayKey === today;
     $("#daily-board-title").textContent = isToday ? "Today's game" : dateLabel(dayKey);
-    $("#daily-board-sub").textContent = "Easy · 3 Strikes" + (isToday ? " · " + dailyResetText() : "");
+    $("#daily-board-sub").textContent = "3 climbs · score is rungs cleared" + (isToday ? " · " + dailyResetText() : "");
 
     const pill = $("#daily-board-streak");
     if (pill) {
@@ -3305,6 +3398,7 @@
     else if (!screens.over.hidden) { e.preventDefault(); startSession(); }
     else if (!screens.climbintro.hidden && !$("#btn-climb-start").disabled) { e.preventDefault(); startClimb(); }
     else if (!screens.climbover.hidden) { e.preventDefault(); startClimb(); }
+    else if (!screens.climbroundend.hidden) { e.preventDefault(); climbRoundContinue(); }
     else if (!screens.tutorial.hidden) { e.preventDefault(); tutNext(); }
     else if (!screens.start.hidden && !$("#btn-start").disabled) { e.preventDefault(); startSession(); }
   });
@@ -3371,15 +3465,14 @@
   });
 
   // ---- home / versus wiring ----
-  // Versus ("New game") is hidden for now — the home screen is Game of the Day
-  // only. #btn-home-solo is the small "Practice" link — it drops straight into a
-  // practice game (Easy · 3 Strikes, random letters), no setup screen.
-  $("#btn-home-solo").addEventListener("click", startPractice);
-  $("#btn-home-climb").addEventListener("click", showClimbIntro);
+  // Versus ("New game") is hidden for now. "Practice" is a single standalone
+  // climb — the same thing as one round of the daily.
+  $("#btn-home-solo").addEventListener("click", showClimbIntro);
   $("#btn-climb-start").addEventListener("click", startClimb);
   $("#btn-climb-intro-back").addEventListener("click", goHome);
   $("#btn-climb-again").addEventListener("click", startClimb);
   $("#btn-climb-home").addEventListener("click", goHome);
+  $("#btn-cre-next").addEventListener("click", climbRoundContinue);
   $("#btn-vs-invite-home").addEventListener("click", goHome);
   $("#btn-vs-wait-home").addEventListener("click", goHome);
   $("#btn-start-home").addEventListener("click", goHome);
@@ -3409,7 +3502,7 @@
     $("#btn-lb-close").disabled = false;
   });
 
-  $("#btn-solo").addEventListener("click", startPractice);
+  $("#btn-solo").addEventListener("click", showClimbIntro);
   $("#btn-vs-create-back").addEventListener("click", goHome);
 
   $("#btn-vs-create").addEventListener("click", async () => {
