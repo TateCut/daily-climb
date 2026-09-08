@@ -2,10 +2,11 @@
 // land immediately; static assets (dictionary, icons) are cache-first for a
 // fast, offline-capable launch. Firebase / Datamuse / gstatic always hit the
 // network.
-const CACHE = "three21-shell-v4"; // bump to re-fetch cached assets (v4: new app icons)
+const CACHE = "three21-shell-v5"; // bump to re-fetch cached assets (v5: + climbs.js)
 const ASSETS = [
   "./words.js",
   "./freq.js",
+  "./climbs.js",
   "./firebase-config.js",
   "./manifest.webmanifest",
   "./icon-192.png",

@@ -585,6 +585,7 @@
       </div>
       <div class="homelinks">
         <button class="ghost" id="btn-home-solo" type="button">Practice</button>
+        <button class="ghost" id="btn-home-climb" type="button">Climb</button>
         <button class="ghost" id="btn-home-howto" type="button">How to play</button>
       </div>
     </section>
@@ -731,7 +732,7 @@
 
     <!-- PLAY -->
     <section id="screen-play" hidden>
-      <div class="roundline"><span id="roundline-rounds">Round <b id="round-n">1</b> of <b id="round-total">3</b></span><span id="roundline-practice" hidden>Practice</span></div>
+      <div class="roundline"><span id="roundline-rounds">Round <b id="round-n">1</b> of <b id="round-total">3</b></span><span id="roundline-practice" hidden>Practice</span><span id="roundline-climb" hidden></span></div>
       <div class="timerbar" id="timerbar"><div class="timerbar-fill" id="bar"></div></div>
       <div class="secs" id="secline"><span id="secs">30</span>s left</div>
       <div class="guesspips" id="guesspips" hidden></div>
@@ -779,6 +780,30 @@
       <p class="lede">Best total: <b id="best-over">0</b> words</p>
       <button class="primary" id="btn-again" type="button">Play again</button>
       <button class="linkbtn tomenu" id="btn-over-home" type="button" hidden>&larr; Home</button>
+    </section>
+
+    <!-- CLIMB: intro -->
+    <section id="screen-climb-intro" hidden>
+      <h2 style="margin:0;font-size:1.3rem;">Climb</h2>
+      <p class="lede">Start with a 3-letter word. Each rung adds one letter &mdash; rearrange them all into a new word, up to eight.</p>
+      <p class="lede">No free rides: a rung can't just be the one below it plus <b>-s</b>, <b>-d</b>, <b>-r</b> or <b>-n</b>.</p>
+      <p class="note">Easy &middot; 3 Strikes &middot; no clock.</p>
+      <button class="primary" id="btn-climb-start" type="button">Start</button>
+      <button class="linkbtn" id="btn-climb-intro-back" type="button">&larr; Home</button>
+    </section>
+
+    <!-- CLIMB: summary -->
+    <section id="screen-climb-over" hidden>
+      <h2 id="climb-over-title" style="margin:0;font-size:1.3rem;">Climb over</h2>
+      <div class="totalbox" id="climb-over-box">
+        <span class="totalbox-label" id="climb-over-label">You cleared</span>
+        <div class="chips" id="climb-over-words"></div>
+        <span class="totalbox-count" id="climb-over-count"></span>
+      </div>
+      <p class="note" id="climb-over-ladder"></p>
+      <p class="lede">Best: <b id="climb-best">0</b> rungs</p>
+      <button class="primary" id="btn-climb-again" type="button">Play again</button>
+      <button class="linkbtn" id="btn-climb-home" type="button">&larr; Home</button>
     </section>
   </main>
 
@@ -1087,10 +1112,12 @@
 </script>
 <script src="freq.js"></script>
 <script src="words.js"></script>
+<script src="climbs.js"></script>
 <script>
 (function () {
   const RAW = window.THREE21_WORDS || [];
   const FREQ_RAW = window.THREE21_FREQ || [];
+  const CLIMBS = window.THREE21_CLIMBS || []; // { c:[6 words 3..8], a:[5 added letters] }
   const $ = (s) => document.querySelector(s);
   const ALPHA = "abcdefghijklmnopqrstuvwxyz".split("");
   const BEST_KEY = "three21.best";
@@ -1178,7 +1205,10 @@
   function seededMode() { return mode === "versus" || mode === "daily"; }
 
   // ---- versus / group-mode state ----
-  let mode = "solo";        // "solo" | "versus" | "daily"
+  let mode = "solo";        // "solo" | "versus" | "daily" | "climb"
+  let climbPuzzle = null;   // the current CLIMBS entry
+  let climbStage = 0;       // 1..6 rungs (letters = climbStage + 2)
+  let climbPrev = null;     // the word played on the rung below (for the inflection rule)
   let matchCode = null;
   let matchSeed = 0;        // versus match seed, or the Game of the Day seed
   let dailyDay = null;      // "YYYY-MM-DD" (local) when mode === "daily"
@@ -1453,6 +1483,8 @@
     vsreveal: $("#screen-vs-reveal"),
     dailyintro: $("#screen-daily-intro"),
     dailyboard: $("#screen-daily-board"),
+    climbintro: $("#screen-climb-intro"),
+    climbover: $("#screen-climb-over"),
     start: $("#screen-start"),
     play: $("#screen-play"),
     roundend: $("#screen-roundend"),
@@ -1480,7 +1512,7 @@
   let resumeState = null;
 
   function saveProgress() {
-    if (screens.play.hidden) return;
+    if (screens.play.hidden || mode === "climb") return; // climb has no mid-session resume yet
     try {
       localStorage.setItem(RESUME_KEY, JSON.stringify({
         v: 1, savedAt: Date.now(), phase: "stage",
@@ -1607,12 +1639,17 @@
   // Round line + practice-only "Quit to menu" — kept in sync from both a fresh
   // startRound and a resumeGame.
   function syncRoundChrome() {
+    const climb = mode === "climb";
     const multiRound = sessionRounds() > 1;
     $("#round-n").textContent = round;
     $("#round-total").textContent = sessionRounds();
-    $("#roundline-rounds").hidden = !multiRound;
-    $("#roundline-practice").hidden = multiRound;
-    $("#btn-play-home").hidden = mode !== "solo"; // daily is one-shot; versus restarts anyway
+    $("#roundline-rounds").hidden = climb || !multiRound;
+    $("#roundline-practice").hidden = climb || multiRound;
+    $("#roundline-climb").hidden = !climb;
+    if (climb) $("#roundline-climb").textContent = "Climb · rung " + climbStage + " of 6";
+    // "Quit to menu" shows in practice + climb; daily is one-shot, versus restarts.
+    $("#btn-play-home").hidden = mode !== "solo" && !climb;
+    $("#btn-endround").textContent = climb ? "End climb" : "End round";
   }
 
   function startRound() {
@@ -1767,10 +1804,10 @@
     guessesLeft = Math.max(0, guessesLeft - 1);
     renderPips();
     if (guessesLeft <= 0) {
-      msg("Three strikes — that's the round.", "warn");
+      msg(mode === "climb" ? "Three strikes — that's the climb." : "Three strikes — that's the round.", "warn");
       locked = true;
       clearInterval(timerId);
-      setTimeout(() => finish(false), 1100);
+      setTimeout(() => (mode === "climb" ? climbFinish(false) : finish(false)), 1100);
     } else {
       saveProgress();
       const used = GUESS_BUDGET - guessesLeft;
@@ -1780,7 +1817,9 @@
 
   function useHint() {
     if (hintUsed || !guessMode() || locked || checking) return;
-    const ex = exampleWord(poolKey());
+    const ex = mode === "climb"
+      ? (climbPuzzle && climbPuzzle.c[climbStage - 1])
+      : exampleWord(poolKey());
     if (!ex) return;
     const reveal = ex.length >= 5 ? ex.slice(0, 2) : ex.slice(0, 1);
     hintUsed = true;
@@ -2071,10 +2110,17 @@
       return;
     }
 
+    // Climb: a rung can't just be the rung below it plus an ending. Not a strike.
+    if (mode === "climb" && isInflectionOf(g, climbPrev)) {
+      msg("“" + g.toUpperCase() + "” is just “" + climbPrev.toUpperCase() + "” plus a letter — find another word.", "warn");
+      return;
+    }
+
+    const accept = mode === "climb" ? climbAccept : acceptWord;
     const reject = () => { if (guessMode()) loseGuess(g); else msg("“" + g.toUpperCase() + "” isn't a word.", "warn"); };
 
     if (WORD_SET.has(g) || extraWords.get(g) === true) {
-      acceptWord(g);
+      accept(g);
       return;
     }
     if (extraWords.get(g) === false) {
@@ -2092,7 +2138,7 @@
       if (locked || screens.play.hidden || stage !== atStage) return;
       if (result === true) {
         extraWords.set(g, true);
-        acceptWord(g);
+        accept(g);
       } else if (result === false) {
         extraWords.set(g, false);
         reject();
@@ -2121,6 +2167,7 @@
 
   function endRound() {
     if (locked || checking || screens.play.hidden) return;
+    if (mode === "climb") { climbFinish(false); return; }
     finish(false);
   }
 
@@ -2416,6 +2463,9 @@
     matchCode = null;
     matchSeed = 0;
     dailyDay = null;
+    climbPuzzle = null;
+    climbStage = 0;
+    climbPrev = null;
     playerName = storedName || "";
     opponentName = "";
     matchMeta = null;
@@ -2535,6 +2585,108 @@
     document.querySelectorAll(".tomenu").forEach((el) => { el.hidden = false; });
     clearResume();
     startSession();
+  }
+
+  // ---- Climb: from a 3-letter word up to an 8-letter one, +1 letter per rung,
+  // rearrange freely.  A rung can't be the rung below it plus a grammatical
+  // single-letter ending.  Standalone for now; the plan is to make it the daily.
+  function isInflectionOf(word, prev) {
+    if (!prev || !word) return false;
+    if (word === prev + "s") return true;                                   // plural / 3rd-person
+    if (/e$/.test(prev) && (word === prev + "d" || word === prev + "r" || word === prev + "n")) return true; // baked / later / proven
+    return false;
+  }
+  const CLIMB_BEST_KEY = "three21.climb.best";
+  function climbBest() { try { return parseInt(localStorage.getItem(CLIMB_BEST_KEY), 10) || 0; } catch (e) { return 0; } }
+  function climbWriteBest(n) { try { localStorage.setItem(CLIMB_BEST_KEY, String(n)); } catch (e) {} }
+
+  function showClimbIntro() {
+    mode = "climb";
+    $("#btn-climb-start").disabled = !CLIMBS.length;
+    document.querySelectorAll(".tomenu").forEach((el) => { el.hidden = false; });
+    show("climbintro");
+  }
+
+  function startClimb() {
+    if (!dictReady) { setTimeout(startClimb, 100); return; }
+    if (!CLIMBS.length) { showClimbIntro(); return; }
+    clearResume();
+    mode = "climb";
+    matchCode = null; matchSeed = 0; dailyDay = null;
+    climbPuzzle = CLIMBS[Math.floor(Math.random() * CLIMBS.length)];
+    climbStage = 1;
+    climbPrev = null;
+    stage = 1;
+    round = 1;
+    solved = 0;
+    currentRoundWords = [];
+    roundWords = [];
+    guessesLeft = GUESS_BUDGET;
+    sessionStrikes = 0;
+    solveMs = 0;
+    hintUsed = false;
+    carryMs = 0;
+    locked = false;
+    checking = false;
+    format = "guesses";                 // 3 strikes, no clock
+    playerName = storedName || "You";
+    document.querySelectorAll(".tomenu").forEach((el) => { el.hidden = false; });
+    pool = climbPuzzle.c[0].split("").map((ch) => ({ ch: ch, isNew: true }));
+    syncRoundChrome();
+    show("play");
+    beginStage();
+  }
+
+  function climbNext() {
+    climbStage++;
+    stage = climbStage;
+    pool.forEach((t) => (t.isNew = false));
+    pool.push({ ch: climbPuzzle.a[climbStage - 2], isNew: true }); // a[0] is the 3->4 letter
+    locked = false;
+    syncRoundChrome();
+    beginStage();
+  }
+
+  function climbAccept(g) {
+    if (stageShownAt) solveMs += Date.now() - stageShownAt;
+    solved++;
+    currentRoundWords.push(g);
+    climbPrev = g;
+    locked = true;
+    checking = false;
+    clearInterval(timerId);
+    marker.remove();
+    wrongGuesses = [];
+    renderWrongWords();
+    if (climbStage >= 6) {
+      msg("“" + g.toUpperCase() + "” — top of the climb!", "good");
+      setTimeout(function () { climbFinish(true); }, 950);
+    } else {
+      msg("Nice — “" + g.toUpperCase() + "”", "good");
+      setTimeout(climbNext, 750);
+    }
+  }
+
+  function climbFinish(completed) {
+    clearInterval(timerId);
+    checking = false;
+    locked = true;
+    marker.remove();
+    defToken++;
+    const got = currentRoundWords.slice();
+    const rungs = got.length;
+    const best = Math.max(climbBest(), rungs);
+    climbWriteBest(best);
+
+    $("#climb-over-title").textContent = completed ? "Full climb!" : "Climb over";
+    $("#climb-over-label").textContent = completed ? "Your ladder" : "You cleared";
+    fillChips($("#climb-over-words"), got);
+    $("#climb-over-count").textContent = completed ? "all 6 rungs" : rungs + " of 6 rungs";
+    $("#climb-over-ladder").textContent =
+      "One way up: " + climbPuzzle.c.map(function (w) { return w.toUpperCase(); }).join(" → ");
+    $("#climb-best").textContent = best;
+    clearResume();
+    show("climbover");
   }
 
   // Dev-only: when on, the Game of the Day can be replayed any number of times
@@ -3114,6 +3266,8 @@
     if (!screens.play.hidden) { e.preventDefault(); submit(); }
     else if (!screens.roundend.hidden) { e.preventDefault(); roundEndContinue(); }
     else if (!screens.over.hidden) { e.preventDefault(); startSession(); }
+    else if (!screens.climbintro.hidden && !$("#btn-climb-start").disabled) { e.preventDefault(); startClimb(); }
+    else if (!screens.climbover.hidden) { e.preventDefault(); startClimb(); }
     else if (!screens.tutorial.hidden) { e.preventDefault(); tutNext(); }
     else if (!screens.start.hidden && !$("#btn-start").disabled) { e.preventDefault(); startSession(); }
   });
@@ -3184,6 +3338,11 @@
   // only. #btn-home-solo is the small "Practice" link — it drops straight into a
   // practice game (Easy · 3 Strikes, random letters), no setup screen.
   $("#btn-home-solo").addEventListener("click", startPractice);
+  $("#btn-home-climb").addEventListener("click", showClimbIntro);
+  $("#btn-climb-start").addEventListener("click", startClimb);
+  $("#btn-climb-intro-back").addEventListener("click", goHome);
+  $("#btn-climb-again").addEventListener("click", startClimb);
+  $("#btn-climb-home").addEventListener("click", goHome);
   $("#btn-vs-invite-home").addEventListener("click", goHome);
   $("#btn-vs-wait-home").addEventListener("click", goHome);
   $("#btn-start-home").addEventListener("click", goHome);
