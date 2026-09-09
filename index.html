@@ -1233,21 +1233,50 @@
     let ctx = null, master = null, on = false;
     try { on = localStorage.getItem("three21.sound") === "1"; } catch (e) {}
 
+    const SILENT_WAV = "data:audio/wav;base64,UklGRgQCAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YeABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+    let prime = null;
+    function primeIOS() {
+      // On iOS, Web Audio obeys the silent switch until the page has played an
+      // <audio> element — re-playing this silent clip on each gesture keeps the
+      // page in the "playback" audio session so the blips are audible.
+      try {
+        if (!prime) {
+          prime = document.createElement("audio");
+          prime.src = SILENT_WAV;
+          prime.setAttribute("playsinline", "");
+          prime.preload = "auto";
+          prime.volume = 0.0001;
+          prime.style.display = "none";
+          document.body.appendChild(prime);
+        }
+        prime.currentTime = 0;
+        const p = prime.play();
+        if (p && p.catch) p.catch(() => {});
+      } catch (e) {}
+    }
     function ensure() {
       if (ctx) return;
       try {
         ctx = new (window.AudioContext || window.webkitAudioContext)();
         master = ctx.createGain();
-        master.gain.value = 0.2;
+        master.gain.value = 0.5;
         master.connect(ctx.destination);
       } catch (e) { ctx = null; }
     }
-    function unlock() { ensure(); if (ctx && ctx.state === "suspended") ctx.resume(); }
+    function unlock() {
+      primeIOS();
+      ensure();
+      if (ctx && ctx.state !== "running") { try { ctx.resume(); } catch (e) {} }
+      // a zero buffer nudges some engines fully awake
+      if (ctx) { try { const s = ctx.createBufferSource(); s.buffer = ctx.createBuffer(1, 1, 22050); s.connect(ctx.destination); s.start(0); } catch (e) {} }
+    }
     window.addEventListener("pointerdown", () => { if (on) unlock(); }, { passive: true });
+    window.addEventListener("touchend", () => { if (on) unlock(); }, { passive: true });
 
     function tone(o) {
       ensure(); if (!ctx) return;
-      const now = ctx.currentTime + (o.t0 || 0);
+      if (ctx.state !== "running") { try { ctx.resume(); } catch (e) {} }
+      const now = ctx.currentTime + 0.01 + (o.t0 || 0);
       const dur = o.dur || 0.1;
       const osc = ctx.createOscillator(), g = ctx.createGain();
       osc.type = o.type || "triangle";
@@ -1261,7 +1290,8 @@
     }
     function noise(o) {
       ensure(); if (!ctx) return;
-      const now = ctx.currentTime + (o.t0 || 0), dur = o.dur || 0.1;
+      if (ctx.state !== "running") { try { ctx.resume(); } catch (e) {} }
+      const now = ctx.currentTime + 0.01 + (o.t0 || 0), dur = o.dur || 0.1;
       const n = Math.max(1, Math.floor(ctx.sampleRate * dur));
       const buf = ctx.createBuffer(1, n, ctx.sampleRate), d = buf.getChannelData(0);
       for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
@@ -3881,7 +3911,7 @@
   $("#btn-sound").addEventListener("click", () => {
     FX.set(!FX.isOn());
     syncSoundBtn();
-    if (FX.isOn()) FX.play("place");
+    if (FX.isOn()) setTimeout(() => FX.play("accept"), 60); // let the iOS audio session settle
   });
   syncSoundBtn();
 
