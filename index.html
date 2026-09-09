@@ -501,6 +501,7 @@
   .homelinks { display: flex; gap: 10px; width: 100%; margin-top: 2px; }
   .homelinks button { flex: 1; padding: 10px 12px; font-size: 0.9rem; }
   .homelinks .sound-toggle { flex: 0 0 auto; padding: 10px 12px; font-size: 1rem; line-height: 1; }
+  #btn-home-invite { width: 100%; padding: 10px 12px; font-size: 0.9rem; }
   .sound-toggle[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
   @media (hover: hover) {
     #daily-board-list .lb-row:hover { border-color: var(--muted); }
@@ -665,6 +666,7 @@
         <button class="ghost" id="btn-home-howto" type="button">How to play</button>
         <button class="ghost sound-toggle" id="btn-sound" type="button" aria-label="Sound" aria-pressed="false">&#128264;</button>
       </div>
+      <button class="ghost" id="btn-home-invite" type="button">Invite friends to play</button>
     </section>
 
     <!-- DAILY CLIMB: intro / one-shot confirm -->
@@ -675,6 +677,19 @@
       <p class="note">One attempt.</p>
       <button class="primary" id="btn-daily-start" type="button">Start</button>
       <button class="linkbtn" id="btn-daily-intro-back" type="button">&larr; Home</button>
+    </section>
+
+    <!-- INVITE: share the game link -->
+    <section id="screen-invite" hidden>
+      <h2 style="margin:0;font-size:1.3rem;">Invite friends</h2>
+      <p class="lede">Send this link. Everyone who opens it plays the same Daily Climb &mdash; then you can compare scores on the leaderboard.</p>
+      <div class="linkrow">
+        <input class="nameinput" id="invite-link" type="text" readonly>
+        <button class="ghost" id="btn-invite-copy" type="button">Copy</button>
+      </div>
+      <p class="note" id="invite-note"></p>
+      <button class="primary" id="btn-invite-share" type="button" hidden>Share&hellip;</button>
+      <button class="linkbtn" id="btn-invite-home" type="button">&larr; Home</button>
     </section>
 
     <!-- DAILY CLIMB: leaderboard -->
@@ -1766,6 +1781,7 @@
     vsreveal: $("#screen-vs-reveal"),
     dailyintro: $("#screen-daily-intro"),
     dailyboard: $("#screen-daily-board"),
+    invite: $("#screen-invite"),
     climbintro: $("#screen-climb-intro"),
     climbover: $("#screen-climb-over"),
     climbroundend: $("#screen-climb-roundend"),
@@ -2641,6 +2657,13 @@
     const u = new URL(location.href);
     u.search = "";
     u.searchParams.set("m", code);
+    return u.toString();
+  }
+  // Plain link to the game itself — for "invite friends to the Daily Climb".
+  function gameLink() {
+    const u = new URL(location.href);
+    u.search = "";
+    u.hash = "";
     return u.toString();
   }
   function dbReady() {
@@ -3992,6 +4015,37 @@
   })();
   $("#btn-home-howto").addEventListener("click", () => showTutorial({ from: "home" }));
   $("#btn-start-howto").addEventListener("click", () => showTutorial({ from: "start" }));
+
+  // Invite friends — a panel with the game link to copy, plus the native share
+  // sheet where the browser supports it.
+  function showInvite() {
+    $("#invite-link").value = gameLink();
+    $("#invite-note").textContent = "";
+    $("#btn-invite-share").hidden = !navigator.share;
+    show("invite");
+  }
+  function shareInvite() {
+    if (!navigator.share) return;
+    navigator.share({ title: "Wadder", text: "Play today's Wadder climb with me:", url: gameLink() })
+      .catch(() => {});
+  }
+  $("#btn-home-invite").addEventListener("click", showInvite);
+  $("#btn-invite-share").addEventListener("click", shareInvite);
+  $("#btn-invite-home").addEventListener("click", goHome);
+  $("#btn-invite-copy").addEventListener("click", () => {
+    const field = $("#invite-link");
+    const done = () => { $("#invite-note").textContent = "Link copied!"; };
+    const fail = () => {
+      field.focus(); field.select();
+      $("#invite-note").textContent = "Couldn't copy — select the link and copy it manually.";
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(field.value).then(done).catch(fail);
+    } else {
+      try { field.focus(); field.select(); document.execCommand("copy"); done(); }
+      catch (e) { fail(); }
+    }
+  });
 
   function syncSoundBtn() {
     const b = $("#btn-sound");
