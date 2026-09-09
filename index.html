@@ -73,13 +73,21 @@
     margin: 0 auto 14px;
     color: var(--accent);
   }
-  /* Keep gameplay tight — the mark drops away on the play screen. */
+  /* Keep things tight — the mark drops away on the play screen, and the mark +
+     wordmark both drop away on any results screen that could otherwise overflow
+     a short viewport (no page scroll to reach the bottom). */
   body:has(#screen-play:not([hidden])) .brandmark { display: none; }
-  /* Tutorial is a fixed card — no scrolling, so a swipe is never stolen as a pan. */
-  :root:has(#screen-tutorial:not([hidden])),
-  :root:has(#screen-tutorial:not([hidden])) body {
-    touch-action: none; overscroll-behavior: none; overflow: hidden;
-  }
+  body:has(#screen-daily-board:not([hidden])) .brandmark,
+  body:has(#screen-daily-board:not([hidden])) h1,
+  body:has(#screen-leaderboard:not([hidden])) .brandmark,
+  body:has(#screen-leaderboard:not([hidden])) h1,
+  body:has(#screen-vs-reveal:not([hidden])) .brandmark,
+  body:has(#screen-vs-reveal:not([hidden])) h1 { display: none; }
+  /* No page scroll anywhere — every screen is sized to fit the viewport. The one
+     list that can overflow (the leaderboard) scrolls inside itself instead. */
+  html, body { overflow: hidden; overscroll-behavior: none; }
+  /* Tutorial is a fixed card — kill touch-panning so a swipe is never stolen. */
+  #screen-tutorial { touch-action: none; }
   h1 {
     margin: 0 0 22px;
     font-size: 2.1rem;
@@ -504,7 +512,10 @@
   .gamecard-chev { color: var(--muted); font-size: 1.3rem; line-height: 1; flex-shrink: 0; }
 
   /* Group leaderboard */
-  .lb-list { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+  .lb-list {
+    display: flex; flex-direction: column; gap: 6px; width: 100%;
+    max-height: 48vh; overflow-y: auto; overscroll-behavior: contain;
+  }
   .lb-row {
     display: flex;
     align-items: center;
@@ -3970,10 +3981,13 @@
       dx < 0 ? tutNext() : tutPrev();
     });
     document.addEventListener("pointercancel", () => { tracking = false; });
-    // The tutorial has nothing to scroll — kill every touch-drag on it (iOS
-    // ignores touch-action / overscroll-behavior in older Safari / the PWA shell).
+    // No screen scrolls the page (iOS ignores touch-action / overscroll-behavior
+    // in older Safari and the PWA shell) — block every touch-drag except inside
+    // the one element that scrolls itself, the leaderboard list.
     document.addEventListener("touchmove", (e) => {
-      if (!screens.tutorial.hidden && e.cancelable) e.preventDefault();
+      const t = e.target;
+      if (t && t.closest && t.closest(".lb-list")) return;
+      if (e.cancelable) e.preventDefault();
     }, { passive: false });
   })();
   $("#btn-home-howto").addEventListener("click", () => showTutorial({ from: "home" }));
