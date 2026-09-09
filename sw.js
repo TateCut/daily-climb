@@ -2,7 +2,7 @@
 // land immediately; static assets (dictionary, icons) are cache-first for a
 // fast, offline-capable launch. Firebase / Datamuse / gstatic always hit the
 // network.
-const CACHE = "wadder-shell-v1"; // bump to re-fetch cached assets (v1: Wadder rename + new icons)
+const CACHE = "wadder-shell-v2"; // bump to re-fetch cached assets (v2: HTML fetch bypasses the HTTP cache)
 const ASSETS = [
   "./words.js",
   "./freq.js",
@@ -38,9 +38,11 @@ self.addEventListener("fetch", (e) => {
     url.pathname.endsWith("/") || url.pathname.endsWith(".html");
 
   if (isHTML) {
-    // Network-first: always try for the latest page, fall back to cache offline.
+    // Network-first, and skip the browser's HTTP cache entirely — GitHub Pages
+    // serves HTML with ~10min max-age, which otherwise lets a stale page through
+    // even on a "network-first" fetch. Fall back to the cached shell offline.
     e.respondWith(
-      fetch(req)
+      fetch("./index.html", { cache: "no-store" })
         .then((res) => {
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put("./index.html", copy));
