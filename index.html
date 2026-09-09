@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>3-2-1</title>
+<title>Wadder</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#1c1917">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="3·2·1">
+<meta name="apple-mobile-web-app-title" content="Wadder">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="icon-192.png">
 <style>
@@ -64,14 +64,15 @@
     align-items: center;
     gap: 16px;
   }
-  /* Growing-bars mark above the wordmark — each step longer, like the words. */
+  /* Ladder mark above the wordmark — six rungs, the top one climbed, the
+     rest tapering down toward what's left. */
   .brandmark {
     display: block;
-    width: 72px;
-    height: auto;
-    margin: 0 auto 16px;
+    height: 58px;
+    width: auto;
+    margin: 0 auto 14px;
+    color: var(--accent);
   }
-  .brandmark rect { fill: var(--accent); }
   /* Keep gameplay tight — the mark drops away on the play screen. */
   body:has(#screen-play:not([hidden])) .brandmark { display: none; }
   /* Tutorial is a fixed card — no scrolling, so a swipe is never stolen as a pan. */
@@ -81,10 +82,11 @@
   }
   h1 {
     margin: 0 0 22px;
-    font-size: 2rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
+    font-size: 2.1rem;
+    font-weight: 800;
+    letter-spacing: -0.015em;
   }
+  h1 .brand-k { color: var(--accent); }
   .lede { margin: 0; color: var(--muted); font-size: 0.95rem; line-height: 1.5; }
 
   /* Loading — three dots, shown while we work out where to route on open. */
@@ -567,12 +569,38 @@
 </head>
 <body>
   <main>
-    <svg class="brandmark" viewBox="0 0 90 39" aria-hidden="true">
-      <rect x="3" y="1" width="33" height="11" rx="5"/>
-      <rect x="3" y="14" width="57" height="11" rx="5"/>
-      <rect x="3" y="27" width="84" height="11" rx="5"/>
+    <svg class="brandmark" viewBox="0 0 48 120" aria-hidden="true">
+      <rect x="5.5" y="6" width="5" height="108" rx="2.5" fill="currentColor"/>
+      <rect x="37.5" y="6" width="5" height="108" rx="2.5" fill="currentColor"/>
+      <rect x="6" y="6" width="1.4" height="108" rx="0.7" fill="#fff" fill-opacity="0.22"/>
+      <rect x="38" y="6" width="1.4" height="108" rx="0.7" fill="#fff" fill-opacity="0.22"/>
+      <g fill="currentColor">
+        <rect x="6" y="16" width="36" height="6" rx="3"/>
+        <rect x="6" y="33.5" width="28" height="5" rx="2.5" fill-opacity="0.62"/>
+        <rect x="6" y="50.5" width="22" height="5" rx="2.5" fill-opacity="0.62"/>
+        <rect x="6" y="67.5" width="17" height="5" rx="2.5" fill-opacity="0.62"/>
+        <rect x="6" y="84.5" width="13" height="5" rx="2.5" fill-opacity="0.62"/>
+        <rect x="6" y="101.5" width="10" height="5" rx="2.5" fill-opacity="0.62"/>
+      </g>
+      <g fill="#fff" fill-opacity="0.28">
+        <rect x="7" y="16" width="33" height="1.8" rx="0.9"/>
+        <rect x="7" y="33.5" width="25" height="1.5" rx="0.75"/>
+        <rect x="7" y="50.5" width="19" height="1.5" rx="0.75"/>
+        <rect x="7" y="67.5" width="14" height="1.5" rx="0.75"/>
+        <rect x="7" y="84.5" width="10" height="1.5" rx="0.75"/>
+        <rect x="7" y="101.5" width="7" height="1.5" rx="0.75"/>
+      </g>
+      <g fill="currentColor">
+        <circle cx="8" cy="19" r="1.9"/>
+        <circle cx="40" cy="19" r="1.9"/>
+        <circle cx="8" cy="36" r="1.7"/>
+        <circle cx="8" cy="53" r="1.7"/>
+        <circle cx="8" cy="70" r="1.7"/>
+        <circle cx="8" cy="87" r="1.7"/>
+        <circle cx="8" cy="104" r="1.7"/>
+      </g>
     </svg>
-    <h1>3&middot;2&middot;1</h1>
+    <h1>W<span class="brand-k">a</span>dder</h1>
 
     <!-- LOADING — the screen shown at rest, before we know where to route -->
     <section id="screen-loading">
@@ -696,7 +724,7 @@
 
     <!-- VS: joined via invite link -->
     <section id="screen-vs-join" hidden>
-      <p class="lede" id="vs-join-lede">You've been invited to a game of 3&middot;2&middot;1!</p>
+      <p class="lede" id="vs-join-lede">You've been invited to a game of Wadder!</p>
       <p class="note" id="vs-join-diff"></p>
       <input class="nameinput" id="vs-name-join" type="text" placeholder="Your name" maxlength="24" autocomplete="off">
       <button class="primary" id="btn-vs-join" type="button">Play</button>
@@ -2747,7 +2775,7 @@
       const closed = matchIsClosed(data);
       $("#vs-join-lede").textContent = closed
         ? (hostName(data) + "'s game has closed — you can still play it for fun")
-        : (hostName(data) + " started a game of 3·2·1");
+        : (hostName(data) + " started a game of Wadder");
       const count = (data.playerUids || []).length || (data.entrants || []).length;
       let sub = DIFF_INFO[normDiff(data.difficulty)].label + " · " + FORMAT_LABEL[normFormat(data.format)];
       if (count > 1) sub += " · " + count + " playing so far";
@@ -3971,7 +3999,7 @@
         else localStorage.setItem("three21.dev", "1");
       }
     } catch (e) {}
-    if (isDev()) console.log("[3-2-1] dev mode ON — Game of the Day is replayable. ?dev=0 to disable.");
+    if (isDev()) console.log("[wadder] dev mode ON — the Daily Climb is replayable. ?dev=0 to disable.");
 
     // Versus / invite links are off for now: ignore any ?m= and clean the URL.
     if (location.search) history.replaceState(null, "", location.pathname);

@@ -1,8 +1,8 @@
-// Service worker for 3·2·1. The HTML is fetched network-first so code updates
+// Service worker for Wadder. The HTML is fetched network-first so code updates
 // land immediately; static assets (dictionary, icons) are cache-first for a
 // fast, offline-capable launch. Firebase / Datamuse / gstatic always hit the
 // network.
-const CACHE = "three21-shell-v5"; // bump to re-fetch cached assets (v5: + climbs.js)
+const CACHE = "wadder-shell-v1"; // bump to re-fetch cached assets (v1: Wadder rename + new icons)
 const ASSETS = [
   "./words.js",
   "./freq.js",

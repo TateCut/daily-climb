@@ -1,7 +1,7 @@
 {
-  "name": "3·2·1 Word Game",
-  "short_name": "3·2·1",
-  "description": "A timed anagram word game — play solo against the clock or head-to-head with a friend on the same letters.",
+  "name": "Wadder",
+  "short_name": "Wadder",
+  "description": "A daily word ladder — climb from a 3-letter word up to an 8, one new letter per rung, three climbs a day.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
