@@ -74,6 +74,8 @@
   .brandmark rect { fill: var(--accent); }
   /* Keep gameplay tight — the mark drops away on the play screen. */
   body:has(#screen-play:not([hidden])) .brandmark { display: none; }
+  /* Tutorial is a fixed card — no scrolling, so a swipe is never stolen as a pan. */
+  body:has(#screen-tutorial:not([hidden])) { touch-action: none; overscroll-behavior: none; }
   h1 {
     margin: 0 0 22px;
     font-size: 2rem;
@@ -3914,22 +3916,24 @@
   $("#tut-next").addEventListener("click", tutNext);
   $("#tut-skip").addEventListener("click", finishTutorial);
 
-  // Swipe the tutorial: left = next card, right = back a card.
+  // Swipe anywhere on the tutorial screen: left = next card, right = back.
+  // (touch-action:none on the tutorial view — see CSS — stops the page from
+  //  scrolling so the swipe never gets stolen.)
   (function () {
-    const el = $("#screen-tutorial");
     let sx = 0, sy = 0, tracking = false;
-    el.addEventListener("pointerdown", (e) => {
-      if (e.target.closest("button")) return;
+    document.addEventListener("pointerdown", (e) => {
+      const onBtn = e.target && e.target.closest && e.target.closest("button");
+      if (screens.tutorial.hidden || onBtn) { tracking = false; return; }
       sx = e.clientX; sy = e.clientY; tracking = true;
     });
-    el.addEventListener("pointerup", (e) => {
+    document.addEventListener("pointerup", (e) => {
       if (!tracking) return;
       tracking = false;
       const dx = e.clientX - sx, dy = e.clientY - sy;
-      if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy) * 1.4) return;
+      if (Math.abs(dx) < 40 || Math.abs(dx) <= Math.abs(dy)) return;
       dx < 0 ? tutNext() : tutPrev();
     });
-    el.addEventListener("pointercancel", () => { tracking = false; });
+    document.addEventListener("pointercancel", () => { tracking = false; });
   })();
   $("#btn-home-howto").addEventListener("click", () => showTutorial({ from: "home" }));
   $("#btn-start-howto").addEventListener("click", () => showTutorial({ from: "start" }));
