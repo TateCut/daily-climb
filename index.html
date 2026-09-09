@@ -2250,8 +2250,10 @@
         if (ans[to] === null) {
           ans[fromAns] = null; ans[to] = id;              // move into the gap
         } else {
-          ans.splice(fromAns, 1);                          // push / reorder
-          ans.splice(fromAns < to ? to - 1 : to, 0, id);
+          // land ON the target cell; the tiles between it and where the dragged
+          // tile started shift over to fill the vacated spot
+          ans.splice(fromAns, 1);
+          ans.splice(to, 0, id);
         }
       } else {
         if (ans[to] === null) {
