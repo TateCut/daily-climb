@@ -2232,12 +2232,12 @@
   }
 
   // Drop resolution — target is a specific CELL {row:"ans"|"tray", index}.
-  //  - empty answer cell: the tile moves in;
-  //  - a letter returning to the tray: always the leftmost open slot, no push;
+  //  - empty cell (answer slot or tray gap): the tile moves into that exact cell;
   //  - occupied answer cell, dragged FROM the answer: land on it, the run
   //    between shifts over to fill the vacated spot;
   //  - occupied cell otherwise (tray<->answer, or tray<->tray): the two tiles
   //    swap positions.
+  // (A click on a placed tile still routes through toTrayHome -> leftmost gap.)
   function commitDrop(id, target) {
     const fromAns = ans.indexOf(id);
     const fromTray = trayCells.findIndex((c) => c.type === "letter" && c.id === id);
@@ -2274,8 +2274,7 @@
         // a letter leaving the answer for the tray
         ans[fromAns] = null;
         if (cell.type === "gap") {
-          const gi = firstTrayGap();                    // always the leftmost open slot
-          trayCells[gi > -1 ? gi : to] = { type: "letter", id: id };
+          trayCells[to] = { type: "letter", id: id };   // the exact slot it was dropped on
         } else {
           // swap: the displaced tray letter takes the answer slot we vacated
           ans[fromAns] = cell.id;
@@ -2387,14 +2386,6 @@
       const r = cellEls[i].getBoundingClientRect();
       const dx = Math.abs(x - (r.left + r.width / 2));
       if (dx < bestDx) { bestDx = dx; index = i; }
-    }
-
-    // A letter heading back to the tray lands in the leftmost open slot, not the
-    // one under the cursor — point the highlight there so it matches.
-    if (!useAns && drag && ans.indexOf(drag.id) > -1 && cellEls[index].classList.contains("slot")) {
-      for (let i = 0; i < cellEls.length; i++) {
-        if (cellEls[i].classList.contains("slot")) { index = i; break; }
-      }
     }
 
     dropTarget = { row: useAns ? "ans" : "tray", index: index };
