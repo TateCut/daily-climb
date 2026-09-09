@@ -2693,7 +2693,7 @@
     renderTut();
     show("tutorial");
   }
-  function renderTut() {
+  function renderTut(dir) {
     const s = TUTORIAL[tutStep];
     $("#tut-visual").innerHTML = tutVisual(s.visual);
     $("#tut-h").textContent = s.h;
@@ -2708,10 +2708,16 @@
     const last = tutStep === TUTORIAL.length - 1;
     $("#tut-next").textContent = last ? "Start playing" : "Next";
     $("#tut-skip").hidden = last;
+    if (dir) anim($(".tut-card"),
+      [{ opacity: 0, transform: "translateX(" + (dir * 26) + "px)" }, { opacity: 1, transform: "none" }],
+      { duration: 180, easing: "cubic-bezier(.2,.7,.3,1)" });
   }
   function tutNext() {
-    if (tutStep < TUTORIAL.length - 1) { tutStep++; renderTut(); return; }
+    if (tutStep < TUTORIAL.length - 1) { tutStep++; renderTut(1); return; }
     finishTutorial();
+  }
+  function tutPrev() {
+    if (tutStep > 0) { tutStep--; renderTut(-1); }
   }
   function finishTutorial() {
     tutorialSeen = true;
@@ -3699,6 +3705,11 @@
   $("#btn-start-resume").addEventListener("click", resumeGame);
 
   document.addEventListener("keydown", (e) => {
+    if (!screens.tutorial.hidden && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+      e.preventDefault();
+      e.key === "ArrowRight" ? tutNext() : tutPrev();
+      return;
+    }
     if (e.key !== "Enter") return;
     if (!screens.play.hidden) { e.preventDefault(); submit(); }
     else if (!screens.roundend.hidden) { e.preventDefault(); roundEndContinue(); }
@@ -3902,6 +3913,24 @@
 
   $("#tut-next").addEventListener("click", tutNext);
   $("#tut-skip").addEventListener("click", finishTutorial);
+
+  // Swipe the tutorial: left = next card, right = back a card.
+  (function () {
+    const el = $("#screen-tutorial");
+    let sx = 0, sy = 0, tracking = false;
+    el.addEventListener("pointerdown", (e) => {
+      if (e.target.closest("button")) return;
+      sx = e.clientX; sy = e.clientY; tracking = true;
+    });
+    el.addEventListener("pointerup", (e) => {
+      if (!tracking) return;
+      tracking = false;
+      const dx = e.clientX - sx, dy = e.clientY - sy;
+      if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy) * 1.4) return;
+      dx < 0 ? tutNext() : tutPrev();
+    });
+    el.addEventListener("pointercancel", () => { tracking = false; });
+  })();
   $("#btn-home-howto").addEventListener("click", () => showTutorial({ from: "home" }));
   $("#btn-start-howto").addEventListener("click", () => showTutorial({ from: "start" }));
 
