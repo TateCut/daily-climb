@@ -624,7 +624,7 @@
     <section id="screen-daily-intro" hidden>
       <h2 style="margin:0;font-size:1.3rem;">Daily Climb</h2>
       <p class="lede" id="daily-intro-date"></p>
-      <p class="lede">Three climbs, 3 letters up to 8. Your score is how many rungs you clear.</p>
+      <p class="lede">Three climbs, 3 letters up to 8. Your score is how many words you get.</p>
       <p class="note">One attempt.</p>
       <button class="primary" id="btn-daily-start" type="button">Start</button>
       <button class="linkbtn" id="btn-daily-intro-back" type="button">&larr; Home</button>
@@ -817,8 +817,8 @@
     <!-- CLIMB: intro -->
     <section id="screen-climb-intro" hidden>
       <h2 style="margin:0;font-size:1.3rem;">Climb</h2>
-      <p class="lede">Start with a 3-letter word. Each rung adds one letter &mdash; rearrange them all into a new word, up to eight.</p>
-      <p class="lede">No free rides: a rung can't just be the one below it plus <b>-s</b>, <b>-d</b>, <b>-r</b> or <b>-n</b>.</p>
+      <p class="lede">Start with a 3-letter word. Solve it and a letter is added &mdash; rearrange them all into a new word, up to eight.</p>
+      <p class="lede">No free rides: a word can't just be the one before it plus <b>-s</b>, <b>-d</b>, <b>-r</b> or <b>-n</b>.</p>
       <p class="note">Easy &middot; 3 Strikes &middot; no clock.</p>
       <button class="primary" id="btn-climb-start" type="button">Start</button>
       <button class="linkbtn" id="btn-climb-intro-back" type="button">&larr; Home</button>
@@ -832,10 +832,10 @@
         <div class="chips" id="climb-over-words"></div>
         <span class="totalbox-count" id="climb-over-count"></span>
       </div>
-      <p class="lede" id="climb-over-sub" hidden>A word that would have worked on rung <b id="climb-over-rung"></b>:</p>
+      <p class="lede" id="climb-over-sub" hidden>A word that would have worked:</p>
       <p class="missed-word" id="climb-over-word" hidden></p>
       <p class="def" id="climb-over-def" hidden></p>
-      <p class="lede">Best: <b id="climb-best">0</b> rungs</p>
+      <p class="lede">Best: <b id="climb-best">0</b> words</p>
       <button class="primary" id="btn-climb-again" type="button">Play again</button>
       <button class="linkbtn" id="btn-climb-home" type="button">&larr; Home</button>
     </section>
@@ -848,7 +848,7 @@
         <div class="chips" id="cre-words"></div>
         <span class="totalbox-count" id="cre-count"></span>
       </div>
-      <p class="lede" id="cre-sub" hidden>A word that would have worked on rung <b id="cre-rung"></b>:</p>
+      <p class="lede" id="cre-sub" hidden>A word that would have worked:</p>
       <p class="missed-word" id="cre-word" hidden></p>
       <p class="def" id="cre-def" hidden></p>
       <button class="primary" id="btn-cre-next" type="button">Next climb</button>
@@ -1901,8 +1901,8 @@
     $("#roundline-climb").hidden = !climb;
     if (climb) {
       $("#roundline-climb").textContent = climbRounds() > 1
-        ? "Climb " + round + " of " + climbRounds() + " · rung " + climbStage
-        : "Climb · rung " + climbStage + " of 6";
+        ? "Climb " + round + " of " + climbRounds() + " · word " + climbStage
+        : "Climb · word " + climbStage + " of 6";
     }
     // "Quit to menu" shows in practice; the daily is one attempt, versus restarts.
     $("#btn-play-home").hidden = mode !== "solo" && mode !== "climb";
@@ -2657,12 +2657,12 @@
     },
     {
       h: "Climb to eight",
-      p: "Clear a rung and one new letter drops in. Rearrange them all into a longer word — and keep going, up to eight letters.",
+      p: "Solve one and a new letter drops in. Rearrange them all into a longer word — and keep going, up to eight letters.",
       visual: "grow",
     },
     {
       h: "No cheap steps",
-      p: "A rung can't just be the rung below it with an ending tacked on — no adding -s, -d, -r or -n. Find a different word.",
+      p: "A word can't just be the one before it with an ending tacked on — no adding -s, -d, -r or -n. Find another one.",
       visual: "nope",
     },
     {
@@ -2672,7 +2672,7 @@
     },
     {
       h: "The Daily Climb",
-      p: "Three climbs, the same puzzles for everyone. Score is total rungs cleared; ties break on fewest strikes, then fastest time. Practice is a single climb, any time.",
+      p: "Three climbs, the same puzzles for everyone. Score is how many words you get; ties break on fewest strikes, then fastest time. Practice is a single climb, any time.",
       visual: "daily",
     },
   ];
@@ -2687,7 +2687,7 @@
       tile("c", "no") + tile("a", "no") + tile("t", "no") + tile("s", "no");
     if (kind === "strikes") return '<span class="guesspip spent"></span>' +
       '<span class="guesspip spent"></span><span class="guesspip"></span>';
-    if (kind === "daily") return '<span class="tut-big">3 climbs &middot; rungs = score</span>';
+    if (kind === "daily") return '<span class="tut-big">3 climbs &middot; words = score</span>';
     return "";
   }
   let tutStep = 0;
@@ -3054,18 +3054,17 @@
     if (round >= climbRounds()) { climbSessionDone(); return; }
 
     // between-climb screen (daily only)
-    const rungs = currentRoundWords.length;
+    const got = currentRoundWords.length;
     $("#cre-title").textContent = "Climb " + round + " of " + climbRounds();
     $("#cre-label").textContent = completed ? "Cleared" : "You cleared";
     fillChips($("#cre-words"), currentRoundWords);
-    $("#cre-count").textContent = completed ? "all 6 rungs" : rungs + " of 6 rungs";
+    $("#cre-count").textContent = completed ? "all 6 words" : got + " of 6 words";
     const showEx = !completed;
     $("#cre-sub").hidden = !showEx;
     $("#cre-word").hidden = !showEx;
     $("#cre-def").hidden = true;
     if (showEx) {
       const ex = climbExample();
-      $("#cre-rung").textContent = climbStage;
       $("#cre-word").textContent = ex ? ex.toUpperCase() : "";
       if (ex) showDefinition(ex, $("#cre-def"));
     }
@@ -3092,7 +3091,7 @@
     $("#climb-over-title").textContent = completed ? "Full climb!" : "Climb over";
     $("#climb-over-label").textContent = completed ? "Your ladder" : "You cleared";
     fillChips($("#climb-over-words"), got);
-    $("#climb-over-count").textContent = completed ? "all 6 rungs" : got.length + " of 6 rungs";
+    $("#climb-over-count").textContent = completed ? "all 6 words" : got.length + " of 6 words";
     $("#climb-best").textContent = best;
 
     const showEx = !completed;
@@ -3101,7 +3100,6 @@
     $("#climb-over-def").hidden = true;
     if (showEx) {
       const ex = climbExample();
-      $("#climb-over-rung").textContent = climbStage;
       $("#climb-over-word").textContent = ex ? ex.toUpperCase() : "";
       if (ex) showDefinition(ex, $("#climb-over-def"));
     }
@@ -3203,7 +3201,7 @@
     const yst = shiftDayKey(today, -1);
     const isToday = dayKey === today;
     $("#daily-board-title").textContent = isToday ? "Today's climb" : dateLabel(dayKey);
-    $("#daily-board-sub").textContent = "3 climbs · score is rungs cleared" + (isToday ? " · " + dailyResetText() : "");
+    $("#daily-board-sub").textContent = "3 climbs · score is words solved" + (isToday ? " · " + dailyResetText() : "");
 
     const pill = $("#daily-board-streak");
     if (pill) {
