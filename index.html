@@ -531,8 +531,10 @@
     font-weight: 700; font-size: 1.15rem; text-transform: uppercase;
   }
   .tut-tile.accent { border-color: var(--accent); color: var(--accent); }
+  .tut-tile.no { border-color: var(--warn); color: var(--warn); opacity: 0.5; }
   .tut-slot { width: 36px; height: 42px; border: 1px dashed var(--line); border-radius: 8px; }
   .tut-arrow { color: var(--muted); font-size: 1.3rem; }
+  .tut-arrow.tut-x { color: var(--warn); font-size: 1.5rem; }
   .tut-big { font-size: 1.5rem; font-weight: 700; letter-spacing: 0.08em; color: var(--accent); }
 
   .diffrow { display: flex; gap: 8px; width: 100%; }
@@ -2645,18 +2647,18 @@
   const TUTORIAL = [
     {
       h: "Start with three letters",
-      p: "Every climb opens with a 3-letter word. Rearrange the letters into a real word to clear the first rung.",
+      p: "Every climb opens with a 3-letter word. Rearrange the letters into a real word.",
       visual: "pool",
     },
     {
-      h: "Build your word",
-      p: "Tap a letter to add it, tap it again to take it back. Drag tiles to reorder, then press Enter.",
-      visual: "build",
+      h: "Climb to eight",
+      p: "Clear a rung and one new letter drops in. Rearrange them all into a longer word — and keep going, up to eight letters.",
+      visual: "grow",
     },
     {
-      h: "Climb to eight",
-      p: "Clear a rung and one new letter drops in — make a longer word from all of them, up to eight. No cheap steps: a rung can't be the one below it plus -s, -d, -r or -n.",
-      visual: "grow",
+      h: "No cheap steps",
+      p: "A rung can't just be the rung below it with an ending tacked on — no adding -s, -d, -r or -n. Find a different word.",
+      visual: "nope",
     },
     {
       h: "Three strikes, no clock",
@@ -2665,7 +2667,7 @@
     },
     {
       h: "The Daily Climb",
-      p: "Three climbs back to back, the same puzzles for everyone. Your score is how many rungs you clear. Practice runs a single climb, any time.",
+      p: "Three climbs, the same puzzles for everyone. Score is total rungs cleared; ties break on fewest strikes, then fastest time. Practice is a single climb, any time.",
       visual: "daily",
     },
   ];
@@ -2673,10 +2675,11 @@
     const tile = (ch, cls) => '<span class="tut-tile' + (cls ? " " + cls : "") + '">' + ch + "</span>";
     const arrow = '<span class="tut-arrow">&rarr;</span>';
     if (kind === "pool") return tile("e") + tile("a") + tile("r");
-    if (kind === "build") return tile("r") + tile("a") + tile("e") + arrow +
-      tile("e", "accent") + tile("a", "accent") + tile("r", "accent");
     if (kind === "grow") return tile("e") + tile("a") + tile("r") + arrow +
       tile("n", "accent") + tile("e") + tile("a") + tile("r");
+    if (kind === "nope") return tile("c") + tile("a") + tile("t") +
+      '<span class="tut-arrow tut-x">&times;</span>' +
+      tile("c", "no") + tile("a", "no") + tile("t", "no") + tile("s", "no");
     if (kind === "strikes") return '<span class="guesspip spent"></span>' +
       '<span class="guesspip spent"></span><span class="guesspip"></span>';
     if (kind === "daily") return '<span class="tut-big">3 climbs &middot; rungs = score</span>';
