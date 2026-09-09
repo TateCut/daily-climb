@@ -138,7 +138,11 @@
     border-radius: 8px;
     cursor: pointer;
   }
-  button.ghost:hover { background: var(--bg); }
+  /* Hover only where a real pointer can hover — otherwise a tap "sticks" the
+     hover state on touch devices and the button looks stuck grey. */
+  @media (hover: hover) {
+    button.ghost:hover { background: var(--bg); }
+  }
   button.linkbtn {
     border: none;
     background: none;
@@ -150,7 +154,7 @@
     cursor: pointer;
     padding: 2px 6px;
   }
-  button.linkbtn:hover { color: var(--text); }
+  @media (hover: hover) { button.linkbtn:hover { color: var(--text); } }
   .note { font-size: 0.8rem; color: var(--muted); min-height: 1.2em; }
 
   .timerbar {
@@ -464,9 +468,11 @@
     color: var(--text);
     cursor: pointer;
   }
-  .gamecard:hover { border-color: var(--accent); }
   .gamecard.dim { opacity: 0.6; }
-  .gamecard.dim:hover { opacity: 1; }
+  @media (hover: hover) {
+    .gamecard:hover { border-color: var(--accent); }
+    .gamecard.dim:hover { opacity: 1; }
+  }
 
   /* Game of the Day card */
   .dailycard {
@@ -488,8 +494,10 @@
   .homelinks button { flex: 1; padding: 10px 12px; font-size: 0.9rem; }
   .homelinks .sound-toggle { flex: 0 0 auto; padding: 10px 12px; font-size: 1rem; line-height: 1; }
   .sound-toggle[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
-  #daily-board-list .lb-row:hover { border-color: var(--muted); }
-  #daily-board-list .lb-row.me:hover { border-color: var(--accent); }
+  @media (hover: hover) {
+    #daily-board-list .lb-row:hover { border-color: var(--muted); }
+    #daily-board-list .lb-row.me:hover { border-color: var(--accent); }
+  }
   .gamecard-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
   .gamecard-vs { font-weight: 650; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .gamecard-sub { font-size: 0.8rem; color: var(--muted); }
@@ -557,7 +565,7 @@
     border-radius: 9px;
     cursor: pointer;
   }
-  .diffbtn:hover { background: var(--bg); }
+  @media (hover: hover) { .diffbtn:hover { background: var(--bg); } }
   .diffbtn.active {
     border-color: var(--accent);
     background: var(--accent);
