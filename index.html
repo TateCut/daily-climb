@@ -601,7 +601,7 @@
       <p class="note whoami" id="home-whoami" hidden></p>
       <div class="dailycard" id="dailycard">
         <div class="dailycard-head">
-          <span class="dailycard-title">Game of the Day</span>
+          <span class="dailycard-title">Daily Climb</span>
         </div>
         <button class="primary" id="btn-daily-play" type="button">Play</button>
         <p class="note" id="daily-meta"></p>
@@ -613,9 +613,9 @@
       </div>
     </section>
 
-    <!-- GAME OF THE DAY: intro / one-shot confirm -->
+    <!-- DAILY CLIMB: intro / one-shot confirm -->
     <section id="screen-daily-intro" hidden>
-      <h2 style="margin:0;font-size:1.3rem;">Game of the Day</h2>
+      <h2 style="margin:0;font-size:1.3rem;">Daily Climb</h2>
       <p class="lede" id="daily-intro-date"></p>
       <p class="lede">Three climbs, 3 letters up to 8. Your score is how many rungs you clear.</p>
       <p class="note">One attempt.</p>
@@ -623,10 +623,10 @@
       <button class="linkbtn" id="btn-daily-intro-back" type="button">&larr; Home</button>
     </section>
 
-    <!-- GAME OF THE DAY: leaderboard -->
+    <!-- DAILY CLIMB: leaderboard -->
     <section id="screen-daily-board" hidden>
       <div class="dailycard-head">
-        <h2 id="daily-board-title" style="margin:0;font-size:1.3rem;">Game of the Day</h2>
+        <h2 id="daily-board-title" style="margin:0;font-size:1.3rem;">Daily Climb</h2>
         <span class="dailycard-streak" id="daily-board-streak" hidden></span>
       </div>
       <p class="note" id="daily-board-sub"></p>
@@ -2664,7 +2664,7 @@
       visual: "strikes",
     },
     {
-      h: "The Game of the Day",
+      h: "The Daily Climb",
       p: "Three climbs back to back, the same puzzles for everyone. Your score is how many rungs you clear. Practice runs a single climb, any time.",
       visual: "daily",
     },
@@ -3188,7 +3188,7 @@
     const today = dailyKeyOf();
     const yst = shiftDayKey(today, -1);
     const isToday = dayKey === today;
-    $("#daily-board-title").textContent = isToday ? "Today's game" : dateLabel(dayKey);
+    $("#daily-board-title").textContent = isToday ? "Today's climb" : dateLabel(dayKey);
     $("#daily-board-sub").textContent = "3 climbs · score is rungs cleared" + (isToday ? " · " + dailyResetText() : "");
 
     const pill = $("#daily-board-streak");
