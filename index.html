@@ -1715,7 +1715,7 @@
   let tileMap = {};     // id -> tile
   // Both rows are fixed grids of N cells for the whole stage — moving a letter
   // out leaves a gap in place, it never reflows.
-  let trayCells = [];   // [{type:"letter", id} | {type:"gap", for:id}]
+  let trayCells = [];   // fixed N-cell grid: [{type:"letter", id} | {type:"gap"}]
   let ans = [];         // length N: letterId, or null for a gap
   const ROUNDS = 3;
   // Practice (mode "solo") is a single round; daily / versus run the full 3.
@@ -2205,8 +2205,9 @@
   }
   const setTrayGap = (id) => {
     const ci = trayCells.findIndex((c) => c.type === "letter" && c.id === id);
-    if (ci > -1) trayCells[ci] = { type: "gap", for: id };
+    if (ci > -1) trayCells[ci] = { type: "gap" };
   };
+  const firstTrayGap = () => trayCells.findIndex((c) => c.type === "gap");
 
   // click a tray letter -> it drops into the leftmost gap in the answer
   function clickToAnswer(id) {
@@ -2218,12 +2219,11 @@
     if (g > -1) { FX.play("place"); buzz(6); popAnswerAt(g); }
   }
 
-  // click an answer letter -> it snaps back to the exact tray gap it left,
-  // and its answer slot becomes a gap in place
+  // click an answer letter -> it drops into the leftmost open tray slot
   function toTrayHome(id) {
     const ai = ans.indexOf(id);
     if (ai > -1) ans[ai] = null;
-    const gi = trayCells.findIndex((c) => c.type === "gap" && c.for === id);
+    const gi = firstTrayGap();
     if (gi > -1) trayCells[gi] = { type: "letter", id: id };
     else trayCells.push({ type: "letter", id: id });
     msg("");
@@ -2231,13 +2231,13 @@
     FX.play("tap"); buzz(4);
   }
 
-  // Drop resolution — target is a specific CELL {row:"ans"|"tray", index} that
-  // the tile locks onto. Empty cell: the tile just moves in. Occupied cell:
-  //  - dragged from the answer  -> push it (and the run between) the way the
-  //    tile came from — a plain splice-reinsert does exactly this;
-  //  - dragged from the tray    -> swap the two tiles.
-  const trayGapFor = (who) => trayCells.findIndex((c) => c.type === "gap" && c.for === who);
-
+  // Drop resolution — target is a specific CELL {row:"ans"|"tray", index}.
+  //  - empty answer cell: the tile moves in;
+  //  - a letter returning to the tray: always the leftmost open slot, no push;
+  //  - occupied answer cell, dragged FROM the answer: land on it, the run
+  //    between shifts over to fill the vacated spot;
+  //  - occupied cell otherwise (tray<->answer, or tray<->tray): the two tiles
+  //    swap positions.
   function commitDrop(id, target) {
     const fromAns = ans.indexOf(id);
     const fromTray = trayCells.findIndex((c) => c.type === "letter" && c.id === id);
@@ -2248,48 +2248,37 @@
       if (fromAns > -1) {
         if (to === fromAns) { render(false); return; }
         if (ans[to] === null) {
-          ans[fromAns] = null; ans[to] = id;              // move into the gap
+          ans[fromAns] = null; ans[to] = id;
         } else {
-          // land ON the target cell; the tiles between it and where the dragged
-          // tile started shift over to fill the vacated spot
           ans.splice(fromAns, 1);
           ans.splice(to, 0, id);
         }
+      } else if (ans[to] === null) {
+        setTrayGap(id); ans[to] = id;
       } else {
-        if (ans[to] === null) {
-          setTrayGap(id); ans[to] = id;                    // fill the gap
-        } else {
-          const displaced = ans[to];                       // swap tray <-> answer
-          setTrayGap(id);
-          ans[to] = id;
-          const gi = trayGapFor(displaced);
-          if (gi > -1) trayCells[gi] = { type: "letter", id: displaced };
-          else trayCells.push({ type: "letter", id: displaced });
-        }
+        // swap: the displaced answer tile takes the tray cell we came from
+        const displaced = ans[to];
+        ans[to] = id;
+        trayCells[fromTray] = { type: "letter", id: displaced };
       }
       landedInAns = true;
     } else {
       const to = target.index;
       const cell = trayCells[to];
       if (fromTray > -1) {
+        // repositioning within the tray — swap the two cells' contents
         if (to === fromTray) { render(false); return; }
-        if (cell.type === "gap") {
-          trayCells[fromTray] = { type: "gap", for: cell.for };
-          trayCells[to] = { type: "letter", id: id };
-        } else {
-          trayCells[fromTray] = { type: "letter", id: cell.id };
-          trayCells[to] = { type: "letter", id: id };
-        }
+        trayCells[fromTray] = cell.type === "letter" ? { type: "letter", id: cell.id } : { type: "gap" };
+        trayCells[to] = { type: "letter", id: id };
       } else {
-        const ownGap = trayGapFor(id);                     // this tile's tray home
+        // a letter leaving the answer for the tray
         ans[fromAns] = null;
         if (cell.type === "gap") {
-          if (ownGap > -1 && ownGap !== to) trayCells[ownGap] = { type: "gap", for: cell.for };
-          trayCells[to] = { type: "letter", id: id };
+          const gi = firstTrayGap();                    // always the leftmost open slot
+          trayCells[gi > -1 ? gi : to] = { type: "letter", id: id };
         } else {
-          const other = cell.id;                           // swap tray <-> answer
-          ans[fromAns] = other;
-          if (ownGap > -1) trayCells[ownGap] = { type: "gap", for: other };
+          // swap: the displaced tray letter takes the answer slot we vacated
+          ans[fromAns] = cell.id;
           trayCells[to] = { type: "letter", id: id };
           landedInAns = true;
         }
@@ -2400,6 +2389,14 @@
       if (dx < bestDx) { bestDx = dx; index = i; }
     }
 
+    // A letter heading back to the tray lands in the leftmost open slot, not the
+    // one under the cursor — point the highlight there so it matches.
+    if (!useAns && drag && ans.indexOf(drag.id) > -1 && cellEls[index].classList.contains("slot")) {
+      for (let i = 0; i < cellEls.length; i++) {
+        if (cellEls[i].classList.contains("slot")) { index = i; break; }
+      }
+    }
+
     dropTarget = { row: useAns ? "ans" : "tray", index: index };
     cellEls[index].classList.add("drop-target");
   }
@@ -2483,8 +2480,10 @@
 
   function returnAll() {
     if (locked || checking) return;
+    const answered = ans.filter((x) => x !== null); // answer order
+    let k = 0;
     trayCells = trayCells.map((c) =>
-      c.type === "gap" ? { type: "letter", id: c.for } : c
+      c.type === "gap" ? { type: "letter", id: answered[k++] } : c
     );
     ans = new Array(tiles.length).fill(null);
     msg("");
