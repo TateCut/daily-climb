@@ -75,7 +75,10 @@
   /* Keep gameplay tight — the mark drops away on the play screen. */
   body:has(#screen-play:not([hidden])) .brandmark { display: none; }
   /* Tutorial is a fixed card — no scrolling, so a swipe is never stolen as a pan. */
-  body:has(#screen-tutorial:not([hidden])) { touch-action: none; overscroll-behavior: none; }
+  :root:has(#screen-tutorial:not([hidden])),
+  :root:has(#screen-tutorial:not([hidden])) body {
+    touch-action: none; overscroll-behavior: none; overflow: hidden;
+  }
   h1 {
     margin: 0 0 22px;
     font-size: 2rem;
@@ -3917,8 +3920,6 @@
   $("#tut-skip").addEventListener("click", finishTutorial);
 
   // Swipe anywhere on the tutorial screen: left = next card, right = back.
-  // (touch-action:none on the tutorial view — see CSS — stops the page from
-  //  scrolling so the swipe never gets stolen.)
   (function () {
     let sx = 0, sy = 0, tracking = false;
     document.addEventListener("pointerdown", (e) => {
@@ -3934,6 +3935,11 @@
       dx < 0 ? tutNext() : tutPrev();
     });
     document.addEventListener("pointercancel", () => { tracking = false; });
+    // The tutorial has nothing to scroll — kill every touch-drag on it (iOS
+    // ignores touch-action / overscroll-behavior in older Safari / the PWA shell).
+    document.addEventListener("touchmove", (e) => {
+      if (!screens.tutorial.hidden && e.cancelable) e.preventDefault();
+    }, { passive: false });
   })();
   $("#btn-home-howto").addEventListener("click", () => showTutorial({ from: "home" }));
   $("#btn-start-howto").addEventListener("click", () => showTutorial({ from: "start" }));
