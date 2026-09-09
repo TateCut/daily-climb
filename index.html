@@ -225,10 +225,31 @@
     touch-action: none;
   }
   .tile.new { border-color: var(--accent); }
-  .tile.pop { animation: pop 0.3s ease; }
+  .tile.pop { animation: pop 0.34s cubic-bezier(.2,.8,.25,1.4); }
   @keyframes pop {
-    0% { transform: scale(0.6); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
+    0%   { transform: translateY(-16px) scale(0.55); opacity: 0; }
+    60%  { transform: translateY(2px) scale(1.06); opacity: 1; }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+  }
+
+  /* juice: reusable one-shot animations, driven from JS by adding the class */
+  @keyframes fx-shake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-7px); } 40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); } 80% { transform: translateX(3px); }
+  }
+  @keyframes fx-flash-good {
+    0% { box-shadow: 0 0 0 0 var(--good); } 100% { box-shadow: 0 0 0 8px transparent; }
+  }
+  @keyframes fx-flash-bad {
+    0% { box-shadow: 0 0 0 0 var(--warn); } 100% { box-shadow: 0 0 0 8px transparent; }
+  }
+  .fx-shake { animation: fx-shake 0.34s ease; }
+  .fx-good  { animation: fx-flash-good 0.4s ease; border-radius: 12px; }
+  .fx-bad   { animation: fx-flash-bad 0.4s ease; border-radius: 12px; }
+  .confetti-canvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 999; }
+  @media (prefers-reduced-motion: reduce) {
+    .tile.pop, .fx-shake, .fx-good, .fx-bad { animation: none; }
   }
   .tile.dragging { opacity: 0.3; }
   .tile.ghost {
@@ -458,6 +479,8 @@
   /* Secondary home actions — clearly tappable, but quieter than the daily card. */
   .homelinks { display: flex; gap: 10px; width: 100%; margin-top: 2px; }
   .homelinks button { flex: 1; padding: 10px 12px; font-size: 0.9rem; }
+  .homelinks .sound-toggle { flex: 0 0 auto; padding: 10px 12px; font-size: 1rem; line-height: 1; }
+  .sound-toggle[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
   #daily-board-list .lb-row:hover { border-color: var(--muted); }
   #daily-board-list .lb-row.me:hover { border-color: var(--accent); }
   .gamecard-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
@@ -586,6 +609,7 @@
       <div class="homelinks">
         <button class="ghost" id="btn-home-solo" type="button">Practice</button>
         <button class="ghost" id="btn-home-howto" type="button">How to play</button>
+        <button class="ghost sound-toggle" id="btn-sound" type="button" aria-label="Sound" aria-pressed="false">&#128264;</button>
       </div>
     </section>
 
@@ -1139,6 +1163,142 @@
   const ALPHA = "abcdefghijklmnopqrstuvwxyz".split("");
   const BEST_KEY = "three21.best";
 
+  // ---- juice: synthesized sound + motion helpers ----
+  let reduceMotion = false;
+  try {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    reduceMotion = mq.matches;
+    mq.addEventListener("change", (e) => { reduceMotion = e.matches; });
+  } catch (e) {}
+
+  // el.animate() wrapper: no-ops under reduced-motion / backgrounded tab.
+  function anim(el, keyframes, opts) {
+    if (!el || reduceMotion || document.hidden || !el.animate) return null;
+    try { return el.animate(keyframes, opts); } catch (e) { return null; }
+  }
+  function buzz(pattern) { try { if (navigator.vibrate && !reduceMotion) navigator.vibrate(pattern); } catch (e) {} }
+
+  // Hand-rolled canvas confetti — one burst, self-cleans. No dependency.
+  function confetti(opts) {
+    opts = opts || {};
+    if (reduceMotion || document.hidden) return;
+    const cv = document.createElement("canvas");
+    cv.className = "confetti-canvas";
+    document.body.appendChild(cv);
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const W = cv.width = window.innerWidth * dpr;
+    const H = cv.height = window.innerHeight * dpr;
+    const g = cv.getContext("2d");
+    const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#f59e0b";
+    const cols = [accent, "#ffd97a", "#ff9f45", "#ffffff", "#7ad1ff"];
+    const n = opts.big ? 130 : 70;
+    const cx = (opts.x != null ? opts.x : window.innerWidth / 2) * dpr;
+    const cy = (opts.y != null ? opts.y : window.innerHeight * 0.36) * dpr;
+    const parts = [];
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const sp = (2 + Math.random() * 6) * dpr * (opts.big ? 1.3 : 1);
+      parts.push({
+        x: cx, y: cy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 3 * dpr,
+        s: (4 + Math.random() * 5) * dpr, rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.4,
+        c: cols[(Math.random() * cols.length) | 0], life: 0, ttl: 55 + Math.random() * 45,
+      });
+    }
+    const grav = 0.16 * dpr;
+    let raf;
+    function frame() {
+      g.clearRect(0, 0, W, H);
+      let alive = 0;
+      for (const p of parts) {
+        if (++p.life > p.ttl) continue;
+        alive++;
+        p.vy += grav; p.vx *= 0.99;
+        p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+        g.save();
+        g.translate(p.x, p.y); g.rotate(p.rot);
+        g.globalAlpha = Math.max(0, 1 - p.life / p.ttl);
+        g.fillStyle = p.c;
+        g.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * 0.6);
+        g.restore();
+      }
+      if (alive) raf = requestAnimationFrame(frame);
+      else cv.remove();
+    }
+    raf = requestAnimationFrame(frame);
+    setTimeout(() => { cancelAnimationFrame(raf); cv.remove(); }, 3500);
+  }
+
+  // Web-Audio blip engine. Off by default; the toggle persists to localStorage.
+  const FX = (function () {
+    let ctx = null, master = null, on = false;
+    try { on = localStorage.getItem("three21.sound") === "1"; } catch (e) {}
+
+    function ensure() {
+      if (ctx) return;
+      try {
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+        master = ctx.createGain();
+        master.gain.value = 0.2;
+        master.connect(ctx.destination);
+      } catch (e) { ctx = null; }
+    }
+    function unlock() { ensure(); if (ctx && ctx.state === "suspended") ctx.resume(); }
+    window.addEventListener("pointerdown", () => { if (on) unlock(); }, { passive: true });
+
+    function tone(o) {
+      ensure(); if (!ctx) return;
+      const now = ctx.currentTime + (o.t0 || 0);
+      const dur = o.dur || 0.1;
+      const osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.type = o.type || "triangle";
+      osc.frequency.setValueAtTime(o.from, now);
+      if (o.to && o.to !== o.from) osc.frequency.exponentialRampToValueAtTime(Math.max(1, o.to), now + dur);
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.exponentialRampToValueAtTime(o.gain || 0.5, now + 0.006);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      osc.connect(g); g.connect(master);
+      osc.start(now); osc.stop(now + dur + 0.03);
+    }
+    function noise(o) {
+      ensure(); if (!ctx) return;
+      const now = ctx.currentTime + (o.t0 || 0), dur = o.dur || 0.1;
+      const n = Math.max(1, Math.floor(ctx.sampleRate * dur));
+      const buf = ctx.createBuffer(1, n, ctx.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(o.gain || 0.3, now);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      let node = src;
+      if (o.lp) { const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = o.lp; node.connect(f); node = f; }
+      if (o.hp) { const f = ctx.createBiquadFilter(); f.type = "highpass"; f.frequency.value = o.hp; node.connect(f); node = f; }
+      node.connect(g); g.connect(master);
+      src.start(now); src.stop(now + dur + 0.03);
+    }
+    const arp = (freqs, step, dur, gain) => freqs.forEach((f, i) =>
+      tone({ from: f, dur: dur, t0: i * step, gain: gain }));
+
+    const cues = {
+      tap:     () => tone({ type: "square", from: 480, to: 660, dur: 0.045, gain: 0.35 }),
+      place:   () => tone({ from: 520, to: 760, dur: 0.06, gain: 0.5 }),
+      shuffle: () => noise({ dur: 0.16, gain: 0.2, lp: 1400, hp: 300 }),
+      drop:    () => { tone({ from: 260, to: 540, dur: 0.11, gain: 0.6 }); tone({ type: "sine", from: 1040, dur: 0.05, t0: 0.03, gain: 0.25 }); },
+      accept:  () => arp([523, 659, 784], 0.05, 0.11, 0.5),
+      nope:    () => tone({ type: "sine", from: 320, to: 240, dur: 0.09, gain: 0.3 }),
+      strike:  () => { tone({ type: "sawtooth", from: 200, to: 80, dur: 0.22, gain: 0.55 }); noise({ dur: 0.07, gain: 0.2, lp: 700 }); },
+      hint:    () => tone({ type: "sine", from: 880, to: 1330, dur: 0.15, gain: 0.35 }),
+      climb:   () => arp([523, 659, 784, 1047, 1319], 0.075, 0.13, 0.45),
+      over:    () => arp([392, 330, 262], 0.11, 0.18, 0.45),
+      board:   () => tone({ type: "sine", from: 660, to: 990, dur: 0.2, gain: 0.35 }),
+      streak:  () => arp([784, 1047, 1319], 0.06, 0.1, 0.4),
+    };
+    return {
+      play: (name) => { if (on && cues[name]) { unlock(); cues[name](); } },
+      isOn: () => on,
+      set: (v) => { on = !!v; try { localStorage.setItem("three21.sound", on ? "1" : "0"); } catch (e) {} if (on) unlock(); },
+    };
+  })();
+
   // iOS Safari ignores user-scalable=no in a browser tab, so also block the
   // pinch gesture directly — a word game shouldn't zoom under your fingers.
   ["gesturestart", "gesturechange", "gestureend"].forEach((evt) =>
@@ -1531,7 +1691,15 @@
     over: $("#screen-over"),
   };
   function show(name) {
+    const el = screens[name];
+    const arriving = el && el.hidden;
     for (const k in screens) screens[k].hidden = k !== name;
+    if (arriving) {
+      anim(el, [
+        { opacity: 0, transform: "translateY(9px)" },
+        { opacity: 1, transform: "translateY(0)" },
+      ], { duration: 210, easing: "cubic-bezier(.2,.7,.3,1)" });
+    }
   }
 
   // Practice ("solo") is one round, so its best is tracked under its own key —
@@ -1768,6 +1936,7 @@
 
     locked = false;
     beginStage();
+    FX.play("drop"); buzz(10);
   }
 
   function beginStage() {
@@ -1855,6 +2024,8 @@
     sessionStrikes++;
     guessesLeft = Math.max(0, guessesLeft - 1);
     renderPips();
+    FX.play("strike"); buzz([30, 40, 30]);
+    fxClass($("#answer"), "fx-shake"); fxClass($("#answer"), "fx-bad");
     if (guessesLeft <= 0) {
       msg(isClimb() ? "Three strikes — that's the climb." : "Three strikes — that's the round.", "warn");
       locked = true;
@@ -1877,6 +2048,7 @@
     hintUsed = true;
     $("#btn-hint").hidden = true;
     msg("Hint: a word here starts with “" + reveal.toUpperCase() + "”", "good");
+    FX.play("hint");
   }
 
   function tick() {
@@ -1942,6 +2114,30 @@
 
   const inAnswer = (id) => ans.indexOf(id) > -1;
   const answerFull = () => ans.indexOf(null) === -1;
+
+  // ---- juice helpers (visual) ----
+  function fxClass(el, cls, ms) {
+    if (!el || reduceMotion || document.hidden) return;
+    el.classList.remove(cls);
+    void el.offsetWidth; // restart the animation
+    el.classList.add(cls);
+    setTimeout(() => el.classList.remove(cls), ms || 450);
+  }
+  function popAnswerAt(idx) {
+    const el = $("#answer").children[idx];
+    if (el && el.classList.contains("tile")) {
+      anim(el, [{ transform: "scale(0.7)" }, { transform: "scale(1.14)" }, { transform: "scale(1)" }],
+        { duration: 200, easing: "cubic-bezier(.2,.8,.25,1.3)" });
+    }
+  }
+  function waveAnswer() {
+    [].forEach.call($("#answer").children, (el, i) => {
+      if (el.classList && el.classList.contains("tile")) {
+        anim(el, [{ transform: "translateY(0)" }, { transform: "translateY(-10px)" }, { transform: "translateY(0)" }],
+          { duration: 300, delay: i * 45, easing: "ease-out" });
+      }
+    });
+  }
   const setTrayGap = (id) => {
     const ci = trayCells.findIndex((c) => c.type === "letter" && c.id === id);
     if (ci > -1) trayCells[ci] = { type: "gap", for: id };
@@ -1954,6 +2150,7 @@
     if (g > -1) ans[g] = id;
     msg("");
     render(false);
+    if (g > -1) { FX.play("place"); buzz(6); popAnswerAt(g); }
   }
 
   // click an answer letter -> it snaps back to the exact tray gap it left,
@@ -1966,6 +2163,7 @@
     else trayCells.push({ type: "letter", id: id });
     msg("");
     render(false);
+    FX.play("tap"); buzz(4);
   }
 
   // drag into the tray at a chosen position: insert and shift the tray cells;
@@ -1989,6 +2187,7 @@
 
   // drop a letter into the answer at a chosen cell (from the tray or reordering)
   function dropInAnswer(id, index) {
+    const fromTray = ans.indexOf(id) < 0;
     const from = ans.indexOf(id);
     if (from > -1) {
       // reordering within the answer — insert and shift the whole cell row
@@ -2009,6 +2208,8 @@
     }
     msg("");
     render(false);
+    FX.play(fromTray ? "place" : "tap"); buzz(6);
+    popAnswerAt(ans.indexOf(id));
   }
 
   // ---- pointer drag / click ----
@@ -2146,6 +2347,8 @@
     wrongGuesses = []; // solved it — clear the dead-end list
     renderWrongWords();
     msg("Nice — “" + g.toUpperCase() + "”", "good");
+    FX.play("accept"); buzz([8, 24, 8]);
+    fxClass($("#answer"), "fx-good"); waveAnswer();
     setTimeout(nextStage, 750);
   }
 
@@ -2153,18 +2356,21 @@
     if (locked || checking || screens.play.hidden) return;
     if (!answerFull()) {
       msg("Put all " + tiles.length + " letters in your word.", "warn");
+      FX.play("nope");
       return;
     }
     const g = ans.map((id) => tileMap[id].ch).join("").toLowerCase();
 
     if (guessMode() && wrongGuesses.indexOf(g) > -1) {
       msg("You already tried “" + g.toUpperCase() + "” — no strike for that.", "warn");
+      FX.play("nope"); fxClass($("#answer"), "fx-shake");
       return;
     }
 
     // Climb: a rung can't just be the rung below it plus an ending. Not a strike.
     if (isClimb() && isInflectionOf(g, climbPrev)) {
       msg("“" + g.toUpperCase() + "” is just “" + climbPrev.toUpperCase() + "” plus a letter — find another word.", "warn");
+      FX.play("nope"); fxClass($("#answer"), "fx-shake");
       return;
     }
 
@@ -2208,6 +2414,7 @@
     ans = new Array(tiles.length).fill(null);
     msg("");
     render(false);
+    FX.play("shuffle"); buzz(8);
   }
 
   function doShuffle() {
@@ -2215,6 +2422,12 @@
     shuffle(trayCells);
     msg("");
     render(false);
+    FX.play("shuffle"); buzz(8);
+    [].forEach.call($("#tray").children, (el, i) => {
+      if (el.classList && el.classList.contains("tile"))
+        anim(el, [{ transform: "translateY(6px) scale(.9)", opacity: 0.4 }, { transform: "none", opacity: 1 }],
+          { duration: 220, delay: i * 20, easing: "ease-out" });
+    });
   }
 
   function endRound() {
@@ -2743,6 +2956,7 @@
     locked = false;
     syncRoundChrome();
     beginStage();
+    FX.play("drop"); buzz(10);
   }
 
   function climbAccept(g) {
@@ -2758,9 +2972,14 @@
     renderWrongWords();
     if (climbStage >= 6) {
       msg("“" + g.toUpperCase() + "” — top of the climb!", "good");
-      setTimeout(function () { climbRoundDone(true); }, 950);
+      FX.play("climb"); buzz([10, 30, 10, 30, 20]);
+      fxClass($("#answer"), "fx-good"); waveAnswer();
+      confetti({ big: true });
+      setTimeout(function () { climbRoundDone(true); }, 1100);
     } else {
       msg("Nice — “" + g.toUpperCase() + "”", "good");
+      FX.play("accept"); buzz([8, 24, 8]);
+      fxClass($("#answer"), "fx-good"); waveAnswer();
       setTimeout(climbNext, 750);
     }
   }
@@ -2786,6 +3005,7 @@
     marker.remove();
     defToken++;
     roundWords[round - 1] = currentRoundWords.slice();
+    if (!completed) FX.play("over");
 
     if (round >= climbRounds()) { climbSessionDone(); return; }
 
@@ -2868,7 +3088,12 @@
   async function submitDailyResult(totalRungs) {
     defToken++;
     // Dev replay: don't touch Firestore — just show the real board read-only.
-    if (isDev()) { clearResume(); showDailyBoard(dailyDay, { live: true }); return; }
+    if (isDev()) {
+      clearResume();
+      showDailyBoard(dailyDay, { live: true, justFinished: true });
+      if (totalRungs >= 12) setTimeout(() => confetti({ big: totalRungs >= 16 }), 350);
+      return;
+    }
     const total = totalRungs;
     const prevDay = shiftDayKey(dailyDay, -1);
     try {
@@ -2883,6 +3108,7 @@
     } catch (e) {}
     clearResume();
     showDailyBoard(dailyDay, { live: true, justFinished: true });
+    if (totalRungs >= 12) setTimeout(() => confetti({ big: totalRungs >= 16 }), 350);
   }
 
   function renderDailyBoard(entrants, dayKey, opts) {
@@ -2904,6 +3130,26 @@
         (myDailyStreak > 1 ? " · " + myDailyStreak + "-day streak 🔥" : "");
     }
     $("#daily-board-foot").textContent = foot;
+
+    if (opts.justFinished && !opts._juiced) {
+      opts._juiced = true;
+      FX.play("board");
+      [].forEach.call(list.children, (el, i) => {
+        anim(el, [{ opacity: 0, transform: "translateX(-14px)" }, { opacity: 1, transform: "translateX(0)" }],
+          { duration: 260, delay: 60 + i * 55, easing: "cubic-bezier(.2,.7,.3,1)" });
+      });
+      if (mine >= 0 && list.children[mine]) {
+        setTimeout(() => anim(list.children[mine],
+          [{ transform: "scale(1)" }, { transform: "scale(1.05)" }, { transform: "scale(1)" }],
+          { duration: 340, easing: "ease-out" }), 120 + mine * 55 + 200);
+      }
+      const pill = $("#daily-board-streak");
+      if (pill && !pill.hidden) {
+        setTimeout(() => { FX.play("streak"); anim(pill,
+          [{ transform: "scale(1)" }, { transform: "scale(1.25)" }, { transform: "scale(1)" }],
+          { duration: 380, easing: "cubic-bezier(.2,.8,.25,1.5)" }); }, 500);
+      }
+    }
   }
 
   function showDailyBoard(dayKey, opts) {
@@ -3625,6 +3871,19 @@
   $("#tut-skip").addEventListener("click", finishTutorial);
   $("#btn-home-howto").addEventListener("click", () => showTutorial({ from: "home" }));
   $("#btn-start-howto").addEventListener("click", () => showTutorial({ from: "start" }));
+
+  function syncSoundBtn() {
+    const b = $("#btn-sound");
+    if (!b) return;
+    b.innerHTML = FX.isOn() ? "&#128266;" : "&#128263;"; // 🔊 / 🔇
+    b.setAttribute("aria-pressed", String(FX.isOn()));
+  }
+  $("#btn-sound").addEventListener("click", () => {
+    FX.set(!FX.isOn());
+    syncSoundBtn();
+    if (FX.isOn()) FX.play("place");
+  });
+  syncSoundBtn();
 
   window.addEventListener("DOMContentLoaded", () => {
     setDifficulty("easy");
