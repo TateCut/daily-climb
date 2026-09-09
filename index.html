@@ -275,15 +275,16 @@
     border-radius: calc(var(--tile-w) * 0.1667);
     opacity: 0.5;
   }
-  .drop-marker {
-    position: absolute;
-    width: 4px;
-    height: calc(var(--tile-w) * 1.0833);
-    margin-top: calc(var(--tile-w) * -0.5417);
-    background: var(--accent);
-    border-radius: 2px;
-    pointer-events: none;
-    z-index: 5;
+  /* The cell a dragged tile will lock onto — highlighted in place, no layout shift. */
+  .tile.drop-target,
+  .slot.drop-target {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .slot.drop-target {
+    opacity: 1;
+    border-style: solid;
+    border-color: var(--accent);
   }
 
   .btnrow {
@@ -2230,57 +2231,81 @@
     FX.play("tap"); buzz(4);
   }
 
-  // drag into the tray at a chosen position: insert and shift the tray cells;
-  // if the letter came from the answer, its answer slot becomes a gap in place
-  function toTrayAt(id, index) {
-    const ai = ans.indexOf(id);
-    if (ai > -1) ans[ai] = null;
-    const ci = trayCells.findIndex(
-      (c) => (c.type === "letter" && c.id === id) || (c.type === "gap" && c.for === id)
-    );
-    let at = index;
-    if (ci > -1) {
-      if (ci < at) at--;
-      trayCells.splice(ci, 1);
-    }
-    at = Math.max(0, Math.min(trayCells.length, at));
-    trayCells.splice(at, 0, { type: "letter", id: id });
-    msg("");
-    render(false);
-  }
+  // Drop resolution — target is a specific CELL {row:"ans"|"tray", index} that
+  // the tile locks onto. Empty cell: the tile just moves in. Occupied cell:
+  //  - dragged from the answer  -> push it (and the run between) the way the
+  //    tile came from — a plain splice-reinsert does exactly this;
+  //  - dragged from the tray    -> swap the two tiles.
+  const trayGapFor = (who) => trayCells.findIndex((c) => c.type === "gap" && c.for === who);
 
-  // drop a letter into the answer at a chosen cell (from the tray or reordering)
-  function dropInAnswer(id, index) {
-    const fromTray = ans.indexOf(id) < 0;
-    const from = ans.indexOf(id);
-    if (from > -1) {
-      // reordering within the answer — insert and shift the whole cell row
-      ans.splice(from, 1);
-      if (from < index) index--;
-      index = Math.max(0, Math.min(ans.length, index));
-      ans.splice(index, 0, id);
-    } else {
-      setTrayGap(id);
-      if (index < ans.length && ans[index] === null) {
-        ans[index] = id; // straight into the targeted gap, nothing shifts
+  function commitDrop(id, target) {
+    const fromAns = ans.indexOf(id);
+    const fromTray = trayCells.findIndex((c) => c.type === "letter" && c.id === id);
+    let landedInAns = false;
+
+    if (target.row === "ans") {
+      const to = target.index;
+      if (fromAns > -1) {
+        if (to === fromAns) { render(false); return; }
+        if (ans[to] === null) {
+          ans[fromAns] = null; ans[to] = id;              // move into the gap
+        } else {
+          ans.splice(fromAns, 1);                          // push / reorder
+          ans.splice(fromAns < to ? to - 1 : to, 0, id);
+        }
       } else {
-        const g = ans.indexOf(null);
-        if (g > -1) { ans.splice(g, 1); if (g < index) index--; }
-        index = Math.max(0, Math.min(ans.length, index));
-        ans.splice(index, 0, id);
+        if (ans[to] === null) {
+          setTrayGap(id); ans[to] = id;                    // fill the gap
+        } else {
+          const displaced = ans[to];                       // swap tray <-> answer
+          setTrayGap(id);
+          ans[to] = id;
+          const gi = trayGapFor(displaced);
+          if (gi > -1) trayCells[gi] = { type: "letter", id: displaced };
+          else trayCells.push({ type: "letter", id: displaced });
+        }
+      }
+      landedInAns = true;
+    } else {
+      const to = target.index;
+      const cell = trayCells[to];
+      if (fromTray > -1) {
+        if (to === fromTray) { render(false); return; }
+        if (cell.type === "gap") {
+          trayCells[fromTray] = { type: "gap", for: cell.for };
+          trayCells[to] = { type: "letter", id: id };
+        } else {
+          trayCells[fromTray] = { type: "letter", id: cell.id };
+          trayCells[to] = { type: "letter", id: id };
+        }
+      } else {
+        const ownGap = trayGapFor(id);                     // this tile's tray home
+        ans[fromAns] = null;
+        if (cell.type === "gap") {
+          if (ownGap > -1 && ownGap !== to) trayCells[ownGap] = { type: "gap", for: cell.for };
+          trayCells[to] = { type: "letter", id: id };
+        } else {
+          const other = cell.id;                           // swap tray <-> answer
+          ans[fromAns] = other;
+          if (ownGap > -1) trayCells[ownGap] = { type: "gap", for: other };
+          trayCells[to] = { type: "letter", id: id };
+          landedInAns = true;
+        }
       }
     }
+
     msg("");
     render(false);
-    FX.play(fromTray ? "place" : "tap"); buzz(6);
-    popAnswerAt(ans.indexOf(id));
+    FX.play(fromAns > -1 ? "tap" : "place"); buzz(6);
+    if (landedInAns) popAnswerAt(ans.indexOf(id));
   }
 
   // ---- pointer drag / click ----
   let drag = null;
   let dropTarget = null;
-  const marker = document.createElement("div");
-  marker.className = "drop-marker";
+  function clearDropTarget() {
+    [].forEach.call(document.querySelectorAll(".drop-target"), (el) => el.classList.remove("drop-target"));
+  }
 
   function onPointerDown(e, id) {
     if (locked || checking) return;
@@ -2311,7 +2336,7 @@
     }
     drag.ghost.style.left = e.clientX + "px";
     drag.ghost.style.top = e.clientY + "px";
-    updateMarker(e.clientX, e.clientY);
+    updateDropTarget(e.clientX, e.clientY);
   }
 
   function onPointerUp() {
@@ -2334,12 +2359,11 @@
     }
 
     if (d.ghost) d.ghost.remove();
-    marker.remove();
+    clearDropTarget();
     const target = dropTarget;
     dropTarget = null;
-    if (!target) { render(false); return; }
-    if (target.list === "ans") dropInAnswer(d.id, target.index);
-    else toTrayAt(d.id, target.index);
+    if (!target) { render(false); return; }   // dropped away from both rows — snap back
+    commitDrop(d.id, target);
   }
 
   function distToRect(x, y, r) {
@@ -2348,49 +2372,34 @@
     return Math.hypot(dx, dy);
   }
 
-  function updateMarker(x, y) {
+  // Highlight the single cell the tile would lock onto: the nearest cell in
+  // whichever row the pointer is over (or closer to). No caret, no shifting.
+  function updateDropTarget(x, y) {
     const trayEl = $("#tray");
     const ansEl = $("#answer");
-    const useAns = distToRect(x, y, ansEl.getBoundingClientRect()) <=
-                   distToRect(x, y, trayEl.getBoundingClientRect());
-    const rowEl = useAns ? ansEl : trayEl;
-    const listName = useAns ? "ans" : "tray";
+    const dAns = distToRect(x, y, ansEl.getBoundingClientRect());
+    const dTray = distToRect(x, y, trayEl.getBoundingClientRect());
 
-    // Both rows are N-cell grids; every cell (letters and gaps) is a drop slot.
-    // The dragged tile stays in the list so `index` is a position in the full
-    // row; each commit path then removes exactly one cell and adjusts.
+    clearDropTarget();
+
+    // Too far from either row — let go here and the tile snaps back.
+    if (Math.min(dAns, dTray) > 90) { dropTarget = null; return; }
+
+    const useAns = dAns <= dTray;
+    const rowEl = useAns ? ansEl : trayEl;
     const cellEls = [].slice.call(rowEl.querySelectorAll(".tile, .slot"));
-    let index = cellEls.length;
+    if (!cellEls.length) { dropTarget = null; return; }
+
+    // Nearest cell centre, clamped to the row — never overshoots past the end.
+    let index = 0, bestDx = Infinity;
     for (let i = 0; i < cellEls.length; i++) {
       const r = cellEls[i].getBoundingClientRect();
-      if (y < r.bottom && x < r.left + r.width / 2) { index = i; break; }
+      const dx = Math.abs(x - (r.left + r.width / 2));
+      if (dx < bestDx) { bestDx = dx; index = i; }
     }
 
-    dropTarget = { list: listName, index: index };
-
-    // Draw the caret as an absolutely-positioned overlay so inserting it never
-    // shifts the tiles (which would move the hit-test targets under the cursor).
-    const rowRect = rowEl.getBoundingClientRect();
-    const ref = cellEls[index];
-    let left, top;
-    if (ref) {
-      const rr = ref.getBoundingClientRect();
-      left = rr.left - rowRect.left - 6;
-      top = rr.top - rowRect.top + rr.height / 2;
-    } else if (cellEls.length) {
-      const rr = cellEls[cellEls.length - 1].getBoundingClientRect();
-      left = rr.right - rowRect.left + 2;
-      top = rr.top - rowRect.top + rr.height / 2;
-    } else {
-      left = rowRect.width / 2;
-      top = rowRect.height / 2;
-    }
-    marker.style.left = left + "px";
-    marker.style.top = top + "px";
-    if (marker.parentElement !== rowEl) {
-      marker.remove();
-      rowEl.appendChild(marker);
-    }
+    dropTarget = { row: useAns ? "ans" : "tray", index: index };
+    cellEls[index].classList.add("drop-target");
   }
 
   function msg(text, kind) {
@@ -2407,7 +2416,7 @@
     locked = true;
     checking = false;
     clearInterval(timerId);
-    marker.remove();
+    clearDropTarget();
     wrongGuesses = []; // solved it — clear the dead-end list
     renderWrongWords();
     msg("Nice — “" + g.toUpperCase() + "”", "good");
@@ -2550,7 +2559,7 @@
   function finish(maxedOut) {
     clearInterval(timerId);
     checking = false;
-    marker.remove();
+    clearDropTarget();
 
     roundWords[round - 1] = currentRoundWords.slice();
     defToken++;
@@ -3038,7 +3047,7 @@
     locked = true;
     checking = false;
     clearInterval(timerId);
-    marker.remove();
+    clearDropTarget();
     wrongGuesses = [];
     renderWrongWords();
     if (climbStage >= 6) {
@@ -3073,7 +3082,7 @@
     clearInterval(timerId);
     checking = false;
     locked = true;
-    marker.remove();
+    clearDropTarget();
     defToken++;
     roundWords[round - 1] = currentRoundWords.slice();
     if (!completed) FX.play("over");
