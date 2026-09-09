@@ -2233,10 +2233,10 @@
 
   // Drop resolution — target is a specific CELL {row:"ans"|"tray", index}.
   //  - empty cell (answer slot or tray gap): the tile moves into that exact cell;
-  //  - occupied answer cell, dragged FROM the answer: land on it, the run
-  //    between shifts over to fill the vacated spot;
-  //  - occupied cell otherwise (tray<->answer, or tray<->tray): the two tiles
-  //    swap positions.
+  //  - occupied cell, same row (answer->answer or tray->tray): land on it, the
+  //    run between shifts over to fill the vacated spot;
+  //  - occupied cell across the tray/answer line (either direction): the two
+  //    tiles swap positions.
   // (A click on a placed tile still routes through toTrayHome -> leftmost gap.)
   function commitDrop(id, target) {
     const fromAns = ans.indexOf(id);
@@ -2266,10 +2266,11 @@
       const to = target.index;
       const cell = trayCells[to];
       if (fromTray > -1) {
-        // repositioning within the tray — swap the two cells' contents
+        // repositioning within the tray — land on the target cell and let the
+        // run between shift over, exactly like reordering the answer row
         if (to === fromTray) { render(false); return; }
-        trayCells[fromTray] = cell.type === "letter" ? { type: "letter", id: cell.id } : { type: "gap" };
-        trayCells[to] = { type: "letter", id: id };
+        trayCells.splice(fromTray, 1);
+        trayCells.splice(to, 0, { type: "letter", id: id });
       } else {
         // a letter leaving the answer for the tray
         ans[fromAns] = null;
