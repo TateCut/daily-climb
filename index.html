@@ -64,6 +64,9 @@
     align-items: center;
     gap: 16px;
   }
+  /* Home now stacks two full cards + the links row + invite — tighten the gap
+     so all of it still fits a short phone with no page scroll. */
+  #screen-home { gap: 8px; }
   /* Ladder mark above the wordmark — six rungs, the top one climbed, the
      rest tapering down toward what's left. */
   .brandmark {
@@ -523,14 +526,14 @@
   /* Game of the Day card */
   .dailycard {
     width: 100%;
-    display: flex; flex-direction: column; gap: 10px;
-    padding: 16px;
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 12px 14px;
     border: 1px solid var(--accent);
     border-radius: 14px;
     background: var(--surface);
   }
   .dailycard-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  #dailycard .dailycard-head { justify-content: center; }
+  #dailycard .dailycard-head, #adventurecard .dailycard-head { justify-content: center; }
   .dailycard-title {
     font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
   }
@@ -732,12 +735,18 @@
         <button class="primary" id="btn-daily-play" type="button">Play</button>
         <p class="note" id="daily-meta"></p>
       </div>
+      <div class="dailycard" id="adventurecard">
+        <div class="dailycard-head">
+          <span class="dailycard-title">Adventure Mode</span>
+        </div>
+        <button class="primary" id="btn-adventure-play" type="button">Play</button>
+        <p class="note">Can you beat all 781 climbs?</p>
+      </div>
       <div class="homelinks">
         <button class="ghost" id="btn-home-solo" type="button">Practice</button>
         <button class="ghost" id="btn-home-howto" type="button">How to play</button>
         <button class="ghost sound-toggle" id="btn-sound" type="button" aria-label="Sound" aria-pressed="false">&#128264;</button>
       </div>
-      <button class="ghost full-btn" id="btn-home-collection" type="button">Collection</button>
       <button class="ghost full-btn" id="btn-home-invite" type="button">Invite friends to play</button>
     </section>
 
@@ -4196,7 +4205,7 @@
   $("#btn-climb-home").addEventListener("click", goHome);
   $("#btn-cre-next").addEventListener("click", climbRoundContinue);
 
-  $("#btn-home-collection").addEventListener("click", showCollection);
+  $("#btn-adventure-play").addEventListener("click", showCollection);
   $("#btn-collection-home").addEventListener("click", goHome);
   $("#collection-grid").addEventListener("click", (e) => {
     const t = e.target.closest(".collection-tile");
