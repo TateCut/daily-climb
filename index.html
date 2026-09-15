@@ -1633,6 +1633,7 @@
   let climbStage = 0;       // 1..6 rungs (letters = climbStage + 2)
   let climbPrev = null;     // the word played on the rung below (for the inflection rule)
   let dailyClimbs = null;   // [puzzle, puzzle, puzzle] for today's daily, from the day seed
+  let dailyClimbIndices = null; // the same 3, as CLIMBS indices — so a beaten round can mark Adventure Mode
   let collectionSeed = null;  // index into CLIMBS currently being played from the Collection screen
   let myBeatenSeeds = [];     // players/{uid}.beatenSeeds — CLIMBS indices this player has cleared
   let matchCode = null;
@@ -2129,7 +2130,8 @@
       let mine = null;
       if (dbReady()) { try { mine = await window.MatchDB.getDailyEntrant(dailyDay); } catch (e) {} }
       if (mine) { clearResume(); showDailyBoard(dailyDay, { live: true }); return; }
-      dailyClimbs = pickDailyClimbs(dailyDay);
+      dailyClimbIndices = pickDailyClimbIndices(dailyDay);
+      dailyClimbs = dailyClimbIndices.map((idx) => CLIMBS[idx]);
       climbPuzzle = dailyClimbs[round - 1];
     }
 
@@ -3095,6 +3097,7 @@
     climbStage = 0;
     climbPrev = null;
     dailyClimbs = null;
+    dailyClimbIndices = null;
     playerName = storedName || "";
     opponentName = "";
     matchMeta = null;
@@ -3258,12 +3261,15 @@
 
   // The three climb puzzles for a given day — the next three in the shuffled
   // deck. The DAILY_SALT rotates the whole cycle to a fresh starting point.
-  function pickDailyClimbs(day) {
+  function pickDailyClimbIndices(day) {
     const m = CLIMB_DECK_LEN;
     if (!m) return [];
     const shift = DAILY_SALT ? (seedForDay(DAILY_SALT) % m) : 0;
     const start = ((dayNumber(day) + shift) * 3) % m; // always a multiple of 3, in [0, m-3]
-    return [0, 1, 2].map((k) => CLIMBS[climbDeck[start + k]]);
+    return [0, 1, 2].map((k) => climbDeck[start + k]);
+  }
+  function pickDailyClimbs(day) {
+    return pickDailyClimbIndices(day).map((idx) => CLIMBS[idx]);
   }
 
   function showClimbIntro() {
@@ -3386,6 +3392,12 @@
     roundWords[round - 1] = currentRoundWords.slice();
     if (!completed) FX.play("over");
 
+    // A climb beaten during the Daily counts in Adventure Mode too — same seed.
+    // (Not in dev replay — those runs already skip the real board/streak, same idea.)
+    if (completed && mode === "daily" && !isDev() && dailyClimbIndices) {
+      markSeedBeatenLocally(dailyClimbIndices[round - 1]);
+    }
+
     if (round >= climbRounds()) { climbSessionDone(); return; }
 
     // between-climb screen (daily only)
@@ -3459,14 +3471,21 @@
     if (changed) myBeatenSeeds = Array.from(set);
   }
 
+  // Record a beaten seed everywhere that cares — Adventure Mode's grid/shelf
+  // row, cached locally for instant paint, and Firestore for other devices —
+  // regardless of which game mode actually cleared it (Collection or Daily).
+  function markSeedBeatenLocally(seedIndex) {
+    if (seedIndex === null || seedIndex === undefined) return;
+    if (myBeatenSeeds.indexOf(seedIndex) > -1) return;
+    myBeatenSeeds = myBeatenSeeds.concat(seedIndex);
+    cacheProfile();
+    if (dbReady() && window.MatchDB.hasAuth) window.MatchDB.markSeedBeaten(seedIndex).catch(() => {});
+  }
+
   function submitCollectionResult() {
     const got = roundWords[0] || [];
     const completed = got.length === 6;
-    if (completed && myBeatenSeeds.indexOf(collectionSeed) < 0) {
-      myBeatenSeeds = myBeatenSeeds.concat(collectionSeed);
-      cacheProfile();
-      if (dbReady() && window.MatchDB.hasAuth) window.MatchDB.markSeedBeaten(collectionSeed).catch(() => {});
-    }
+    if (completed) markSeedBeatenLocally(collectionSeed);
     $("#co-title").textContent = completed ? "Climb beaten!" : "Climb over";
     $("#co-label").textContent = completed ? "Your ladder" : "You cleared";
     fillChips($("#co-words"), got);
@@ -3550,7 +3569,8 @@
     mode = "daily";
     matchCode = null;
     matchSeed = seedForDay(dailyDay);
-    dailyClimbs = pickDailyClimbs(dailyDay);
+    dailyClimbIndices = pickDailyClimbIndices(dailyDay);
+    dailyClimbs = dailyClimbIndices.map((idx) => CLIMBS[idx]);
     startClimbSession();
     climbPuzzle = dailyClimbs[0];
     beginClimbRound();
