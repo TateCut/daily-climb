@@ -373,6 +373,33 @@
     background: var(--surface);
   }
   .chips .none { color: var(--muted); font-weight: 400; border-style: dashed; }
+  .chips span[data-word] { cursor: pointer; }
+  .chips span[data-word]:active { background: var(--bg); }
+
+  /* Tap-a-word definition popover — fixed, positioned next to the tapped chip */
+  .chip-popover {
+    position: fixed;
+    z-index: 50;
+    max-width: min(84vw, 300px);
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    text-align: left;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  }
+  .chip-popover b {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-bottom: 2px;
+  }
+  .chip-popover span { color: var(--text); }
+  .chip-popover span i { color: var(--muted); font-style: italic; }
 
   .totalbox {
     width: 100%;
@@ -976,6 +1003,13 @@
       <button class="linkbtn" id="btn-co-back" type="button">&larr; Collection</button>
     </section>
   </main>
+
+  <!-- Tap any word chip to see its definition — a floating popover, positioned
+       next to whichever chip was tapped, works the same on every screen. -->
+  <div class="chip-popover" id="chip-popover" hidden role="status">
+    <b id="chip-popover-word"></b>
+    <span id="chip-popover-def"></span>
+  </div>
 
 <script>
   // Pre-paint routing: a returning player (cached profile) jumps straight to the
@@ -1700,6 +1734,66 @@
     el.appendChild(document.createTextNode(def.text));
   }
 
+  // ---- tap-a-word-chip definition popover (any screen, any word chip) ----
+  let chipDefToken = 0;
+  let chipPopoverFor = null; // the chip element the popover currently targets
+
+  function hideChipPopover() {
+    chipPopoverFor = null;
+    $("#chip-popover").hidden = true;
+  }
+
+  function positionChipPopover(chip) {
+    const pop = $("#chip-popover");
+    const r = chip.getBoundingClientRect();
+    const pw = pop.offsetWidth, ph = pop.offsetHeight;
+    let left = r.left + r.width / 2 - pw / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
+    let top = r.bottom + 8;
+    if (top + ph > window.innerHeight - 8) top = r.top - ph - 8; // flip above if it wouldn't fit below
+    pop.style.left = left + "px";
+    pop.style.top = Math.max(8, top) + "px";
+  }
+
+  async function toggleChipPopover(chip) {
+    if (chipPopoverFor === chip) { hideChipPopover(); return; }
+    chipPopoverFor = chip;
+    const word = chip.dataset.word;
+    const pop = $("#chip-popover");
+    $("#chip-popover-word").textContent = word.toUpperCase();
+    $("#chip-popover-def").textContent = "Looking up definition…";
+    pop.hidden = false;
+    positionChipPopover(chip);
+    const my = ++chipDefToken;
+    const def = await fetchDefinition(word);
+    if (my !== chipDefToken || chipPopoverFor !== chip) return;
+    const el = $("#chip-popover-def");
+    el.textContent = "";
+    if (def) {
+      if (def.pos) {
+        const tag = document.createElement("i");
+        tag.textContent = def.pos + "  ";
+        el.appendChild(tag);
+      }
+      el.appendChild(document.createTextNode(def.text));
+    } else {
+      el.textContent = "No definition found.";
+    }
+    positionChipPopover(chip); // content just changed size — reposition to match
+  }
+
+  document.addEventListener("click", (e) => {
+    const chip = e.target.closest("[data-word]");
+    if (chip) { toggleChipPopover(chip); return; }
+    if (!e.target.closest("#chip-popover")) hideChipPopover();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { hideChipPopover(); return; }
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const chip = e.target.closest && e.target.closest("[data-word]");
+    if (chip) { e.preventDefault(); toggleChipPopover(chip); }
+  });
+
   function validSingles(chars) {
     const out = [];
     for (const c of ALPHA) if (hasAna(chars.concat(c))) out.push(c);
@@ -1863,6 +1957,7 @@
     over: $("#screen-over"),
   };
   function show(name) {
+    hideChipPopover(); // never leave a word definition floating over the next screen
     const el = screens[name];
     const arriving = el && el.hidden;
     for (const k in screens) screens[k].hidden = k !== name;
@@ -2620,7 +2715,14 @@
   function chipEl(text, isNone) {
     const s = document.createElement("span");
     s.textContent = isNone ? text : text.toUpperCase();
-    if (isNone) s.className = "none";
+    if (isNone) {
+      s.className = "none";
+    } else {
+      // Tap any real word chip to look up its definition — see chip-popover.
+      s.dataset.word = text;
+      s.tabIndex = 0;
+      s.setAttribute("role", "button");
+    }
     return s;
   }
 
