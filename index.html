@@ -2153,7 +2153,10 @@
     syncRoundChrome();
 
     if (s.phase === "roundbreak") {
-      // between rounds — the saved round hasn't been seen yet
+      // "round" past the last one = they'd failed the final climb and were
+      // looking at the results hint when they left — finish up, don't try to
+      // start a climb that doesn't exist.
+      if (mode === "daily" && round > climbRounds()) { climbSessionDone(); return; }
       if (mode === "daily") beginClimbRound(); else startRound();
       return;
     }
@@ -3398,9 +3401,12 @@
       markSeedBeatenLocally(dailyClimbIndices[round - 1]);
     }
 
-    if (round >= climbRounds()) { climbSessionDone(); return; }
+    const isLastRound = round >= climbRounds();
+    if (isLastRound && completed) { climbSessionDone(); return; }
 
-    // between-climb screen (daily only)
+    // Between-climb screen — also shown for a failed FINAL round (there's no
+    // next climb to advance to, but the "word that would have worked" hint
+    // shouldn't be skipped just because of that).
     const got = currentRoundWords.length;
     $("#cre-title").textContent = "Climb " + round + " of " + climbRounds();
     $("#cre-label").textContent = completed ? "Cleared" : "You cleared";
@@ -3415,9 +3421,16 @@
       $("#cre-word").textContent = ex ? ex.toUpperCase() : "";
       if (ex) showDefinition(ex, $("#cre-def"));
     }
-    $("#btn-cre-next").textContent = "Climb " + (round + 1) + " of " + climbRounds();
+    $("#btn-cre-next").textContent = isLastRound ? "See results" : "Climb " + (round + 1) + " of " + climbRounds();
     saveRoundBreak(round + 1);
     show("climbroundend");
+  }
+
+  // The between-climb button: advance to the next climb, or — if this was the
+  // last one and it just showed the failure hint — finish the session instead.
+  function climbRoundEndContinue() {
+    if (round >= climbRounds()) { climbSessionDone(); return; }
+    climbRoundContinue();
   }
 
   function climbRoundContinue() {
@@ -4250,7 +4263,7 @@
   $("#btn-climb-intro-back").addEventListener("click", goHome);
   $("#btn-climb-again").addEventListener("click", startClimb);
   $("#btn-climb-home").addEventListener("click", goHome);
-  $("#btn-cre-next").addEventListener("click", climbRoundContinue);
+  $("#btn-cre-next").addEventListener("click", climbRoundEndContinue);
 
   $("#btn-adventure-play").addEventListener("click", showCollection);
   $("#btn-collection-home").addEventListener("click", goHome);
