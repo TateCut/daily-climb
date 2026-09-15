@@ -64,9 +64,6 @@
     align-items: center;
     gap: 16px;
   }
-  /* Home now stacks two full cards + the links row + invite — tighten the gap
-     so all of it still fits a short phone with no page scroll. */
-  #screen-home { gap: 8px; }
   /* Ladder mark above the wordmark — six rungs, the top one climbed, the
      rest tapering down toward what's left. */
   .brandmark {
@@ -526,18 +523,32 @@
   /* Game of the Day card */
   .dailycard {
     width: 100%;
-    display: flex; flex-direction: column; gap: 8px;
-    padding: 12px 14px;
+    display: flex; flex-direction: column; gap: 10px;
+    padding: 16px;
     border: 1px solid var(--accent);
     border-radius: 14px;
     background: var(--surface);
   }
   .dailycard-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  #dailycard .dailycard-head, #adventurecard .dailycard-head { justify-content: center; }
+  #dailycard .dailycard-head { justify-content: center; }
   .dailycard-title {
     font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
   }
   .dailycard-streak { font-size: 0.8rem; font-weight: 700; color: var(--text); }
+
+  /* Adventure Mode — a shelf row under the daily hero, not a rival card. */
+  .shelfrow {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 12px; font: inherit; color: var(--text); cursor: pointer; text-align: left;
+  }
+  .shelfrow-icon { flex: none; width: 22px; height: 22px; color: var(--accent); }
+  .shelfrow-icon svg { width: 100%; height: 100%; }
+  .shelfrow-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .shelfrow-txt b { font-size: 0.85rem; font-weight: 700; }
+  .shelfrow-txt span { font-size: 0.72rem; color: var(--muted); margin-top: 1px; }
+  .shelfrow-chev { flex: none; color: var(--muted); font-size: 1.1rem; line-height: 1; }
+
   /* Secondary home actions — clearly tappable, but quieter than the daily card. */
   .homelinks { display: flex; gap: 10px; width: 100%; margin-top: 2px; }
   .homelinks button { flex: 1; padding: 10px 12px; font-size: 0.9rem; }
@@ -735,13 +746,21 @@
         <button class="primary" id="btn-daily-play" type="button">Play</button>
         <p class="note" id="daily-meta"></p>
       </div>
-      <div class="dailycard" id="adventurecard">
-        <div class="dailycard-head">
-          <span class="dailycard-title">Adventure Mode</span>
-        </div>
-        <button class="primary" id="btn-adventure-play" type="button">Play</button>
-        <p class="note">Can you beat all 781 climbs?</p>
-      </div>
+      <button class="shelfrow" id="btn-adventure-play" type="button">
+        <span class="shelfrow-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <polygon points="13,19 18,9 23,19" fill="currentColor" fill-opacity=".35"/>
+            <polygon points="1,19 11,5 20,19" fill="currentColor"/>
+            <line x1="11" y1="5" x2="11" y2="1" stroke="currentColor" stroke-width="1.5"/>
+            <polygon points="11,1 16,2.5 11,4" fill="currentColor"/>
+          </svg>
+        </span>
+        <span class="shelfrow-txt">
+          <b>Adventure Mode</b>
+          <span id="adventure-progress">Can you beat all 781 climbs?</span>
+        </span>
+        <span class="shelfrow-chev" aria-hidden="true">&rsaquo;</span>
+      </button>
       <div class="homelinks">
         <button class="ghost" id="btn-home-solo" type="button">Practice</button>
         <button class="ghost" id="btn-home-howto" type="button">How to play</button>
@@ -3639,7 +3658,15 @@
   }
 
   // The single home Play button: label + one-line status for today's puzzle.
+  function renderAdventureProgress() {
+    const el = $("#adventure-progress");
+    if (!el) return;
+    const n = myBeatenSeeds.length;
+    el.textContent = n > 0 ? (n + " / " + (CLIMBS.length || 781) + " beaten") : "Can you beat all 781 climbs?";
+  }
+
   function renderDailyCard() {
+    renderAdventureProgress();
     const btn = $("#btn-daily-play");
     const meta = $("#daily-meta");
     if (!btn) return;
