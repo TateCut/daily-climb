@@ -1699,7 +1699,16 @@
     return true;
   }
 
-  async function fetchDefinition(word) {
+  // Wiktionary often defines a deverbal noun/gerund as pure cross-reference
+  // prose — "the act of one who abets", "one who admires" — which is useless
+  // if you don't already know "abets"/"admires". Anyone who didn't recognize
+  // "abetting"/"admirers" is unlikely to know the base verb either. Matches
+  // only a bare "act/action of (one who) VERB[.]" or "one/someone who VERB[.]"
+  // — a fuller gloss like "the act of ingesting food" has extra words after
+  // the verb and won't match, so it's left alone.
+  const SELF_REF_DEF = /^(?:(?:the |an? )?act(?:ion)?(?: or action)? of(?: one who| something that)?|(?:one|(?:a|the) person|someone|something) (?:who|that))\s+([a-z]+)\.?\s*$/i;
+
+  async function fetchDefinition(word, _chaining) {
     try {
       const data = await datamuseSpell(word);
       const defs = data && data[0] && data[0].defs;
@@ -1710,6 +1719,18 @@
       if (tab > -1) { pos = raw.slice(0, tab); text = raw.slice(tab + 1); }
       text = text.replace(/\s*\[[^\]]*\]\s*$/, "").trim();
       if (!text) return null;
+
+      if (!_chaining) {
+        const m = SELF_REF_DEF.exec(text);
+        if (m) {
+          const base = m[1].replace(/s$/, ""); // "abets" -> "abet"
+          if (base !== word) {
+            const baseDef = await fetchDefinition(base, true);
+            if (baseDef) return { pos: baseDef.pos, text: baseDef.text, chainedFrom: base };
+          }
+        }
+      }
+
       return { pos: POS_NAMES[pos] !== undefined ? POS_NAMES[pos] : pos, text: text };
     } catch (e) {
       return null;
@@ -1732,6 +1753,11 @@
       el.appendChild(tag);
     }
     el.appendChild(document.createTextNode(def.text));
+    if (def.chainedFrom) {
+      const from = document.createElement("i");
+      from.textContent = " (from " + def.chainedFrom.toUpperCase() + ")";
+      el.appendChild(from);
+    }
   }
 
   // ---- tap-a-word-chip definition popover (any screen, any word chip) ----
@@ -1776,6 +1802,11 @@
         el.appendChild(tag);
       }
       el.appendChild(document.createTextNode(def.text));
+      if (def.chainedFrom) {
+        const from = document.createElement("i");
+        from.textContent = " (from " + def.chainedFrom.toUpperCase() + ")";
+        el.appendChild(from);
+      }
     } else {
       el.textContent = "No definition found.";
     }
