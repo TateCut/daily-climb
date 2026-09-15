@@ -82,7 +82,9 @@
   body:has(#screen-leaderboard:not([hidden])) .brandmark,
   body:has(#screen-leaderboard:not([hidden])) h1,
   body:has(#screen-vs-reveal:not([hidden])) .brandmark,
-  body:has(#screen-vs-reveal:not([hidden])) h1 { display: none; }
+  body:has(#screen-vs-reveal:not([hidden])) h1,
+  body:has(#screen-collection:not([hidden])) .brandmark,
+  body:has(#screen-collection:not([hidden])) h1 { display: none; }
   /* No page scroll anywhere — every screen is sized to fit the viewport. The one
      list that can overflow (the leaderboard) scrolls inside itself instead. */
   html, body { overflow: hidden; overscroll-behavior: none; }
@@ -501,7 +503,7 @@
   .homelinks { display: flex; gap: 10px; width: 100%; margin-top: 2px; }
   .homelinks button { flex: 1; padding: 10px 12px; font-size: 0.9rem; }
   .homelinks .sound-toggle { flex: 0 0 auto; padding: 10px 12px; font-size: 1rem; line-height: 1; }
-  #btn-home-invite { width: 100%; padding: 10px 12px; font-size: 0.9rem; }
+  .full-btn { width: 100%; padding: 10px 12px; font-size: 0.9rem; }
   .sound-toggle[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
   @media (hover: hover) {
     #daily-board-list .lb-row:hover { border-color: var(--muted); }
@@ -511,6 +513,39 @@
   .gamecard-vs { font-weight: 650; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .gamecard-sub { font-size: 0.8rem; color: var(--muted); }
   .gamecard-chev { color: var(--muted); font-size: 1.3rem; line-height: 1; flex-shrink: 0; }
+
+  /* Collection: every seed, beaten or not */
+  .collection-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
+    gap: 6px;
+    width: 100%;
+    max-height: 46vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 2px;
+  }
+  .collection-tile {
+    aspect-ratio: 1;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.7rem;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .collection-tile.beaten {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #1c1005;
+    font-size: 0.85rem;
+  }
 
   /* Group leaderboard */
   .lb-list {
@@ -666,7 +701,8 @@
         <button class="ghost" id="btn-home-howto" type="button">How to play</button>
         <button class="ghost sound-toggle" id="btn-sound" type="button" aria-label="Sound" aria-pressed="false">&#128264;</button>
       </div>
-      <button class="ghost" id="btn-home-invite" type="button">Invite friends to play</button>
+      <button class="ghost full-btn" id="btn-home-collection" type="button">Collection</button>
+      <button class="ghost full-btn" id="btn-home-invite" type="button">Invite friends to play</button>
     </section>
 
     <!-- DAILY CLIMB: intro / one-shot confirm -->
@@ -915,6 +951,30 @@
       <p class="def" id="cre-def" hidden></p>
       <button class="primary" id="btn-cre-next" type="button">Next climb</button>
     </section>
+
+    <!-- COLLECTION: every seed, pick one you haven't beaten -->
+    <section id="screen-collection" hidden>
+      <h2 style="margin:0;font-size:1.3rem;">Collection</h2>
+      <p class="lede" id="collection-progress"></p>
+      <div class="collection-grid" id="collection-grid"></div>
+      <p class="note">Tap any climb to play it &mdash; beaten ones are filled in. The goal: beat them all.</p>
+      <button class="linkbtn" id="btn-collection-home" type="button">&larr; Home</button>
+    </section>
+
+    <!-- COLLECTION: after one attempt at a chosen seed -->
+    <section id="screen-collection-over" hidden>
+      <h2 id="co-title" style="margin:0;font-size:1.3rem;">Climb over</h2>
+      <div class="totalbox" id="co-box">
+        <span class="totalbox-label" id="co-label">You cleared</span>
+        <div class="chips" id="co-words"></div>
+        <span class="totalbox-count" id="co-count"></span>
+      </div>
+      <p class="lede" id="co-sub" hidden>A word that would have worked:</p>
+      <p class="missed-word" id="co-word" hidden></p>
+      <p class="def" id="co-def" hidden></p>
+      <button class="primary" id="btn-co-retry" type="button">Try again</button>
+      <button class="linkbtn" id="btn-co-back" type="button">&larr; Collection</button>
+    </section>
   </main>
 
 <script>
@@ -1048,6 +1108,14 @@
       if (!uid) return;
       try {
         await setDoc(doc(db, "players", uid), { tutorialSeen: true }, { merge: true });
+      } catch (e) {}
+    },
+    // Collection mode: record that this player has cleared CLIMBS[seedIndex].
+    // arrayUnion so concurrent devices / repeats never duplicate an entry.
+    async markSeedBeaten(seedIndex) {
+      if (!uid) return;
+      try {
+        await setDoc(doc(db, "players", uid), { beatenSeeds: arrayUnion(seedIndex) }, { merge: true });
       } catch (e) {}
     },
 
@@ -1489,11 +1557,13 @@
   function seededMode() { return mode === "versus" || mode === "daily"; }
 
   // ---- versus / group-mode state ----
-  let mode = "solo";        // "solo" | "versus" | "daily" (3 climbs) | "climb" (1, practice)
+  let mode = "solo";        // "solo" | "versus" | "daily" (3 climbs) | "climb" (1, practice) | "collection" (1, a chosen seed)
   let climbPuzzle = null;   // the current CLIMBS entry
   let climbStage = 0;       // 1..6 rungs (letters = climbStage + 2)
   let climbPrev = null;     // the word played on the rung below (for the inflection rule)
   let dailyClimbs = null;   // [puzzle, puzzle, puzzle] for today's daily, from the day seed
+  let collectionSeed = null;  // index into CLIMBS currently being played from the Collection screen
+  let myBeatenSeeds = [];     // players/{uid}.beatenSeeds — CLIMBS indices this player has cleared
   let matchCode = null;
   let matchSeed = 0;        // versus match seed, or the Game of the Day seed
   let dailyDay = null;      // "YYYY-MM-DD" (local) when mode === "daily"
@@ -1785,6 +1855,8 @@
     climbintro: $("#screen-climb-intro"),
     climbover: $("#screen-climb-over"),
     climbroundend: $("#screen-climb-roundend"),
+    collection: $("#screen-collection"),
+    collectionover: $("#screen-collection-over"),
     start: $("#screen-start"),
     play: $("#screen-play"),
     roundend: $("#screen-roundend"),
@@ -1820,7 +1892,7 @@
   let resumeState = null;
 
   function saveProgress() {
-    if (screens.play.hidden || mode === "climb") return; // practice climb doesn't resume
+    if (screens.play.hidden || mode === "climb" || mode === "collection") return; // one-off climbs don't resume
     try {
       localStorage.setItem(RESUME_KEY, JSON.stringify({
         v: 2, savedAt: Date.now(), phase: "stage",
@@ -1963,12 +2035,14 @@
     $("#roundline-practice").hidden = climb || multiRound;
     $("#roundline-climb").hidden = !climb;
     if (climb) {
-      $("#roundline-climb").textContent = climbRounds() > 1
-        ? "Climb " + round + " of " + climbRounds() + " · word " + climbStage
-        : "Climb · word " + climbStage + " of 6";
+      $("#roundline-climb").textContent = mode === "collection"
+        ? "Seed #" + (collectionSeed + 1) + " · word " + climbStage + " of 6"
+        : climbRounds() > 1
+          ? "Climb " + round + " of " + climbRounds() + " · word " + climbStage
+          : "Climb · word " + climbStage + " of 6";
     }
-    // "Quit to menu" shows in practice; the daily is one attempt, versus restarts.
-    $("#btn-play-home").hidden = mode !== "solo" && mode !== "climb";
+    // "Quit to menu" shows in practice/collection; the daily is one attempt, versus restarts.
+    $("#btn-play-home").hidden = mode !== "solo" && mode !== "climb" && mode !== "collection";
     $("#btn-endround").textContent = climb ? "End climb" : "End round";
   }
 
@@ -2061,9 +2135,10 @@
     if (guessMode()) {
       $("#timerbar").hidden = true;
       $("#secline").hidden = true;
-      $("#guesspips").hidden = false;
+      // Collection: unlimited retries, so strike pips don't apply.
+      $("#guesspips").hidden = mode === "collection";
+      if (mode !== "collection") renderPips();
       $("#btn-hint").hidden = hintUsed;
-      renderPips();
       msg("");
       saveProgress();
       return;
@@ -2122,19 +2197,22 @@
     if (wrongGuesses.indexOf(word) < 0) wrongGuesses.push(word);
     renderWrongWords();
     sessionStrikes++;
-    guessesLeft = Math.max(0, guessesLeft - 1);
+    const unlimited = mode === "collection"; // the whole point is to eventually clear every seed
+    if (!unlimited) guessesLeft = Math.max(0, guessesLeft - 1);
     renderPips();
     FX.play("strike"); buzz([30, 40, 30]);
     fxClass($("#answer"), "fx-shake"); fxClass($("#answer"), "fx-bad");
-    if (guessesLeft <= 0) {
+    if (!unlimited && guessesLeft <= 0) {
       msg(isClimb() ? "Three strikes — that's the climb." : "Three strikes — that's the round.", "warn");
       locked = true;
       clearInterval(timerId);
       setTimeout(() => (isClimb() ? climbRoundDone(false) : finish(false)), 1100);
     } else {
       saveProgress();
-      const used = GUESS_BUDGET - guessesLeft;
-      msg("“" + word.toUpperCase() + "” isn't a word — strike " + used + " of " + GUESS_BUDGET, "warn");
+      const msgText = unlimited
+        ? "“" + word.toUpperCase() + "” isn't a word — try again"
+        : "“" + word.toUpperCase() + "” isn't a word — strike " + (GUESS_BUDGET - guessesLeft) + " of " + GUESS_BUDGET;
+      msg(msgText, "warn");
     }
   }
 
@@ -2893,6 +2971,7 @@
         name: storedName || "",
         dailyLastDay: myDailyLastDay || null,
         dailyStreak: myDailyStreak || 0,
+        beatenSeeds: myBeatenSeeds || [],
       }));
     } catch (e) {}
   }
@@ -2903,6 +2982,7 @@
       if (p.name) storedName = p.name;
       if (typeof p.dailyStreak === "number") myDailyStreak = p.dailyStreak;
       if (p.dailyLastDay) myDailyLastDay = p.dailyLastDay;
+      if (Array.isArray(p.beatenSeeds)) myBeatenSeeds = p.beatenSeeds;
     } catch (e) {}
   }
 
@@ -2972,7 +3052,7 @@
   // rearrange freely.  A rung can't be the rung below it plus a grammatical
   // single-letter ending.  Practice = one climb (mode "climb"); the Game of the
   // Day = three climbs back to back (mode "daily"), score = total rungs cleared.
-  function isClimb() { return mode === "climb" || mode === "daily"; }
+  function isClimb() { return mode === "climb" || mode === "daily" || mode === "collection"; }
   function climbRounds() { return mode === "daily" ? 3 : 1; }
 
   function isInflectionOf(word, prev) {
@@ -3060,6 +3140,20 @@
     matchCode = null; matchSeed = 0; dailyDay = null;
     startClimbSession();
     climbPuzzle = CLIMBS[Math.floor(Math.random() * CLIMBS.length)];
+    beginClimbRound();
+  }
+
+  // Collection: a specific, deliberately-picked seed. Same engine as Practice —
+  // unlimited retries (see loseGuess) since the goal is to eventually clear it.
+  function startCollectionSeed(seedIndex) {
+    if (!dictReady) { setTimeout(() => startCollectionSeed(seedIndex), 100); return; }
+    if (!CLIMBS[seedIndex]) return;
+    clearResume();
+    mode = "collection";
+    matchCode = null; matchSeed = 0; dailyDay = null;
+    collectionSeed = seedIndex;
+    startClimbSession();
+    climbPuzzle = CLIMBS[seedIndex];
     beginClimbRound();
   }
 
@@ -3153,6 +3247,7 @@
   function climbSessionDone() {
     const totalRungs = roundWords.reduce((a, w) => a + w.length, 0);
     if (mode === "daily") { submitDailyResult(totalRungs); return; }
+    if (mode === "collection") { submitCollectionResult(); return; }
 
     // Practice summary.
     const best = Math.max(climbBest(), totalRungs);
@@ -3176,6 +3271,86 @@
     }
     clearResume();
     show("climbover");
+  }
+
+  // ---- Collection: pick any seed you haven't beaten, aim to beat them all ----
+
+  function beatenSeedSet() { return new Set(myBeatenSeeds); }
+
+  // Beaten is monotonic — a seed never un-beats — so a server read only ever
+  // adds to what we already know locally. A plain replace would let a read that
+  // raced ahead of an in-flight markSeedBeaten() write clobber a seed just
+  // beaten on this device back to "unbeaten".
+  function mergeBeatenSeeds(serverSeeds) {
+    if (!Array.isArray(serverSeeds) || !serverSeeds.length) return;
+    const set = new Set(myBeatenSeeds);
+    let changed = false;
+    for (const s of serverSeeds) if (!set.has(s)) { set.add(s); changed = true; }
+    if (changed) myBeatenSeeds = Array.from(set);
+  }
+
+  function submitCollectionResult() {
+    const got = roundWords[0] || [];
+    const completed = got.length === 6;
+    if (completed && myBeatenSeeds.indexOf(collectionSeed) < 0) {
+      myBeatenSeeds = myBeatenSeeds.concat(collectionSeed);
+      cacheProfile();
+      if (dbReady() && window.MatchDB.hasAuth) window.MatchDB.markSeedBeaten(collectionSeed).catch(() => {});
+    }
+    $("#co-title").textContent = completed ? "Climb beaten!" : "Climb over";
+    $("#co-label").textContent = completed ? "Your ladder" : "You cleared";
+    fillChips($("#co-words"), got);
+    $("#co-count").textContent = completed ? "all 6 words" : got.length + " of 6 words";
+
+    const showEx = !completed;
+    $("#co-sub").hidden = !showEx;
+    $("#co-word").hidden = !showEx;
+    $("#co-def").hidden = true;
+    if (showEx) {
+      const ex = climbExample();
+      $("#co-word").textContent = ex ? ex.toUpperCase() : "";
+      if (ex) showDefinition(ex, $("#co-def"));
+    }
+    clearResume();
+    show("collectionover");
+  }
+
+  function renderCollection() {
+    const grid = $("#collection-grid");
+    const beaten = beatenSeedSet();
+    $("#collection-progress").textContent = beaten.size + " / " + CLIMBS.length + " beaten";
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < CLIMBS.length; i++) {
+      const isBeaten = beaten.has(i);
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "collection-tile" + (isBeaten ? " beaten" : "");
+      b.dataset.idx = i;
+      b.textContent = isBeaten ? "✓" : String(i + 1);
+      b.setAttribute("aria-label", "Climb " + (i + 1) + (isBeaten ? ", beaten" : ", not yet beaten"));
+      frag.appendChild(b);
+    }
+    grid.innerHTML = "";
+    grid.appendChild(frag);
+  }
+
+  // Cached progress paints instantly; a fresh players/{uid} read corrects it
+  // (e.g. a seed beaten on another device) without blocking the screen.
+  function showCollection() {
+    document.querySelectorAll(".tomenu").forEach((el) => { el.hidden = false; });
+    renderCollection();
+    show("collection");
+    if (dbReady() && window.MatchDB.hasAuth) {
+      window.MatchDB.getPlayer().then((p) => {
+        if (!p) return;
+        const before = myBeatenSeeds.length;
+        mergeBeatenSeeds(p.beatenSeeds);
+        if (myBeatenSeeds.length !== before) {
+          cacheProfile();
+          if (!screens.collection.hidden) renderCollection();
+        }
+      });
+    }
   }
 
   // Dev-only: when on, the Game of the Day can be replayed any number of times
@@ -3772,7 +3947,7 @@
     b.textContent = "Quit to menu";
     clearInterval(timerId);
     clearResume();
-    goHome();
+    if (mode === "collection") showCollection(); else goHome();
   });
   $("#re-btn").addEventListener("click", roundEndContinue);
   $("#btn-again").addEventListener("click", startSession);
@@ -3865,6 +4040,15 @@
   $("#btn-climb-again").addEventListener("click", startClimb);
   $("#btn-climb-home").addEventListener("click", goHome);
   $("#btn-cre-next").addEventListener("click", climbRoundContinue);
+
+  $("#btn-home-collection").addEventListener("click", showCollection);
+  $("#btn-collection-home").addEventListener("click", goHome);
+  $("#collection-grid").addEventListener("click", (e) => {
+    const t = e.target.closest(".collection-tile");
+    if (t) startCollectionSeed(+t.dataset.idx);
+  });
+  $("#btn-co-retry").addEventListener("click", () => startCollectionSeed(collectionSeed));
+  $("#btn-co-back").addEventListener("click", showCollection);
   $("#btn-vs-invite-home").addEventListener("click", goHome);
   $("#btn-vs-wait-home").addEventListener("click", goHome);
   $("#btn-start-home").addEventListener("click", goHome);
@@ -4009,7 +4193,7 @@
     // the one element that scrolls itself, the leaderboard list.
     document.addEventListener("touchmove", (e) => {
       const t = e.target;
-      if (t && t.closest && t.closest(".lb-list")) return;
+      if (t && t.closest && (t.closest(".lb-list") || t.closest(".collection-grid"))) return;
       if (e.cancelable) e.preventDefault();
     }, { passive: false });
   })();
@@ -4120,6 +4304,7 @@
           if (player.tutorialSeen) tutorialSeen = true;
           myDailyStreak = player.dailyStreak || 0;
           myDailyLastDay = player.dailyLastDay || null;
+          mergeBeatenSeeds(player.beatenSeeds);
         }
         // Keep the cached name if the server read failed (offline) — don't blow
         // away a valid identity and bounce the player to the name screen.
