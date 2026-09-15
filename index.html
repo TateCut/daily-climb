@@ -84,7 +84,13 @@
   body:has(#screen-vs-reveal:not([hidden])) .brandmark,
   body:has(#screen-vs-reveal:not([hidden])) h1,
   body:has(#screen-collection:not([hidden])) .brandmark,
-  body:has(#screen-collection:not([hidden])) h1 { display: none; }
+  body:has(#screen-collection:not([hidden])) h1,
+  body:has(#screen-collection-over:not([hidden])) .brandmark,
+  body:has(#screen-collection-over:not([hidden])) h1,
+  body:has(#screen-climb-over:not([hidden])) .brandmark,
+  body:has(#screen-climb-over:not([hidden])) h1,
+  body:has(#screen-climb-roundend:not([hidden])) .brandmark,
+  body:has(#screen-climb-roundend:not([hidden])) h1 { display: none; }
   /* No page scroll anywhere — every screen is sized to fit the viewport. The one
      list that can overflow (the leaderboard) scrolls inside itself instead. */
   html, body { overflow: hidden; overscroll-behavior: none; }
@@ -315,6 +321,9 @@
   .def {
     margin: -8px 0 0;
     max-width: 34ch;
+    max-height: 22vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     font-size: 0.85rem;
     line-height: 1.5;
     color: var(--muted);
@@ -3444,6 +3453,19 @@
       $("#co-word").textContent = ex ? ex.toUpperCase() : "";
       if (ex) showDefinition(ex, $("#co-def"));
     }
+
+    // Beaten it — retrying the same seed isn't the point, picking the next one
+    // is. Only offer "Try again" when the climb wasn't actually finished.
+    $("#btn-co-retry").hidden = completed;
+    const back = $("#btn-co-back");
+    if (completed) {
+      back.className = "primary";
+      back.textContent = "Back to Collection";
+    } else {
+      back.className = "linkbtn";
+      back.textContent = "← Collection";
+    }
+
     clearResume();
     show("collectionover");
   }
@@ -4326,7 +4348,7 @@
     // the one element that scrolls itself, the leaderboard list.
     document.addEventListener("touchmove", (e) => {
       const t = e.target;
-      if (t && t.closest && (t.closest(".lb-list") || t.closest(".collection-grid"))) return;
+      if (t && t.closest && (t.closest(".lb-list") || t.closest(".collection-grid") || t.closest(".def"))) return;
       if (e.cancelable) e.preventDefault();
     }, { passive: false });
   })();
