@@ -2981,12 +2981,12 @@
     },
     {
       h: "Climb to eight",
-      p: "Solve one and a new letter drops in. Rearrange them all into a longer word — and keep going, up to eight letters.",
+      p: "Solve one and a new letter drops in. Rearrange everything into a longer word, and keep climbing, up to eight letters.",
       visual: "grow",
     },
     {
       h: "No cheap steps",
-      p: "A word can't just be the one before it with an ending tacked on — no adding -s, -d, -r or -n. Find another one.",
+      p: "A word can't just be the one before it with an ending tacked on, like adding -s, -d, -r or -n. Find another one.",
       visual: "nope",
     },
     {
@@ -2996,22 +2996,28 @@
     },
     {
       h: "The Daily Climb",
-      p: "Three climbs, the same for everyone — you're competing against every other player. Score is how many words you get; ties break on fewest strikes, then fastest time.",
+      p: "Three climbs, the same for everyone, once a day. You're on a leaderboard with every other player, and score is how many words you get. Ties break on fewest strikes, then fastest time.",
       visual: "daily",
+    },
+    {
+      h: "Adventure Mode",
+      p: "Adventure Mode has all 781 climbs waiting whenever you want them. No strikes, no clock, no daily limit. Chip away at them anytime and watch your progress grow.",
+      visual: "adventure",
     },
   ];
   function tutVisual(kind) {
     const tile = (ch, cls) => '<span class="tut-tile' + (cls ? " " + cls : "") + '">' + ch + "</span>";
     const arrow = '<span class="tut-arrow">&rarr;</span>';
     if (kind === "pool") return tile("e") + tile("a") + tile("r");
-    if (kind === "grow") return tile("e") + tile("a") + tile("r") + arrow +
-      tile("n", "accent") + tile("e") + tile("a") + tile("r");
+    if (kind === "grow") return tile("r") + tile("a") + tile("t") + arrow +
+      tile("t") + tile("r") + tile("a") + tile("p", "accent");
     if (kind === "nope") return tile("c") + tile("a") + tile("t") +
       '<span class="tut-arrow tut-x">&times;</span>' +
       tile("c", "no") + tile("a", "no") + tile("t", "no") + tile("s", "no");
     if (kind === "strikes") return '<span class="guesspip spent"></span>' +
       '<span class="guesspip spent"></span><span class="guesspip"></span>';
-    if (kind === "daily") return '<span class="tut-big">3 climbs &middot; words = score</span>';
+    if (kind === "daily") return '<span class="tut-big">3 climbs &middot; once a day</span>';
+    if (kind === "adventure") return '<span class="tut-big">781 climbs &middot; no strikes &middot; no clock</span>';
     return "";
   }
   let tutStep = 0;
