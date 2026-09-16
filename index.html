@@ -1598,7 +1598,7 @@
   // climbs), an empty board, and nobody counts as "already played". It only
   // changes the day *key*, still under `dailies/{key}`, so no Firestore rule
   // change. "" = the plain calendar date.
-  const DAILY_SALT = "-r2";
+  const DAILY_SALT = "-r3";
   function dailyKeyOf(d) { return dayKeyOf(d) + DAILY_SALT; }
   function dayBase(key) { const m = /^\d{4}-\d{2}-\d{2}/.exec(key || ""); return m ? m[0] : (key || ""); }
   function shiftDayKey(key, delta) {
@@ -3241,35 +3241,37 @@
   function climbBest() { try { return parseInt(localStorage.getItem(CLIMB_BEST_KEY), 10) || 0; } catch (e) { return 0; } }
   function climbWriteBest(n) { try { localStorage.setItem(CLIMB_BEST_KEY, String(n)); } catch (e) {} }
 
-  // The climb puzzles as a fixed shuffled deck. The daily walks three at a time
-  // through it (deckLen trimmed to a multiple of 3), so it's a clean rotation:
-  // every puzzle in the deck is used exactly once per full pass (~260 days)
-  // before any repeat. Change CLIMB_SHUFFLE_SEED only to re-order the whole deck.
-  const CLIMB_SHUFFLE_SEED = 0x1f2e3d4c;
-  const climbDeck = (function () {
-    const d = CLIMBS.map((_, i) => i);
-    const rnd = mulberry32(CLIMB_SHUFFLE_SEED);
+  // The daily rotates through pre-grouped triples (window.THREE21_DAILY_TRIPLES,
+  // built by gen-daily-triples.pl), not individual seeds — each triple's 3
+  // seeds share no word at any rung, so a day's 3 climbs never repeat a word.
+  // We still shuffle the ORDER the triples are visited in, so the rotation
+  // doesn't just walk the deck in generation order. Change DAILY_ORDER_SEED
+  // only to re-order the whole rotation.
+  const DAILY_TRIPLES = window.THREE21_DAILY_TRIPLES || [];
+  const DAILY_ORDER_SEED = 0x1f2e3d4c;
+  const dailyTripleOrder = (function () {
+    const d = DAILY_TRIPLES.map((_, i) => i);
+    const rnd = mulberry32(DAILY_ORDER_SEED);
     for (let i = d.length - 1; i > 0; i--) {
       const j = Math.floor(rnd() * (i + 1));
       const t = d[i]; d[i] = d[j]; d[j] = t;
     }
     return d;
   })();
-  const CLIMB_DECK_LEN = climbDeck.length - (climbDeck.length % 3); // multiple of 3
 
   function dayNumber(key) {
     const p = dayBase(key).split("-");
     return Math.floor(Date.UTC(+p[0], +p[1] - 1, +p[2]) / 86400000); // days since 1970-01-01
   }
 
-  // The three climb puzzles for a given day — the next three in the shuffled
-  // deck. The DAILY_SALT rotates the whole cycle to a fresh starting point.
+  // The three climb puzzles for a given day — the next triple in the shuffled
+  // order. The DAILY_SALT rotates the whole cycle to a fresh starting point.
   function pickDailyClimbIndices(day) {
-    const m = CLIMB_DECK_LEN;
+    const m = dailyTripleOrder.length;
     if (!m) return [];
     const shift = DAILY_SALT ? (seedForDay(DAILY_SALT) % m) : 0;
-    const start = ((dayNumber(day) + shift) * 3) % m; // always a multiple of 3, in [0, m-3]
-    return [0, 1, 2].map((k) => climbDeck[start + k]);
+    const idx = (dayNumber(day) + shift) % m;
+    return DAILY_TRIPLES[dailyTripleOrder[idx]];
   }
   function pickDailyClimbs(day) {
     return pickDailyClimbIndices(day).map((idx) => CLIMBS[idx]);
