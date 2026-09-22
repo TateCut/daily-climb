@@ -1087,16 +1087,26 @@
   import {
     getAuth, signInAnonymously, onAuthStateChanged,
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+  import {
+    getAnalytics, logEvent,
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-analytics.js";
 
   const cfg = window.THREE21_FIREBASE_CONFIG;
-  let db = null, auth = null;
+  let db = null, auth = null, analytics = null;
   if (cfg && cfg.apiKey && cfg.apiKey !== "REPLACE_ME") {
+    let app = null;
     try {
-      const app = initializeApp(cfg);
+      app = initializeApp(cfg);
       db = getFirestore(app);
       auth = getAuth(app);
     } catch (e) {
       db = null; auth = null;
+    }
+    // Kept in its own try/catch — analytics failing to init (e.g. no
+    // measurementId yet, or an environment that blocks it) must never take
+    // down Firestore/auth, which the actual game depends on.
+    if (app && cfg.measurementId) {
+      try { analytics = getAnalytics(app); } catch (e) { analytics = null; }
     }
   }
 
@@ -1162,6 +1172,14 @@
     ready: !!db,
     get uid() { return uid; },
     get hasAuth() { return !!uid; },
+
+    // Fire-and-forget analytics event (Google Analytics for Firebase). A
+    // no-op until THREE21_FIREBASE_CONFIG.measurementId is filled in — see
+    // firebase-config.js. Never throws, never blocks the caller.
+    track(name, params) {
+      if (!analytics) return;
+      try { logEvent(analytics, name, params || {}); } catch (e) {}
+    },
 
     // Calls cb(uid) once signed in; if auth isn't available, never fires.
     whenReady(cb) {
@@ -3460,6 +3478,7 @@
     // (Not in dev replay — those runs already skip the real board/streak, same idea.)
     if (completed && mode === "daily" && !isDev() && dailyClimbIndices) {
       markSeedBeatenLocally(dailyClimbIndices[round - 1]);
+      window.MatchDB.track("daily_round_complete", { round: round });
     }
 
     const isLastRound = round >= climbRounds();
@@ -3651,6 +3670,7 @@
     dailyElapsedMs = 0;
     dailySessionActive = true;
     startDailyTimer();
+    if (!isDev()) window.MatchDB.track("daily_start", { day: dailyDay });
     climbPuzzle = dailyClimbs[0];
     beginClimbRound();
   }
@@ -3664,6 +3684,7 @@
       if (totalRungs >= 12) setTimeout(() => confetti({ big: totalRungs >= 16 }), 350);
       return;
     }
+    window.MatchDB.track("daily_finish", { rungs: totalRungs, strikes: sessionStrikes });
     const total = totalRungs;
     const prevDay = shiftDayKey(dailyDay, -1);
     try {
