@@ -105,6 +105,17 @@
   h1 .brand-k { color: var(--accent); }
   .lede { margin: 0; color: var(--muted); font-size: 0.95rem; line-height: 1.5; }
 
+  /* Daily Climb's aggregate stopwatch — lives outside the section swap so one
+     element serves both #screen-play and #screen-climb-roundend (toggled in
+     show()); font-variant-numeric keeps the digits from jittering in width. */
+  .daily-timer {
+    text-align: center;
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+    margin: 0 0 18px;
+  }
+
   /* Loading — three dots, shown while we work out where to route on open. */
   #screen-loading { min-height: 96px; justify-content: center; }
   .loader { display: flex; gap: 9px; }
@@ -706,6 +717,7 @@
       </g>
     </svg>
     <h1>W<span class="brand-k">a</span>dder</h1>
+    <div class="daily-timer" id="daily-timer" hidden><span id="daily-timer-val">0:00</span></div>
 
     <!-- LOADING — the screen shown at rest, before we know where to route -->
     <section id="screen-loading">
@@ -1568,6 +1580,15 @@
   let solveMs = 0;        // time actively spent solving (sum of solved stages) — tiebreak #2
   let stageShownAt = 0;
   let hintUsed = false;  // one hint per session
+
+  // Daily Climb's visible "how long have I been on this" stopwatch. Aggregate
+  // across all 3 rounds (never resets between climbs), pauses while the app
+  // is backgrounded instead of counting away-time, resumes on a real resume.
+  let dailyElapsedMs = 0;
+  let dailyTimerRunning = false;
+  let dailyTimerStartedAt = 0;
+  let dailyTickId = null;
+  let dailySessionActive = false;
   const guessMode = () => format === "guesses";
 
   // Deterministic PRNG so two players in a versus match get the exact same
@@ -2030,6 +2051,7 @@
     const el = screens[name];
     const arriving = el && el.hidden;
     for (const k in screens) screens[k].hidden = k !== name;
+    $("#daily-timer").hidden = !(mode === "daily" && (name === "play" || name === "climbroundend"));
     if (arriving) {
       anim(el, [
         { opacity: 0, transform: "translateY(9px)" },
@@ -2067,7 +2089,7 @@
         poolChars: pool.map((t) => t.ch),
         newCount: pool.filter((t) => t.isNew).length,
         guessesLeft: guessesLeft, wrongGuesses: wrongGuesses, hintUsed: hintUsed,
-        sessionStrikes: sessionStrikes, solveMs: solveMs,
+        sessionStrikes: sessionStrikes, solveMs: solveMs, dailyElapsedMs: dailyElapsedNow(),
       }));
     } catch (e) {}
   }
@@ -2077,7 +2099,7 @@
         v: 2, savedAt: Date.now(), phase: "roundbreak",
         mode: mode, matchCode: matchCode, matchSeed: matchSeed, dailyDay: dailyDay,
         difficulty: difficulty, format: format,
-        sessionStrikes: sessionStrikes, solveMs: solveMs,
+        sessionStrikes: sessionStrikes, solveMs: solveMs, dailyElapsedMs: dailyElapsedNow(),
         round: nextRound, roundWords: roundWords, hintUsed: hintUsed,
       }));
     } catch (e) {}
@@ -2133,6 +2155,9 @@
       dailyClimbIndices = pickDailyClimbIndices(dailyDay);
       dailyClimbs = dailyClimbIndices.map((idx) => CLIMBS[idx]);
       climbPuzzle = dailyClimbs[round - 1];
+      dailyElapsedMs = s.dailyElapsedMs || 0;
+      dailySessionActive = true;
+      startDailyTimer();
     }
 
     if (mode === "versus" && matchCode && dbReady()) {
@@ -2194,6 +2219,32 @@
 
   // Round line + practice-only "Quit to menu" — kept in sync from both a fresh
   // startRound and a resumeGame.
+  function dailyElapsedNow() {
+    return dailyElapsedMs + (dailyTimerRunning ? Date.now() - dailyTimerStartedAt : 0);
+  }
+  function renderDailyTimer() {
+    $("#daily-timer-val").textContent = fmtDuration(dailyElapsedNow());
+  }
+  function startDailyTimer() {
+    if (dailyTimerRunning) return;
+    dailyTimerRunning = true;
+    dailyTimerStartedAt = Date.now();
+    clearInterval(dailyTickId);
+    dailyTickId = setInterval(renderDailyTimer, 500);
+    renderDailyTimer();
+  }
+  function pauseDailyTimer() {
+    if (!dailyTimerRunning) return;
+    dailyElapsedMs += Date.now() - dailyTimerStartedAt;
+    dailyTimerRunning = false;
+    clearInterval(dailyTickId);
+    dailyTickId = null;
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) { pauseDailyTimer(); }
+    else if (dailySessionActive) { startDailyTimer(); }
+  });
+
   function syncRoundChrome() {
     const climb = isClimb();
     const multiRound = sessionRounds() > 1;
@@ -3096,6 +3147,8 @@
   }
 
   function goHome() {
+    pauseDailyTimer();
+    dailySessionActive = false;
     teardownMatchWatches();
     teardownDailyWatch();
     mode = "solo";
@@ -3448,6 +3501,8 @@
   }
 
   function climbSessionDone() {
+    pauseDailyTimer();
+    dailySessionActive = false;
     const totalRungs = roundWords.reduce((a, w) => a + w.length, 0);
     if (mode === "daily") { submitDailyResult(totalRungs); return; }
     if (mode === "collection") { submitCollectionResult(); return; }
@@ -3593,6 +3648,9 @@
     dailyClimbIndices = pickDailyClimbIndices(dailyDay);
     dailyClimbs = dailyClimbIndices.map((idx) => CLIMBS[idx]);
     startClimbSession();
+    dailyElapsedMs = 0;
+    dailySessionActive = true;
+    startDailyTimer();
     climbPuzzle = dailyClimbs[0];
     beginClimbRound();
   }
