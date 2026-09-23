@@ -104,6 +104,12 @@
   }
   h1 .brand-k { color: var(--accent); }
   .lede { margin: 0; color: var(--muted); font-size: 0.95rem; line-height: 1.5; }
+  .home-tagline { font-size: 1.05rem; line-height: 1.4; }
+  /* A hair tighter than the shared 16px section gap — the home screen has one
+     more row than most (hero card + shelf row + homelinks + invite + the
+     whoami footer), and moving whoami down here plus the bigger tagline both
+     add height, so this claws back room to keep every screen scroll-free. */
+  #screen-home { gap: 12px; }
 
   /* Daily Climb's aggregate stopwatch — lives outside the section swap so one
      element serves both #screen-play and #screen-climb-roundend (toggled in
@@ -750,7 +756,7 @@
 
     <!-- HOME (once signed in with a name) -->
     <section id="screen-home" hidden>
-      <p class="note whoami" id="home-whoami" hidden></p>
+      <p class="lede home-tagline" id="home-tagline">Every solve adds a letter. Climb all the way to 8.</p>
 
       <!-- Home hero: whichever of Daily Climb / Adventure Mode is the day's main
            call to action gets the full card treatment; the other one, already
@@ -806,6 +812,7 @@
         <button class="ghost sound-toggle" id="btn-sound" type="button" aria-label="Sound" aria-pressed="false">&#128264;</button>
       </div>
       <button class="ghost full-btn" id="btn-home-invite" type="button">Invite friends to play</button>
+      <p class="note whoami" id="home-whoami" hidden></p>
     </section>
 
     <!-- DAILY CLIMB: intro / one-shot confirm -->
