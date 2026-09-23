@@ -769,7 +769,7 @@
         </span>
         <span class="shelfrow-txt">
           <b>Adventure Mode</b>
-          <span id="adventure-progress">Can you beat all 775 climbs?</span>
+          <span id="adventure-progress">Can you beat all 765 climbs?</span>
         </span>
         <span class="shelfrow-chev" aria-hidden="true">&rsaquo;</span>
       </button>
@@ -1637,7 +1637,7 @@
   // climbs), an empty board, and nobody counts as "already played". It only
   // changes the day *key*, still under `dailies/{key}`, so no Firestore rule
   // change. "" = the plain calendar date.
-  const DAILY_SALT = "-r4";
+  const DAILY_SALT = "-r5";
   function dailyKeyOf(d) { return dayKeyOf(d) + DAILY_SALT; }
   function dayBase(key) { const m = /^\d{4}-\d{2}-\d{2}/.exec(key || ""); return m ? m[0] : (key || ""); }
   function shiftDayKey(key, delta) {
@@ -3070,7 +3070,7 @@
     },
     {
       h: "Adventure Mode",
-      p: "Adventure Mode has all 775 climbs waiting whenever you want them. No strikes, no clock, no daily limit. Chip away at them anytime and watch your progress grow.",
+      p: "Adventure Mode has all 765 climbs waiting whenever you want them. No strikes, no clock, no daily limit. Chip away at them anytime and watch your progress grow.",
       visual: "adventure",
     },
   ];
@@ -3086,7 +3086,7 @@
     if (kind === "strikes") return '<span class="guesspip spent"></span>' +
       '<span class="guesspip spent"></span><span class="guesspip"></span>';
     if (kind === "daily") return '<span class="tut-big">3 climbs &middot; once a day</span>';
-    if (kind === "adventure") return '<span class="tut-big">775 climbs &middot; no strikes &middot; no clock</span>';
+    if (kind === "adventure") return '<span class="tut-big">765 climbs &middot; no strikes &middot; no clock</span>';
     return "";
   }
   let tutStep = 0;
@@ -3782,7 +3782,7 @@
     const el = $("#adventure-progress");
     if (!el) return;
     const n = myBeatenSeeds.length;
-    el.textContent = n > 0 ? (n + " / " + (CLIMBS.length || 775) + " beaten") : "Can you beat all 775 climbs?";
+    el.textContent = n > 0 ? (n + " / " + (CLIMBS.length || 765) + " beaten") : "Can you beat all 765 climbs?";
   }
 
   function renderDailyCard() {
