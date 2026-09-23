@@ -541,7 +541,7 @@
     background: var(--surface);
   }
   .dailycard-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  #dailycard .dailycard-head { justify-content: center; }
+  #dailycard-hero .dailycard-head, #adventure-hero .dailycard-head { justify-content: center; }
   .dailycard-title {
     font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
   }
@@ -751,13 +751,40 @@
     <!-- HOME (once signed in with a name) -->
     <section id="screen-home" hidden>
       <p class="note whoami" id="home-whoami" hidden></p>
-      <div class="dailycard" id="dailycard">
+
+      <!-- Home hero: whichever of Daily Climb / Adventure Mode is the day's main
+           call to action gets the full card treatment; the other one, already
+           done for today or just secondary, sits below as a compact row. Both
+           pairs always exist — renderDailyCard() toggles which is shown, see
+           setHomeHero(). Source order matters: it's what decides visual order
+           between the two SHOWN elements, since hidden ones take no space. -->
+      <div class="dailycard" id="adventure-hero" hidden>
+        <div class="dailycard-head">
+          <span class="dailycard-title">Adventure Mode</span>
+        </div>
+        <button class="primary" id="btn-adventure-hero-play" type="button">Play</button>
+        <p class="note" id="adventure-hero-meta"></p>
+      </div>
+      <div class="dailycard" id="dailycard-hero">
         <div class="dailycard-head">
           <span class="dailycard-title">Daily Climb</span>
         </div>
         <button class="primary" id="btn-daily-play" type="button">Play</button>
         <p class="note" id="daily-meta"></p>
       </div>
+      <button class="shelfrow" id="btn-daily-compact" type="button" hidden>
+        <span class="shelfrow-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" fill="currentColor" fill-opacity=".18"/>
+            <path d="M7 12.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="shelfrow-txt">
+          <b>Daily Climb</b>
+          <span>Completed — see today's standings</span>
+        </span>
+        <span class="shelfrow-chev" aria-hidden="true">&rsaquo;</span>
+      </button>
       <button class="shelfrow" id="btn-adventure-play" type="button">
         <span class="shelfrow-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24">
@@ -3779,10 +3806,23 @@
 
   // The single home Play button: label + one-line status for today's puzzle.
   function renderAdventureProgress() {
-    const el = $("#adventure-progress");
-    if (!el) return;
     const n = myBeatenSeeds.length;
-    el.textContent = n > 0 ? (n + " / " + (CLIMBS.length || 765) + " beaten") : "Can you beat all 765 climbs?";
+    const text = n > 0 ? (n + " / " + (CLIMBS.length || 765) + " beaten") : "Can you beat all 765 climbs?";
+    const el = $("#adventure-progress");
+    if (el) el.textContent = text;
+    const heroEl = $("#adventure-hero-meta");
+    if (heroEl) heroEl.textContent = text;
+  }
+
+  // Which of Daily Climb / Adventure Mode gets the big hero-card treatment vs.
+  // the compact shelf row below it. Once today's daily is done, Adventure Mode
+  // becomes the hero — the point of the daily results is to glance at them,
+  // not to be the thing pulling the player's attention on the way back home.
+  function setHomeHero(adventureIsHero) {
+    $("#adventure-hero").hidden = !adventureIsHero;
+    $("#dailycard-hero").hidden = adventureIsHero;
+    $("#btn-daily-compact").hidden = !adventureIsHero;
+    $("#btn-adventure-play").hidden = adventureIsHero;
   }
 
   function renderDailyCard() {
@@ -3793,6 +3833,7 @@
     if (isDev()) {
       btn.textContent = "Play (dev replay)";
       meta.textContent = "Dev mode — replay enabled. " + capFirst(dailyResetText()) + ".";
+      setHomeHero(false); // dev replays never set myDailyLastDay — keep the daily as hero for testing
       return;
     }
     const today = dailyKeyOf();
@@ -3802,9 +3843,10 @@
     else if (canResume) btn.textContent = "Resume today's game";
     else btn.textContent = "Play";
     meta.textContent = capFirst(dailyResetText()) + ".";
+    setHomeHero(playedToday);
   }
 
-  $("#btn-daily-play").addEventListener("click", async () => {
+  async function dailyPlayClick() {
     const today = dailyKeyOf();
     // Dev replay: skip the "already played" guards, always offer a fresh run.
     if (isDev()) {
@@ -3819,7 +3861,9 @@
     if (mine) { showDailyBoard(today, { live: true }); return; }
     $("#daily-intro-date").textContent = dateLabel(today);
     show("dailyintro");
-  });
+  }
+  $("#btn-daily-play").addEventListener("click", dailyPlayClick);
+  $("#btn-daily-compact").addEventListener("click", dailyPlayClick);
   $("#btn-daily-start").addEventListener("click", startDailySession);
   $("#btn-daily-intro-back").addEventListener("click", goHome);
   $("#btn-daily-board-home").addEventListener("click", goHome);
@@ -4353,6 +4397,7 @@
   $("#btn-cre-next").addEventListener("click", climbRoundEndContinue);
 
   $("#btn-adventure-play").addEventListener("click", showCollection);
+  $("#btn-adventure-hero-play").addEventListener("click", showCollection);
   $("#btn-collection-home").addEventListener("click", goHome);
   $("#collection-grid").addEventListener("click", (e) => {
     const t = e.target.closest(".collection-tile");
