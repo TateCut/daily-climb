@@ -787,7 +787,7 @@
         </span>
         <span class="shelfrow-txt">
           <b>Daily Climb</b>
-          <span>Completed — see today's standings</span>
+          <span id="daily-compact-meta">Completed — see today's standings</span>
         </span>
         <span class="shelfrow-chev" aria-hidden="true">&rsaquo;</span>
       </button>
@@ -3864,6 +3864,7 @@
     else if (canResume) btn.textContent = "Resume today's game";
     else btn.textContent = "Play";
     meta.textContent = capFirst(dailyResetText()) + ".";
+    $("#daily-compact-meta").textContent = capFirst(dailyResetText()) + " — tap to see today's results.";
     setHomeHero(playedToday);
   }
 
