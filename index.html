@@ -2678,6 +2678,20 @@
   function onPointerDown(e, id) {
     if (locked || checking) return;
     if (e.pointerType === "mouse" && e.button !== 0) return;
+    // A drag is already in progress — ignore a second touch instead of
+    // silently replacing `drag`. Without this guard, a stray second finger
+    // (easy on a phone) overwrites the module-level `drag` object, orphaning
+    // the first drag's floating `.tile.ghost` clone (appended straight to
+    // <body>, position:fixed on the pointer) forever, since its cleanup only
+    // ever runs from inside onPointerUp() — and by the time the first finger
+    // lifts, that function is reading the second drag's state instead. This
+    // is "the floating letter" bug: a ghost tile frozen mid-air, visually
+    // detached from the tray/answer it came from.
+    if (drag) return;
+    // Defensive cleanup: remove any ghost left behind by an edge case this
+    // guard doesn't cover (e.g. a mid-drag exception skipping onPointerUp),
+    // so a stray ghost can't accumulate indefinitely across drags.
+    document.querySelectorAll(".tile.ghost").forEach((g) => g.remove());
     const el = e.currentTarget;
     drag = { id: id, el: el, startX: e.clientX, startY: e.clientY, pointerId: e.pointerId, started: false };
     try { el.setPointerCapture(e.pointerId); } catch (err) {}
