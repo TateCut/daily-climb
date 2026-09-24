@@ -1,13 +1,13 @@
 {
-  "name": "Wadder",
-  "short_name": "Wadder",
+  "name": "Daily Climb",
+  "short_name": "Daily Climb",
   "description": "A daily word ladder — climb from a 3-letter word up to an 8, one new letter per rung, three climbs a day.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#1c1917",
-  "theme_color": "#1c1917",
+  "background_color": "#0c1324",
+  "theme_color": "#0c1324",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },

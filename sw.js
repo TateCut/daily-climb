@@ -1,8 +1,8 @@
-// Service worker for Wadder. The HTML is fetched network-first so code updates
+// Service worker for Daily Climb. The HTML is fetched network-first so code updates
 // land immediately; static assets (dictionary, icons) are cache-first for a
 // fast, offline-capable launch. Firebase / Datamuse / gstatic always hit the
 // network.
-const CACHE = "wadder-shell-v4"; // bump to re-fetch cached assets (v4: climbs.js content changed, 775->765 seeds)
+const CACHE = "wadder-shell-v5"; // bump to re-fetch cached assets (v5: climbs.js 765->746 seeds; Daily Ascent colors in manifest + icons)
 const ASSETS = [
   "./words.js",
   "./freq.js",

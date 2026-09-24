@@ -3,37 +3,40 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Wadder</title>
+<title>Daily Climb</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#1c1917">
+<meta name="theme-color" content="#0c1324">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Wadder">
+<meta name="apple-mobile-web-app-title" content="Daily Climb">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="icon-192.png">
 <style>
+  /* "Daily Ascent" theme, app-wide: a navy night sky warming toward dawn, with
+     the trail amber as the accent. Deliberately one committed dark palette
+     (no light variant) — every screen sits on the same sky the daily run's
+     mountain scene rises out of, so the look never changes between screens. */
   :root {
-    --bg: #f5f5f4;
-    --surface: #ffffff;
-    --line: #d6d3d1;
-    --text: #1c1917;
-    --muted: #78716c;
-    --accent: #d97706;
-    --good: #16a34a;
-    --warn: #dc2626;
+    --bg: #12141f;
+    --surface: #1d2233;
+    --line: #313852;
+    --text: #f3ece1;
+    --muted: #9c96ab;
+    --accent: #e8871e;
+    --good: #6fd08c;
+    --warn: #f07a6a;
+    --sky-top: #0c1324;
+    --sky-mid: #20213c;
+    --sky-glow: #4a3350;
+    --mtn-far: #232c49;
+    --mtn-near: #12141f;
+    --sun-core: #fff2d6;
+    --sun-ring: #ffb266;
     --tile-w: 48px; /* set from JS (sizeTiles) so a row's letters always fit on one line */
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #1c1917;
-      --surface: #292524;
-      --line: #44403c;
-      --text: #f5f5f4;
-      --muted: #a8a29e;
-      --accent: #f59e0b;
-      --good: #4ade80;
-      --warn: #f87171;
-    }
+    color-scheme: dark;
+    /* No background here on purpose: body's sky gradient must propagate to
+       the canvas. Giving html a background would make body paint its own box
+       ABOVE the play screen's z-index:-1 mountain scene and hide it. */
   }
   * { box-sizing: border-box; }
   /* No pinch- or double-tap-zoom — tapping tiles fast shouldn't zoom the page.
@@ -50,7 +53,7 @@
     align-items: center;
     justify-content: center;
     padding: 40px 16px;
-    background: var(--bg);
+    background: linear-gradient(var(--sky-top), var(--sky-mid) 60%, var(--sky-glow)) fixed;
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
@@ -64,11 +67,10 @@
     align-items: center;
     gap: 16px;
   }
-  /* Ladder mark above the wordmark — six rungs, the top one climbed, the
-     rest tapering down toward what's left. */
+  /* Summit mark above the wordmark (sun, peaks, trail, flag). */
   .brandmark {
     display: block;
-    height: 58px;
+    height: 62px;
     width: auto;
     margin: 0 auto 14px;
     color: var(--accent);
@@ -76,7 +78,8 @@
   /* Keep things tight — the mark drops away on the play screen, and the mark +
      wordmark both drop away on any results screen that could otherwise overflow
      a short viewport (no page scroll to reach the bottom). */
-  body:has(#screen-play:not([hidden])) .brandmark { display: none; }
+  body:has(#screen-play:not([hidden])) .brandmark,
+  body:has(#screen-play:not([hidden])) h1,
   body:has(#screen-daily-board:not([hidden])) .brandmark,
   body:has(#screen-daily-board:not([hidden])) h1,
   body:has(#screen-leaderboard:not([hidden])) .brandmark,
@@ -94,6 +97,8 @@
   /* No page scroll anywhere — every screen is sized to fit the viewport. The one
      list that can overflow (the leaderboard) scrolls inside itself instead. */
   html, body { overflow: hidden; overscroll-behavior: none; }
+  /* The few inner scrollers draw their bar in the theme's line color. */
+  .lb-list, .collection-grid, .def { scrollbar-color: var(--line) transparent; scrollbar-width: thin; }
   /* Tutorial is a fixed card — kill touch-panning so a swipe is never stolen. */
   #screen-tutorial { touch-action: none; }
   h1 {
@@ -104,7 +109,7 @@
   }
   h1 .brand-k { color: var(--accent); }
   .lede { margin: 0; color: var(--muted); font-size: 0.95rem; line-height: 1.5; }
-  .home-tagline { font-size: 1.05rem; line-height: 1.4; }
+  .home-tagline { font-size: 1.05rem; line-height: 1.4; text-wrap: balance; }
   /* A hair tighter than the shared 16px section gap — the home screen has one
      more row than most (hero card + shelf row + homelinks + invite + the
      whoami footer), and moving whoami down here plus the bigger tagline both
@@ -243,7 +248,12 @@
     width: 100%;
     min-height: calc(var(--tile-w) * 1.1667);
     overflow-x: auto;
+    /* The tile pop-in animation overshoots its scale for a moment, which
+       briefly counts as overflow and flashes a scrollbar on the row. Keep the
+       horizontal scroll as a safety net, just never draw the bar. */
+    scrollbar-width: none;
   }
+  .row::-webkit-scrollbar { display: none; }
   .row.answer {
     padding: 8px;
     border: 1px dashed var(--line);
@@ -447,6 +457,104 @@
   .totalbox .chips span { border-color: var(--accent); }
   .totalbox-count { font-size: 0.85rem; color: var(--muted); }
 
+  /* The mountain strip on the play screen. The scene is full-bleed (up to
+     520px) and sits BEHIND everything (z-index -1): its ::before paints the
+     sky from the ridge line up past the top of the screen, its ::after paints
+     the ground from the mountain base down past the bottom — so the timer and
+     round line float in the sky and the tiles sit on the ground. The sky and
+     ground are anchored to the strip itself, not the viewport, because body
+     vertically centers the page. See renderAscentMini(). Daily only. */
+  .ascent-mini {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .ascent-scene {
+    position: relative;
+    z-index: -1;
+    width: min(100vw, 520px);
+    flex: none;
+    pointer-events: none;
+  }
+  .ascent-scene::before,
+  .ascent-scene::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    left: 50%;
+    width: 100vw;
+    transform: translateX(-50%);
+  }
+  .ascent-scene::before {
+    top: -100vh;
+    bottom: 0;
+    background: linear-gradient(to top, var(--sky-glow) 0, var(--sky-glow) 50px, var(--sky-mid) 170px, var(--sky-top) 330px);
+  }
+  .ascent-scene::after {
+    top: calc(100% - 1px); /* overlap the mountain base by a pixel — no sub-pixel seam */
+    height: 100vh;
+    background: var(--mtn-near);
+  }
+  .ascent-scene svg { width: 100%; height: auto; display: block; overflow: visible; }
+  #ascentClimber { transition: cx .4s cubic-bezier(.3,.8,.4,1), cy .4s cubic-bezier(.3,.8,.4,1); }
+  #ascentTrailDone { transition: stroke-dashoffset .4s ease-out; }
+  #ascentSun, #ascentSunGlow { transition: cy .9s cubic-bezier(.3,.8,.4,1), opacity .9s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    #ascentClimber, #ascentTrailDone, #ascentSun, #ascentSunGlow { transition: none; }
+  }
+  /* Rivals on your trail: faint flags where today's earlier finishers ended
+     up. Once you're past one it fades behind you. See renderAscentMini(). */
+  #ascentRivals g { transition: opacity .4s; }
+  #ascentRivals g.passed { opacity: .18; }
+  .ascent-mini { position: relative; }
+  /* "You beat Priya" — drops into the sky on the right of the mountain when
+     you pass someone. The trail (and so the climber) never leaves the left
+     half, and the timer / round line / strike dots sit above the strip, so
+     this corner is the one place it covers nothing. */
+  .ascent-toast {
+    position: absolute; right: 8px; top: 2px; z-index: 2;
+    transform: translateY(-6px); opacity: 0;
+    display: flex; align-items: center; gap: 6px;
+    max-width: calc(52% - 8px);
+    padding: 5px 12px 5px 9px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--accent); color: var(--text);
+    font-size: 0.8rem; font-weight: 600; white-space: nowrap;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+    transition: opacity .25s, transform .25s; pointer-events: none;
+  }
+  .ascent-toast.show { opacity: 1; transform: none; }
+  .ascent-toast span { overflow: hidden; text-overflow: ellipsis; }
+  .ascent-toast svg { width: 13px; height: 15px; flex: none; }
+  @media (prefers-reduced-motion: reduce) { #ascentRivals g, .ascent-toast { transition: none; } }
+
+  /* Daily board: everyone's flag on the mountain. One pole per spot, one
+     pennant per person stacked in finishing order (top pennant won the
+     tiebreak), +N past three. See renderBoardMountain(). */
+  #screen-daily-board { gap: 12px; }
+  .board-mtn { position: relative; width: 100%; }
+  /* Feather the scene into the page top and bottom (on the SVG, not the
+     wrapper, so the callout above a flag is never faded). */
+  .board-mtn svg {
+    display: block; width: 100%; height: auto;
+    -webkit-mask-image: linear-gradient(transparent, #000 14%, #000 80%, transparent);
+    mask-image: linear-gradient(transparent, #000 14%, #000 80%, transparent);
+  }
+  .board-mtn .bflag { cursor: pointer; transition: opacity .2s; }
+  .board-mtn.focus .bflag:not(.hl) { opacity: .28; }
+  .board-callout {
+    position: absolute; transform: translate(-50%, -100%); z-index: 2;
+    background: var(--surface); border: 1px solid var(--accent); border-radius: 9px;
+    padding: 5px 9px; font-size: 0.72rem; line-height: 1.35; text-align: left;
+    width: max-content; max-width: 90%; pointer-events: none; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+  }
+  .board-callout b { display: block; color: var(--accent); font-size: 0.62rem; letter-spacing: 0.1em; }
+  /* The mountain takes ~150px, so the list gives some back to stay scroll-free. */
+  #screen-daily-board .lb-list { max-height: max(120px, min(48vh, calc(100vh - 480px))); }
+  #daily-board-list .lb-row.spot { border-color: var(--text); }
+  #daily-board-list .lb-row.me.spot { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  @media (prefers-reduced-motion: reduce) { .board-mtn .bflag { transition: none; } }
+
   .nameinput {
     width: 100%;
     font: inherit;
@@ -547,7 +655,14 @@
     background: var(--surface);
   }
   .dailycard-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  #dailycard-hero .dailycard-head, #adventure-hero .dailycard-head { justify-content: center; }
+  #adventure-hero .dailycard-head { justify-content: center; }
+  .adventure-hero-icon { flex: none; width: 24px; height: 24px; color: var(--accent); }
+  #adventure-hero .dailycard-title { font-size: 0.8rem; }
+  /* A touch tighter than .dailycard — the compass row made it taller, and this
+     layout (post-daily, with the compact "Today's climb" row) must still fit 667px. */
+  #adventure-hero { gap: 6px; padding-block: 14px; }
+  .home-play { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .home-play button.primary { width: 100%; padding: 15px 26px; font-size: 1.2rem; border-radius: 12px; }
   .dailycard-title {
     font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
   }
@@ -700,38 +815,19 @@
 </head>
 <body>
   <main>
-    <svg class="brandmark" viewBox="0 0 48 120" aria-hidden="true">
-      <rect x="5.5" y="6" width="5" height="108" rx="2.5" fill="currentColor"/>
-      <rect x="37.5" y="6" width="5" height="108" rx="2.5" fill="currentColor"/>
-      <rect x="6" y="6" width="1.4" height="108" rx="0.7" fill="#fff" fill-opacity="0.22"/>
-      <rect x="38" y="6" width="1.4" height="108" rx="0.7" fill="#fff" fill-opacity="0.22"/>
-      <g fill="currentColor">
-        <rect x="6" y="16" width="36" height="6" rx="3"/>
-        <rect x="6" y="33.5" width="28" height="5" rx="2.5" fill-opacity="0.62"/>
-        <rect x="6" y="50.5" width="22" height="5" rx="2.5" fill-opacity="0.62"/>
-        <rect x="6" y="67.5" width="17" height="5" rx="2.5" fill-opacity="0.62"/>
-        <rect x="6" y="84.5" width="13" height="5" rx="2.5" fill-opacity="0.62"/>
-        <rect x="6" y="101.5" width="10" height="5" rx="2.5" fill-opacity="0.62"/>
-      </g>
-      <g fill="#fff" fill-opacity="0.28">
-        <rect x="7" y="16" width="33" height="1.8" rx="0.9"/>
-        <rect x="7" y="33.5" width="25" height="1.5" rx="0.75"/>
-        <rect x="7" y="50.5" width="19" height="1.5" rx="0.75"/>
-        <rect x="7" y="67.5" width="14" height="1.5" rx="0.75"/>
-        <rect x="7" y="84.5" width="10" height="1.5" rx="0.75"/>
-        <rect x="7" y="101.5" width="7" height="1.5" rx="0.75"/>
-      </g>
-      <g fill="currentColor">
-        <circle cx="8" cy="19" r="1.9"/>
-        <circle cx="40" cy="19" r="1.9"/>
-        <circle cx="8" cy="36" r="1.7"/>
-        <circle cx="8" cy="53" r="1.7"/>
-        <circle cx="8" cy="70" r="1.7"/>
-        <circle cx="8" cy="87" r="1.7"/>
-        <circle cx="8" cy="104" r="1.7"/>
-      </g>
+    <!-- Summit mark: the sun rising behind a back peak, and the main peak with
+         the dotted trail you climb and a flag on top. One color (amber) — the
+         back peak sits on a --bg knockout so the sun reads as behind it. -->
+    <svg class="brandmark" viewBox="0 0 64 56" aria-hidden="true">
+      <circle cx="44" cy="25" r="11" fill="currentColor" fill-opacity=".65"/>
+      <polygon points="30,54 45,28 62,54" fill="var(--bg)"/>
+      <polygon points="30,54 45,28 62,54" fill="currentColor" fill-opacity=".38"/>
+      <polygon points="2,54 26,14 50,54" fill="currentColor"/>
+      <path d="M11 51 L22 44 L15 36 L25 27 L21 21" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="0.1 4.6"/>
+      <line x1="26" y1="14" x2="26" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M26 3.5 h10 l-2.6 3.2 l2.6 3.2 h-10 Z" fill="currentColor"/>
     </svg>
-    <h1>W<span class="brand-k">a</span>dder</h1>
+    <h1>Daily <span class="brand-k">Climb</span></h1>
     <div class="daily-timer" id="daily-timer" hidden><span id="daily-timer-val">0:00</span></div>
 
     <!-- LOADING — the screen shown at rest, before we know where to route -->
@@ -773,19 +869,36 @@
            pairs always exist — renderDailyCard() toggles which is shown, see
            setHomeHero(). Source order matters: it's what decides visual order
            between the two SHOWN elements, since hidden ones take no space. -->
+      <!-- Adventure Mode's compass: one definition, used here and in the
+           shelf row below. It marks this card as Adventure Mode, not today's
+           climb (which is done by the time this card is showing). -->
+      <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <symbol id="compass-mark" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.6"/>
+          <g stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-opacity=".55">
+            <line x1="12" y1="3.6" x2="12" y2="5.2"/><line x1="12" y1="18.8" x2="12" y2="20.4"/>
+            <line x1="3.6" y1="12" x2="5.2" y2="12"/><line x1="18.8" y1="12" x2="20.4" y2="12"/>
+          </g>
+          <g transform="rotate(35 12 12)">
+            <polygon points="12,5.2 14.6,12 9.4,12" fill="currentColor"/>
+            <polygon points="12,18.8 14.6,12 9.4,12" fill="currentColor" fill-opacity=".4"/>
+          </g>
+          <circle cx="12" cy="12" r="1.3" fill="var(--surface)"/>
+        </symbol>
+      </svg>
       <div class="dailycard" id="adventure-hero" hidden>
         <div class="dailycard-head">
+          <svg class="adventure-hero-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#compass-mark"/></svg>
           <span class="dailycard-title">Adventure Mode</span>
         </div>
         <button class="primary" id="btn-adventure-hero-play" type="button">Play</button>
         <p class="note" id="adventure-hero-meta"></p>
       </div>
-      <div class="dailycard" id="dailycard-hero">
-        <div class="dailycard-head">
-          <span class="dailycard-title">Daily Climb</span>
-        </div>
+      <!-- The game IS the daily climb, so today's climb needs no box or label —
+           just the one big Play button (its text flips to Resume / standings). -->
+      <div class="home-play" id="dailycard-hero">
         <button class="primary" id="btn-daily-play" type="button">Play</button>
-        <p class="note" id="daily-meta"></p>
+        <p class="note" id="daily-meta" hidden></p>
       </div>
       <button class="shelfrow" id="btn-daily-compact" type="button" hidden>
         <span class="shelfrow-icon" aria-hidden="true">
@@ -795,23 +908,18 @@
           </svg>
         </span>
         <span class="shelfrow-txt">
-          <b>Daily Climb</b>
+          <b>Today's climb</b>
           <span id="daily-compact-meta">Completed — see today's standings</span>
         </span>
         <span class="shelfrow-chev" aria-hidden="true">&rsaquo;</span>
       </button>
       <button class="shelfrow" id="btn-adventure-play" type="button">
         <span class="shelfrow-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24">
-            <polygon points="13,19 18,9 23,19" fill="currentColor" fill-opacity=".35"/>
-            <polygon points="1,19 11,5 20,19" fill="currentColor"/>
-            <line x1="11" y1="5" x2="11" y2="1" stroke="currentColor" stroke-width="1.5"/>
-            <polygon points="11,1 16,2.5 11,4" fill="currentColor"/>
-          </svg>
+          <svg viewBox="0 0 24 24"><use href="#compass-mark"/></svg>
         </span>
         <span class="shelfrow-txt">
           <b>Adventure Mode</b>
-          <span id="adventure-progress">Can you beat all 765 climbs?</span>
+          <span id="adventure-progress">Can you beat all 746 climbs?</span>
         </span>
         <span class="shelfrow-chev" aria-hidden="true">&rsaquo;</span>
       </button>
@@ -826,7 +934,7 @@
 
     <!-- DAILY CLIMB: intro / one-shot confirm -->
     <section id="screen-daily-intro" hidden>
-      <h2 style="margin:0;font-size:1.3rem;">Daily Climb</h2>
+      <h2 style="margin:0;font-size:1.3rem;">Today's climb</h2>
       <p class="lede" id="daily-intro-date"></p>
       <p class="lede">Three climbs, 3 letters up to 8. Your score is how many words you get.</p>
       <p class="note">One attempt.</p>
@@ -837,7 +945,7 @@
     <!-- INVITE: share the game link -->
     <section id="screen-invite" hidden>
       <h2 style="margin:0;font-size:1.3rem;">Invite friends</h2>
-      <p class="lede">Send this link. Everyone who opens it plays the same Daily Climb &mdash; then you can compare scores on the leaderboard.</p>
+      <p class="lede">Send this link. Everyone who opens it plays today's climb, then you can compare scores on the leaderboard.</p>
       <div class="linkrow">
         <input class="nameinput" id="invite-link" type="text" readonly>
         <button class="ghost" id="btn-invite-copy" type="button">Copy</button>
@@ -854,6 +962,7 @@
         <span class="dailycard-streak" id="daily-board-streak" hidden></span>
       </div>
       <p class="note" id="daily-board-sub"></p>
+      <div class="board-mtn" id="daily-board-mtn" hidden></div>
       <div class="lb-list" id="daily-board-list"></div>
       <p class="note" id="daily-board-foot"></p>
       <div class="homelinks">
@@ -913,7 +1022,7 @@
 
     <!-- VS: joined via invite link -->
     <section id="screen-vs-join" hidden>
-      <p class="lede" id="vs-join-lede">You've been invited to a game of Wadder!</p>
+      <p class="lede" id="vs-join-lede">You've been invited to a game of Daily Climb!</p>
       <p class="note" id="vs-join-diff"></p>
       <input class="nameinput" id="vs-name-join" type="text" placeholder="Your name" maxlength="24" autocomplete="off">
       <button class="primary" id="btn-vs-join" type="button">Play</button>
@@ -985,6 +1094,43 @@
       <div class="timerbar" id="timerbar"><div class="timerbar-fill" id="bar"></div></div>
       <div class="secs" id="secline"><span id="secs">30</span>s left</div>
       <div class="guesspips" id="guesspips" hidden></div>
+      <div class="ascent-mini" id="ascent-mini" hidden>
+        <div class="ascent-scene">
+          <svg id="ascentSvg" viewBox="0 0 300 68" role="img" aria-label="Progress up today's mountain">
+            <defs>
+              <radialGradient id="ascentSunGlowFill" cx="0.5" cy="0.5" r="0.5">
+                <stop offset="0" stop-color="var(--sun-ring)" stop-opacity="0.6"/>
+                <stop offset="1" stop-color="var(--sun-ring)" stop-opacity="0"/>
+              </radialGradient>
+              <clipPath id="ascentAboveGround"><rect x="-300" y="-400" width="900" height="468"/></clipPath>
+            </defs>
+            <g fill="#fff">
+              <circle cx="18" cy="-58" r="0.9" opacity=".5"/>
+              <circle cx="62" cy="-96" r="0.8" opacity=".4"/>
+              <circle cx="104" cy="-38" r="1" opacity=".45"/>
+              <circle cx="150" cy="-112" r="0.8" opacity=".35"/>
+              <circle cx="178" cy="-70" r="1.1" opacity=".5"/>
+              <circle cx="262" cy="-40" r="0.9" opacity=".4"/>
+              <circle cx="288" cy="-104" r="1" opacity=".45"/>
+            </g>
+            <g clip-path="url(#ascentAboveGround)">
+              <circle id="ascentSunGlow" cx="222" cy="58" r="55" fill="url(#ascentSunGlowFill)" opacity=".35"/>
+              <circle id="ascentSun" cx="222" cy="58" r="15" fill="var(--sun-core)" opacity=".55"/>
+            </g>
+            <polygon fill="var(--mtn-far)"
+              points="0,68 6,60 25,50 45,36 62,22 82,12 105,5 130,5 148,3 165,12 188,24 212,17 240,30 270,45 294,60 300,68"/>
+            <polygon fill="var(--mtn-near)"
+              points="0,68 8,58 30,48 55,58 85,44 120,60 160,50 200,58 235,42 270,54 292,60 300,68"/>
+            <path id="ascentTrailBg" d="M22,61 C36,51 33,39 52,34 C73,28 69,17 92,15 C113,12 122,20 145,13"
+              fill="none" stroke="var(--muted)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="1 6" opacity=".6"/>
+            <path id="ascentTrailDone" d="M22,61 C36,51 33,39 52,34 C73,28 69,17 92,15 C113,12 122,20 145,13"
+              fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round"/>
+            <g id="ascentRivals"></g>
+            <circle id="ascentClimber" cx="22" cy="61" r="4" fill="var(--sun-core)" stroke="var(--accent)" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div class="ascent-toast" id="ascent-toast" role="status" aria-live="polite"></div>
+      </div>
 
       <div class="rowlabel">Letters</div>
       <div class="row" id="tray"></div>
@@ -1681,7 +1827,7 @@
   // climbs), an empty board, and nobody counts as "already played". It only
   // changes the day *key*, still under `dailies/{key}`, so no Firestore rule
   // change. "" = the plain calendar date.
-  const DAILY_SALT = "-r5";
+  const DAILY_SALT = "-r6";
   function dailyKeyOf(d) { return dayKeyOf(d) + DAILY_SALT; }
   function dayBase(key) { const m = /^\d{4}-\d{2}-\d{2}/.exec(key || ""); return m ? m[0] : (key || ""); }
   function shiftDayKey(key, delta) {
@@ -1717,6 +1863,8 @@
   let climbPrev = null;     // the word played on the rung below (for the inflection rule)
   let dailyClimbs = null;   // [puzzle, puzzle, puzzle] for today's daily, from the day seed
   let dailyClimbIndices = null; // the same 3, as CLIMBS indices — so a beaten round can mark Adventure Mode
+  let dailyRivals = [];         // today's earlier finishers [{name, total}] — flags on your trail + "You beat X"
+  let rivalsRound = null;       // which climb the rivals list was last fetched for (refetched once per climb)
   let collectionSeed = null;  // index into CLIMBS currently being played from the Collection screen
   let myBeatenSeeds = [];     // players/{uid}.beatenSeeds — CLIMBS indices this player has cleared
   let matchCode = null;
@@ -2113,7 +2261,8 @@
     const el = screens[name];
     const arriving = el && el.hidden;
     for (const k in screens) screens[k].hidden = k !== name;
-    $("#daily-timer").hidden = !(mode === "daily" && (name === "play" || name === "climbroundend"));
+    const dailyRun = mode === "daily" && (name === "play" || name === "climbroundend");
+    $("#daily-timer").hidden = !dailyRun;
     if (arriving) {
       anim(el, [
         { opacity: 0, transform: "translateY(9px)" },
@@ -2260,6 +2409,7 @@
       climbStage = stage;
       climbPrev = currentRoundWords[currentRoundWords.length - 1] || null;
       syncRoundChrome();
+      renderAscentMini();
     }
     show("play");
     beginStage();
@@ -3122,13 +3272,13 @@
       visual: "strikes",
     },
     {
-      h: "The Daily Climb",
+      h: "Once a day",
       p: "Three climbs, the same for everyone, once a day. You're on a leaderboard with every other player, and score is how many words you get. Ties break on fewest strikes, then fastest time.",
       visual: "daily",
     },
     {
       h: "Adventure Mode",
-      p: "Adventure Mode has all 765 climbs waiting whenever you want them. No strikes, no clock, no daily limit. Chip away at them anytime and watch your progress grow.",
+      p: "Adventure Mode has all 746 climbs waiting whenever you want them. No strikes, no clock, no daily limit. Chip away at them anytime and watch your progress grow.",
       visual: "adventure",
     },
   ];
@@ -3144,7 +3294,7 @@
     if (kind === "strikes") return '<span class="guesspip spent"></span>' +
       '<span class="guesspip spent"></span><span class="guesspip"></span>';
     if (kind === "daily") return '<span class="tut-big">3 climbs &middot; once a day</span>';
-    if (kind === "adventure") return '<span class="tut-big">765 climbs &middot; no strikes &middot; no clock</span>';
+    if (kind === "adventure") return '<span class="tut-big">746 climbs &middot; no strikes &middot; no clock</span>';
     return "";
   }
   let tutStep = 0;
@@ -3204,7 +3354,7 @@
       const closed = matchIsClosed(data);
       $("#vs-join-lede").textContent = closed
         ? (hostName(data) + "'s game has closed — you can still play it for fun")
-        : (hostName(data) + " started a game of Wadder");
+        : (hostName(data) + " started a game of Daily Climb");
       const count = (data.playerUids || []).length || (data.entrants || []).length;
       let sub = DIFF_INFO[normDiff(data.difficulty)].label + " · " + FORMAT_LABEL[normFormat(data.format)];
       if (count > 1) sub += " · " + count + " playing so far";
@@ -3236,6 +3386,7 @@
     climbPrev = null;
     dailyClimbs = null;
     dailyClimbIndices = null;
+    dailyRivals = []; rivalsRound = null;
     playerName = storedName || "";
     opponentName = "";
     matchMeta = null;
@@ -3446,6 +3597,7 @@
     checking = false;
     pool = climbPuzzle.c[0].split("").map((ch) => ({ ch: ch, isNew: true }));
     syncRoundChrome();
+    renderAscentMini();
     show("play");
     beginStage();
   }
@@ -3501,6 +3653,8 @@
     if (stageShownAt) solveMs += Date.now() - stageShownAt;
     solved++;
     currentRoundWords.push(g);
+    renderAscentMini();
+    if (mode === "daily") announcePasses(dailyWordsSoFar());
     climbPrev = g;
     locked = true;
     checking = false;
@@ -3575,6 +3729,112 @@
     $("#btn-cre-next").textContent = isLastRound ? "See results" : "Climb " + (round + 1) + " of " + climbRounds();
     saveRoundBreak(round + 1);
     show("climbroundend");
+  }
+
+  // Daily only: the climber's spot on the trail is every word solved so far
+  // today (earlier climbs + this one, out of 18), and the sun rises with it.
+  // Lives on the live play screen (called from beginClimbRound + climbAccept),
+  // not the between-rounds recap — the climb moves as you solve.
+  function dailyWordsSoFar() {
+    const wordsIn = (i) => (roundWords[i] ? roundWords[i].length : 0);
+    let priorTotal = 0;
+    for (let i = 0; i < round - 1; i++) priorTotal += wordsIn(i);
+    // live count — this climb isn't finalized into roundWords[] until it ends
+    return priorTotal + currentRoundWords.length;
+  }
+
+  // Today's earlier finishers, fetched once per climb so people who finish
+  // while you're playing show up from your next climb on. Read-only, so dev
+  // replay can use it too. Excludes you (a finished run can't be replayed
+  // outside dev mode anyway).
+  function loadDailyRivals() {
+    if (mode !== "daily" || rivalsRound === round || !dbReady()) return;
+    rivalsRound = round;
+    const day = dailyDay;
+    window.MatchDB.getDailyBoard(day).then((entrants) => {
+      if (!entrants || mode !== "daily" || dailyDay !== day) return;
+      const myUid = window.MatchDB.uid;
+      dailyRivals = entrants.filter((e) => e.uid !== myUid)
+        .map((e) => ({ name: (e.name || "Someone").trim() || "Someone", total: e.total || 0 }));
+      renderAscentMini();
+    });
+  }
+
+  // "You beat Priya" the moment your word count moves past an earlier
+  // finisher's. Beating is final: scores only go up. Drawing level isn't
+  // announced — a tie still goes to fewer wrong words, then speed.
+  function announcePasses(total) {
+    const beat = dailyRivals.filter((r) => r.total === total - 1).map((r) => r.name);
+    const names = (arr) => arr.length <= 3 ? arr.join(", ").replace(/, ([^,]*)$/, " and $1") : arr.slice(0, 2).join(", ") + " +" + (arr.length - 2);
+    if (beat.length) ascentToast("You beat " + names(beat));
+  }
+  let ascentToastT = null;
+  function ascentToast(text) {
+    const t = $("#ascent-toast");
+    t.innerHTML = '<svg viewBox="0 0 13 15" aria-hidden="true"><line x1="1.8" y1="1" x2="1.8" y2="14" stroke="currentColor" stroke-width="1.4"/><path d="M1.8 1.4h9.4l-2.2 2.8 2.2 2.8H1.8z" fill="var(--accent)"/></svg>';
+    const s = document.createElement("span");
+    s.textContent = text;
+    t.appendChild(s);
+    void t.offsetWidth; // restart the drop-in even if one is already showing
+    t.classList.add("show");
+    clearTimeout(ascentToastT);
+    ascentToastT = setTimeout(() => t.classList.remove("show"), 2400);
+  }
+
+  function renderAscentMini() {
+    const el = $("#ascent-mini");
+    if (mode !== "daily") { el.hidden = true; return; }
+    el.hidden = false;
+    loadDailyRivals();
+
+    const PER_ROUND = 6;
+    const totalMax = PER_ROUND * climbRounds();
+    const total = dailyWordsSoFar();
+
+    const trail = $("#ascentTrailDone");
+    const totalLen = trail.getTotalLength();
+    const pointAt = (frac) => trail.getPointAtLength(totalLen * Math.max(0, Math.min(1, frac)));
+
+    const climberFrac = total / totalMax;
+    const p = pointAt(climberFrac);
+    $("#ascentClimber").setAttribute("cx", p.x);
+    $("#ascentClimber").setAttribute("cy", p.y);
+    trail.style.strokeDasharray = totalLen;
+    trail.style.strokeDashoffset = totalLen * (1 - climberFrac);
+
+    // Sunrise tracks the whole day's progress: starts behind the far ridge
+    // (only its glow shows), clears the peaks around the end of climb 1, and
+    // finishes high in the sky behind the timer — overflow:visible on the SVG
+    // lets it rise past the strip's top edge into the ::before sky.
+    const sunY = 58 - climberFrac * 153;
+    $("#ascentSun").setAttribute("cy", sunY);
+    $("#ascentSunGlow").setAttribute("cy", sunY);
+    $("#ascentSun").setAttribute("opacity", 0.55 + climberFrac * 0.45);
+    $("#ascentSunGlow").setAttribute("opacity", 0.35 + climberFrac * 0.55);
+
+    // Rivals' flags: one faint pole per spot, a small pennant per person
+    // there (up to 3). Drawn under the climber so you walk in front of them.
+    const g = $("#ascentRivals");
+    g.innerHTML = "";
+    const spots = new Map();
+    dailyRivals.forEach((r) => spots.set(r.total, (spots.get(r.total) || 0) + 1));
+    spots.forEach((n, t) => {
+      const q = pointAt(t / totalMax);
+      const f = svgEl("g", { class: total > t ? "passed" : "", opacity: 0.7 }, g);
+      const H = 9 + Math.min(n - 1, 2) * 3;
+      svgEl("line", { x1: q.x, y1: q.y, x2: q.x, y2: q.y - H, stroke: "var(--muted)", "stroke-width": 0.7 }, f);
+      for (let i = 0; i < Math.min(n, 3); i++) {
+        const y = q.y - H + i * 3;
+        svgEl("path", { d: "M" + q.x + "," + y + " h5 l-1.2,1.4 l1.2,1.4 h-5 Z", fill: "var(--muted)" }, f);
+      }
+    });
+  }
+
+  function svgEl(tag, attrs, parent) {
+    const n = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(n);
+    return n;
   }
 
   // The between-climb button: advance to the next climb, or — if this was the
@@ -3783,8 +4043,14 @@
     if (!done.length) {
       list.innerHTML = "<p class='note'>No one's finished this one yet.</p>";
     } else {
-      done.forEach((e, i) => list.appendChild(dailyRow(i + 1, e, e.uid === myUid)));
+      done.forEach((e, i) => {
+        const row = dailyRow(i + 1, e, e.uid === myUid);
+        row.dataset.total = e.total || 0;
+        row.addEventListener("click", () => setBoardFocus(boardFocus === (e.total || 0) ? null : (e.total || 0)));
+        list.appendChild(row);
+      });
     }
+    renderBoardMountain(done, myUid);
     const mine = done.findIndex((e) => e.uid === myUid);
     let foot = done.length + (done.length === 1 ? " player" : " players");
     if (mine >= 0) foot += " · you're " + ordinal(mine + 1);
@@ -3806,6 +4072,10 @@
           [{ transform: "scale(1)" }, { transform: "scale(1.05)" }, { transform: "scale(1)" }],
           { duration: 340, easing: "ease-out" }), 120 + mine * 55 + 200);
       }
+      // ...and your flag gets planted on the mountain.
+      const myFlag = $("#daily-board-mtn .bflag.mine");
+      if (myFlag) anim(myFlag, [{ opacity: 0, transform: "translateY(-10px)" }, { opacity: 1, transform: "translateY(0)" }],
+        { duration: 420, delay: 250, easing: "cubic-bezier(.2,.8,.25,1.4)", fill: "backwards" });
       const pill = $("#daily-board-streak");
       if (pill && !pill.hidden) {
         setTimeout(() => { FX.play("streak"); anim(pill,
@@ -3815,9 +4085,132 @@
     }
   }
 
+  // ---- Board mountain: a flag for every finisher at the word they reached ----
+  let boardFocus = null; // the spot (words solved, 0-18) whose flag + rows are lit up
+  const BOARD_VIEW = { x: 4, y: -16, w: 160, h: 80 }; // cropped to the trail (x 22-145) + pennant room, plus sky for tall poles
+
+  function renderBoardMountain(done, myUid) {
+    const wrap = $("#daily-board-mtn");
+    wrap.innerHTML = "";
+    wrap.hidden = !done.length;
+    if (!done.length) return;
+    const V = BOARD_VIEW, MAX = 18;
+    const svg = svgEl("svg", { viewBox: V.x + " " + V.y + " " + V.w + " " + V.h, role: "img",
+      "aria-label": "Today's mountain with a flag for each player" });
+    wrap.appendChild(svg);
+    const stars = svgEl("g", { fill: "#fff" }, svg);
+    [[14, -6, .5], [44, 16, .4], [96, -10, .45], [118, 0, .35], [156, -4, .5], [22, 22, .3], [160, 24, .4]]
+      .forEach((s) => svgEl("circle", { cx: s[0], cy: s[1], r: 0.8, opacity: s[2] }, stars));
+    // Dawn: the sun up over the far ridge, since the day's climb is done — in
+    // the open sky left of the trail's upper half, clear of the flags.
+    // Own gradient: one referenced from the (hidden) play-screen SVG may not paint.
+    const glow = svgEl("radialGradient", { id: "boardSunGlowFill", cx: 0.5, cy: 0.5, r: 0.5 }, svgEl("defs", {}, svg));
+    svgEl("stop", { offset: 0, "stop-color": "var(--sun-ring)", "stop-opacity": 0.6 }, glow);
+    svgEl("stop", { offset: 1, "stop-color": "var(--sun-ring)", "stop-opacity": 0 }, glow);
+    svgEl("circle", { cx: 62, cy: 4, r: 18, fill: "url(#boardSunGlowFill)", opacity: 0.9 }, svg);
+    svgEl("circle", { cx: 62, cy: 4, r: 5.5, fill: "var(--sun-core)" }, svg);
+    // Same ridges + trail as the play screen's mountain — cloned so they can't drift apart.
+    $("#ascentSvg").querySelectorAll("polygon").forEach((p) => svg.appendChild(p.cloneNode()));
+    const trail = $("#ascentTrailBg").cloneNode();
+    trail.removeAttribute("id");
+    svg.appendChild(trail);
+    const L = trail.getTotalLength();
+
+    const spots = new Map(); // total -> finishers there, already in board order
+    done.forEach((e) => {
+      const t = Math.max(0, Math.min(MAX, e.total || 0));
+      if (!spots.has(t)) spots.set(t, []);
+      spots.get(t).push(e);
+    });
+    const initial = (e) => ([...String(e.name || "?").trim()][0] || "?").toUpperCase();
+    // Swallowtail pennant off a pole. `left` flies it the other way so it
+    // clears a flag planted one word further up the trail.
+    const pennant = (g, x, y, label, mine, w, left) => {
+      const s = left ? -1 : 1;
+      svgEl("path", { d: "M" + x + "," + y + " h" + s * w + " l" + (-s * 2.2) + ",3 l" + (s * 2.2) + ",3 h" + (-s * w) + " Z",
+        fill: mine ? "var(--accent)" : "var(--text)" }, g);
+      const t = svgEl("text", { x: x + s * (w - 2) / 2, y: y + 4.5, "text-anchor": "middle", "font-size": 4.6,
+        "font-weight": 800, fill: mine ? "#1c1005" : "var(--bg)" }, g);
+      t.textContent = label;
+    };
+    [...spots.keys()].sort((a, b) => a - b).forEach((t) => {
+      const people = spots.get(t);
+      const p = trail.getPointAtLength(L * t / MAX);
+      const isMine = (e) => e.uid === myUid;
+      const hasMe = people.some(isMine);
+      const left = spots.has(t + 1);
+      const g = svgEl("g", { class: "bflag" + (hasMe ? " mine" : ""), "data-total": t }, svg);
+      svgEl("circle", { cx: p.x, cy: p.y, r: 1.3, fill: "var(--text)" }, g);
+      // Up to 3 pennants; past that, 2 + a "+N" pennant (amber if you're hidden in it).
+      const vis = people.length > 3 ? people.slice(0, 2) : people;
+      const extra = people.length - vis.length;
+      const n = vis.length + (extra ? 1 : 0);
+      const H = 12 + 7 * (n - 1);
+      svgEl("line", { x1: p.x, y1: p.y, x2: p.x, y2: p.y - H, stroke: "var(--text)", "stroke-width": 0.8 }, g);
+      vis.forEach((e, i) => pennant(g, p.x, p.y - H + i * 7, initial(e), isMine(e), 9, left));
+      if (extra) pennant(g, p.x, p.y - H + vis.length * 7, "+" + extra, hasMe && !vis.some(isMine), 11, left);
+      svgEl("rect", { x: left ? p.x - 13 : p.x - 3, y: p.y - H - 2, width: 16, height: H + 5, fill: "transparent" }, g);
+      g.addEventListener("click", (ev) => { ev.stopPropagation(); setBoardFocus(boardFocus === t ? null : t); });
+    });
+    applyBoardFocus(done, myUid);
+  }
+
+  let boardLastDone = {}; // {done, myUid} from the last render, for the callout's names
+  function setBoardFocus(t) {
+    boardFocus = t;
+    applyBoardFocus();
+  }
+  function applyBoardFocus(done, myUid) {
+    if (done) boardLastDone = { done: done, myUid: myUid };
+    const wrap = $("#daily-board-mtn");
+    const old = wrap.querySelector(".board-callout");
+    if (old) old.remove();
+    const has = boardFocus != null && wrap.querySelector('.bflag[data-total="' + boardFocus + '"]');
+    if (!has) boardFocus = null;
+    wrap.classList.toggle("focus", boardFocus != null);
+    wrap.querySelectorAll(".bflag").forEach((f) => f.classList.toggle("hl", +f.dataset.total === boardFocus));
+    let first = null;
+    document.querySelectorAll("#daily-board-list .lb-row").forEach((r) => {
+      const on = boardFocus != null && +r.dataset.total === boardFocus;
+      r.classList.toggle("spot", on);
+      if (on && !first) first = r;
+    });
+    if (boardFocus == null) return;
+    // Bring the first matching row into view inside the list (not the page).
+    const list = $("#daily-board-list");
+    if (first && (first.offsetTop < list.scrollTop || first.offsetTop + first.offsetHeight > list.scrollTop + list.clientHeight)) {
+      list.scrollTop = first.offsetTop - list.offsetTop - 4;
+    }
+    // Callout above the pole: where it is + who's there.
+    const { done: all, myUid: me } = boardLastDone;
+    const people = (all || []).filter((e) => Math.min(18, e.total || 0) === boardFocus);
+    const names = people.map((e) => (e.uid === me ? "you" : (e.name || "?")));
+    const c = document.createElement("div");
+    c.className = "board-callout";
+    const head = document.createElement("b");
+    head.textContent = boardFocus >= 18 ? "SUMMIT · 18 OF 18" : "WORD " + boardFocus + " OF 18";
+    c.appendChild(head);
+    c.appendChild(document.createTextNode(names.length > 4 ? names.slice(0, 4).join(", ") + " +" + (names.length - 4) + " more" : names.join(", ")));
+    wrap.appendChild(c);
+    const flag = wrap.querySelector('.bflag[data-total="' + boardFocus + '"]');
+    const fb = flag.getBoundingClientRect(), wb = wrap.getBoundingClientRect();
+    const half = c.offsetWidth / 2 + 4;
+    const cx = Math.min(Math.max(fb.left + fb.width / 2 - wb.left, half), wb.width - half);
+    c.style.left = cx + "px";
+    c.style.top = (fb.top - wb.top - 4) + "px"; // may rise over the subtitle — it's a temporary overlay
+  }
+  // Tapping anywhere else on the board clears the highlight.
+  document.addEventListener("click", (ev) => {
+    if (boardFocus == null || screens.dailyboard.hidden) return;
+    if (ev.target.closest(".bflag, #daily-board-list .lb-row")) return;
+    setBoardFocus(null);
+  });
+
   function showDailyBoard(dayKey, opts) {
     opts = opts || {};
     teardownDailyWatch();
+    boardFocus = null;
+    $("#daily-board-mtn").hidden = true;
     const today = dailyKeyOf();
     const yst = shiftDayKey(today, -1);
     const isToday = dayKey === today;
@@ -3852,7 +4245,7 @@
   // The single home Play button: label + one-line status for today's puzzle.
   function renderAdventureProgress() {
     const n = myBeatenSeeds.length;
-    const text = n > 0 ? (n + " / " + (CLIMBS.length || 765) + " beaten") : "Can you beat all 765 climbs?";
+    const text = n > 0 ? (n + " / " + (CLIMBS.length || 746) + " beaten") : "Can you beat all 746 climbs?";
     const el = $("#adventure-progress");
     if (el) el.textContent = text;
     const heroEl = $("#adventure-hero-meta");
@@ -3875,6 +4268,7 @@
     const btn = $("#btn-daily-play");
     const meta = $("#daily-meta");
     if (!btn) return;
+    meta.hidden = !isDev(); // the only note left under Play is the dev-mode reminder
     if (isDev()) {
       btn.textContent = "Play (dev replay)";
       meta.textContent = "Dev mode — replay enabled. " + capFirst(dailyResetText()) + ".";
@@ -4618,7 +5012,7 @@
   }
   function shareInvite() {
     if (!navigator.share) return;
-    navigator.share({ title: "Wadder", text: "Play today's Wadder climb with me:", url: gameLink() })
+    navigator.share({ title: "Daily Climb", text: "Play today's Daily Climb with me:", url: gameLink() })
       .catch(() => {});
   }
   $("#btn-home-invite").addEventListener("click", showInvite);
@@ -4668,7 +5062,7 @@
         else localStorage.setItem("three21.dev", "1");
       }
     } catch (e) {}
-    if (isDev()) console.log("[wadder] dev mode ON — the Daily Climb is replayable. ?dev=0 to disable.");
+    if (isDev()) console.log("[daily-climb] dev mode ON — the Daily Climb is replayable. ?dev=0 to disable.");
 
     // Versus / invite links are off for now: ignore any ?m= and clean the URL.
     if (location.search) history.replaceState(null, "", location.pathname);

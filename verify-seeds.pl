@@ -10,6 +10,13 @@
 #      (climbs.js's own data is internally consistent);
 #   3. no rung is the rung below it plus a grammatical ending (-s/-d/-r/-n on
 #      an -e word) - the actual "no cheap steps" rule enforced in submit().
+#   4. no lockouts: the "no cheap steps" rule is checked against the word the
+#      player ACTUALLY played, not the reference ladder. So for every word a
+#      player could reach on each rung (any dictionary anagram that isn't a
+#      cheap step off something they could have played before), the next
+#      rung must still offer at least one word that isn't just that word plus
+#      an ending. Otherwise a valid earlier choice (e.g. DESIGN instead of
+#      SIGNED) leaves DESIGNS as the only word and the climb can't continue.
 use strict;
 use warnings;
 
@@ -26,6 +33,8 @@ for my $w (split /\n/, $1) {
     $word_set{$w} = 1 if length($w) >= 3;
 }
 print "loaded " . scalar(keys %word_set) . " dictionary words\n";
+my %anagrams;
+push @{ $anagrams{ join("", sort split //, $_) } }, $_ for keys %word_set;
 
 # ---- load climbs.js ----
 open(my $cfh, "<:raw", "$root/climbs.js") or die "climbs.js: $!";
@@ -86,6 +95,20 @@ for my $seed (@seeds) {
         if (is_inflection_of($c[$i+1], $c[$i])) {
             push @problems, "c[" . ($i+1) . "]='$c[$i+1]' is a grammatical inflection of c[$i]='$c[$i]' - violates the no-cheap-steps rule";
         }
+    }
+
+    my %reachable = map { $_ => 1 } @{ $anagrams{ sorted_letters($c[0]) } || [] };
+    for my $i (1 .. $#c) {
+        my @words = @{ $anagrams{ sorted_letters($c[$i]) } || [] };
+        my %next;
+        for my $prev (sort keys %reachable) {
+            my @ok = grep { !is_inflection_of($_, $prev) } @words;
+            if (!@ok) {
+                push @problems, "LOCKOUT at rung $i: a player who played '$prev' can only make '" . join("/", @words) . "', which is '$prev' plus an ending";
+            }
+            $next{$_} = 1 for @ok;
+        }
+        %reachable = %next;
     }
 
     if (@problems) {

@@ -1,8 +1,8 @@
 Add-Type -AssemblyName System.Drawing
 
-# Wadder app icon: dark ground + the ladder mark — two rails, six rungs, the top
-# rung spanning both rails (one word climbed) and each rung below it a step
-# shorter. Drawn from the same 48x120 viewBox as the in-app brandmark.
+# Daily Climb app icon: navy ground + the summit mark — the sun rising behind a
+# back peak, the main peak with the dotted trail you climb, and a flag on top.
+# Drawn from the same 64x56 viewBox as the in-app brandmark (index.html).
 
 function Add-RoundRect {
     param(
@@ -27,18 +27,16 @@ function Blend {
 }
 
 function New-Icon {
-    param([int]$Size, [double]$LadderFrac, [string]$OutPath, [switch]$Maskable)
+    param([int]$Size, [double]$MarkFrac, [string]$OutPath, [switch]$Maskable)
 
     $bmp = New-Object System.Drawing.Bitmap($Size, $Size)
     $g = [System.Drawing.Graphics]::FromImage($bmp)
     $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
 
-    $bg = [System.Drawing.Color]::FromArgb(28, 25, 23)        # #1c1917
-    $accent = [System.Drawing.Color]::FromArgb(245, 158, 11)  # #f59e0b
-    $white = [System.Drawing.Color]::FromArgb(255, 255, 255)
-    $dim = Blend $accent $bg 0.38                             # dimmed rung
-    $lite = Blend $accent $white 0.34                         # rung highlight
-    $bolt = Blend $accent $bg 0.16                            # bolt heads
+    $bg = [System.Drawing.Color]::FromArgb(18, 20, 31)        # #12141f (--bg)
+    $accent = [System.Drawing.Color]::FromArgb(232, 135, 30)  # #e8871e (--accent)
+    $sun = Blend $bg $accent 0.65                             # fill-opacity .65
+    $back = Blend $bg $accent 0.38                            # back peak, fill-opacity .38
 
     $bgBrush = New-Object System.Drawing.SolidBrush($bg)
     if ($Maskable) {
@@ -50,65 +48,47 @@ function New-Icon {
         $p.Dispose()
     }
 
-    # viewBox 0..48 x, content y 6..114 (height 108). Scale to target.
-    [double]$H = $Size * $LadderFrac
-    [double]$s = $H / 108.0
-    [double]$W = 37.0 * $s
-    [double]$left = ($Size - $W) / 2.0
-    [double]$top = ($Size - $H) / 2.0
-    function VX([double]$vx) { return $left + ($vx - 5.5) * $s }
-    function VY([double]$vy) { return $top + ($vy - 6.0) * $s }
-
-    $accBrush = New-Object System.Drawing.SolidBrush($accent)
-    $dimBrush = New-Object System.Drawing.SolidBrush($dim)
-    $liteBrush = New-Object System.Drawing.SolidBrush($lite)
-    $boltBrush = New-Object System.Drawing.SolidBrush($bolt)
-
-    function Fill-VBRoundRect {
-        param([System.Drawing.Brush]$Brush, [double]$X, [double]$Y, [double]$Wd, [double]$Ht, [double]$R)
-        $bp = New-Object System.Drawing.Drawing2D.GraphicsPath
-        Add-RoundRect -Path $bp -X (VX $X) -Y (VY $Y) -W ($Wd * $s) -H ($Ht * $s) -R ($R * $s)
-        $g.FillPath($Brush, $bp)
-        $bp.Dispose()
+    # viewBox 64 x 56, centred; the mark spans MarkFrac of the icon's width.
+    [double]$s = $Size * $MarkFrac / 64.0
+    [double]$left = ($Size - 64.0 * $s) / 2.0
+    [double]$top = ($Size - 56.0 * $s) / 2.0
+    function P([double]$vx, [double]$vy) { return New-Object System.Drawing.PointF([single]($left + $vx * $s), [single]($top + $vy * $s)) }
+    function Poly([System.Drawing.Color]$c, [double[]]$xy) {
+        $pts = @(); for ($i = 0; $i -lt $xy.Length; $i += 2) { $pts += (P $xy[$i] $xy[$i + 1]) }
+        $b = New-Object System.Drawing.SolidBrush($c); $g.FillPolygon($b, [System.Drawing.PointF[]]$pts); $b.Dispose()
     }
-    function Fill-VBDot {
-        param([System.Drawing.Brush]$Brush, [double]$Cx, [double]$Cy, [double]$Rad)
-        $rp = $Rad * $s
-        $g.FillEllipse($Brush, (VX $Cx) - $rp, (VY $Cy) - $rp, 2 * $rp, 2 * $rp)
+    function Dot([System.Drawing.Color]$c, [double]$cx, [double]$cy, [double]$r) {
+        $b = New-Object System.Drawing.SolidBrush($c)
+        $g.FillEllipse($b, [single]($left + ($cx - $r) * $s), [single]($top + ($cy - $r) * $s), [single](2 * $r * $s), [single](2 * $r * $s))
+        $b.Dispose()
     }
 
-    # rails
-    Fill-VBRoundRect $accBrush 5.5 6 5 108 2.5
-    Fill-VBRoundRect $accBrush 37.5 6 5 108 2.5
+    # sun, then the back peak over it, then the main peak
+    Dot $sun 44 25 11
+    Poly $back @(30, 54, 45, 28, 62, 54)
+    Poly $accent @(2, 54, 26, 14, 50, 54)
 
-    # rungs: [x, y, w, h, rx, dim?]
-    $rungs = @(
-        @(6, 16,    36, 6, 3,   $false),
-        @(6, 33.5,  28, 5, 2.5, $true),
-        @(6, 50.5,  22, 5, 2.5, $true),
-        @(6, 67.5,  17, 5, 2.5, $true),
-        @(6, 84.5,  13, 5, 2.5, $true),
-        @(6, 101.5, 10, 5, 2.5, $true)
-    )
-    foreach ($r in $rungs) {
-        $brush = if ($r[5]) { $dimBrush } else { $accBrush }
-        Fill-VBRoundRect $brush $r[0] $r[1] $r[2] $r[3] $r[4]
+    # dotted trail up the main peak: a dot every 4.7 units along the polyline
+    $trail = @(@(11, 51), @(22, 44), @(15, 36), @(25, 27), @(21, 21))
+    [double]$carry = 0
+    for ($i = 0; $i -lt $trail.Length - 1; $i++) {
+        $ax = $trail[$i][0]; $ay = $trail[$i][1]; $bx = $trail[$i + 1][0]; $by = $trail[$i + 1][1]
+        $len = [Math]::Sqrt(($bx - $ax) * ($bx - $ax) + ($by - $ay) * ($by - $ay))
+        for ([double]$d = $carry; $d -le $len; $d += 4.7) {
+            $t = $d / $len
+            Dot $bg ($ax + ($bx - $ax) * $t) ($ay + ($by - $ay) * $t) 1.2
+        }
+        $carry = 4.7 - (($len - $carry) % 4.7)
+        if ($carry -ge 4.7) { $carry = 0 }
     }
-    # rung top highlights
-    $hi = @(
-        @(7, 16,    33, 1.8),
-        @(7, 33.5,  25, 1.5),
-        @(7, 50.5,  19, 1.5),
-        @(7, 67.5,  14, 1.5),
-        @(7, 84.5,  10, 1.5),
-        @(7, 101.5, 7,  1.5)
-    )
-    foreach ($h2 in $hi) { Fill-VBRoundRect $liteBrush $h2[0] $h2[1] $h2[2] $h2[3] ($h2[3] / 2.0) }
 
-    # bolt heads where rungs meet the rails
-    Fill-VBDot $boltBrush 8 19 1.9
-    Fill-VBDot $boltBrush 40 19 1.9
-    foreach ($cy in @(36, 53, 70, 87, 104)) { Fill-VBDot $boltBrush 8 $cy 1.7 }
+    # flag pole + swallowtail flag
+    $pen = New-Object System.Drawing.Pen($accent, [single](2 * $s))
+    $pen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
+    $pen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
+    $g.DrawLine($pen, (P 26 14), (P 26 3))
+    $pen.Dispose()
+    Poly $accent @(26, 3.5, 36, 3.5, 33.4, 6.7, 36, 9.9, 26, 9.9)
 
     $g.Dispose()
     $bmp.Save($OutPath, [System.Drawing.Imaging.ImageFormat]::Png)
@@ -117,6 +97,6 @@ function New-Icon {
 }
 
 $dir = "D:\Claude Code\portfolio\games\3-2-1"
-New-Icon -Size 192 -LadderFrac 0.64 -OutPath "$dir\icon-192.png"
-New-Icon -Size 512 -LadderFrac 0.64 -OutPath "$dir\icon-512.png"
-New-Icon -Size 512 -LadderFrac 0.50 -OutPath "$dir\icon-maskable-512.png" -Maskable
+New-Icon -Size 192 -MarkFrac 0.70 -OutPath "$dir\icon-192.png"
+New-Icon -Size 512 -MarkFrac 0.70 -OutPath "$dir\icon-512.png"
+New-Icon -Size 512 -MarkFrac 0.56 -OutPath "$dir\icon-maskable-512.png" -Maskable
