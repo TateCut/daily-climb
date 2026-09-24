@@ -639,10 +639,19 @@
   .lb-row.me .lb-rank { color: var(--accent); }
   .lb-namewrap { flex: 1; min-width: 0; }
   .lb-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Daily board only: a no-hint badge next to the name. Wrapping .lb-name in
+     its own flex row (rather than changing .lb-name itself) keeps the
+     ellipsis truncation working exactly as before for the shared .lb-name
+     class the versus leaderboard (lbRow) also uses — the star just never
+     gets truncated away. */
+  .lb-namerow { display: flex; align-items: baseline; gap: 4px; min-width: 0; }
+  .lb-namerow .lb-name { flex: 1; min-width: 0; }
+  .lb-star { flex: none; color: var(--accent); font-size: 0.85em; }
   .lb-meta { font-size: 0.72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .lb-score { font-weight: 700; font-variant-numeric: tabular-nums; }
   .lb-row.pending .lb-score { font-weight: 400; font-size: 0.8rem; color: var(--muted); }
   .lb-detail { width: 100%; padding: 2px 4px 8px; }
+  .lb-detail-badge { color: var(--accent); margin: 0 0 6px; }
 
   /* Tutorial */
   .tut-card {
@@ -1393,6 +1402,7 @@
         total: r.total || 0,
         strikes: r.strikes || 0,
         solveMs: r.solveMs || 0,
+        hintUsed: !!r.hintUsed,
         roundWords: wrapRoundWords(r.roundWords),
         finishedAt: Date.now(),
       });
@@ -3314,10 +3324,23 @@
     r.textContent = rank == null ? "·" : rank;
     const nmwrap = document.createElement("div");
     nmwrap.className = "lb-namewrap";
+    const nmrow = document.createElement("div");
+    nmrow.className = "lb-namerow";
     const nm = document.createElement("div");
     nm.className = "lb-name";
     nm.textContent = (e.name || "?") + (isMe ? " (you)" : "");
-    nmwrap.appendChild(nm);
+    nmrow.appendChild(nm);
+    // Strict === false, not just falsy: entries from before this field
+    // existed have hintUsed undefined, and we genuinely don't know whether
+    // they used one — only an explicit false earns the badge.
+    if (e.hintUsed === false) {
+      const star = document.createElement("span");
+      star.className = "lb-star";
+      star.title = "Completed without using a hint";
+      star.textContent = "★";
+      nmrow.appendChild(star);
+    }
+    nmwrap.appendChild(nmrow);
     const meta = document.createElement("div");
     meta.className = "lb-meta";
     const st = e.strikes || 0;
@@ -3739,6 +3762,7 @@
       await window.MatchDB.submitDaily(dailyDay, {
         name: storedName || playerName || "Player",
         total: total, strikes: sessionStrikes, solveMs: solveMs, roundWords: roundWords,
+        hintUsed: hintUsed,
       });
       await window.MatchDB.bumpStreak(dailyDay, prevDay);
       const p = await window.MatchDB.getPlayer();
@@ -4165,6 +4189,12 @@
     if (open) return;
     const d = document.createElement("div");
     d.className = "lb-detail";
+    if (e.hintUsed === false) {
+      const badge = document.createElement("p");
+      badge.className = "note lb-detail-badge";
+      badge.textContent = "★ Completed without using a hint";
+      d.appendChild(badge);
+    }
     const rounds = document.createElement("div");
     rounds.className = "rounds";
     renderRoundsBlock(rounds, e.roundWords || []);
