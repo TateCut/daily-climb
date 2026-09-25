@@ -78,8 +78,9 @@ self.addEventListener("push", (e) => {
   try { p = e.data ? e.data.json() : {}; } catch (err) {}
   const n = p.notification || {};
   const d = p.data || {};
-  const title = n.title || d.title || "Daily Climb";
-  const body = n.body || d.body || "Today's climb is waiting.";
+  // One line only: "Today's climb is waiting ⛰️" (the phone shows the app name above it).
+  const title = n.title || d.title || "Today's climb is waiting ⛰️";
+  const body = n.body || d.body || "";
   e.waitUntil(self.registration.showNotification(title, {
     body,
     icon: "./icon-192.png",

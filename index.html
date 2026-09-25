@@ -570,7 +570,7 @@
   }
   .board-callout b { display: block; color: var(--accent); font-size: 0.62rem; letter-spacing: 0.1em; }
   /* The mountain takes ~150px, so the list gives some back to stay scroll-free. */
-  #screen-daily-board .lb-list { max-height: max(120px, min(48vh, calc(100vh - 510px))); } /* -30px more for the reminder link */
+  #screen-daily-board .lb-list { max-height: max(120px, min(48vh, calc(100vh - 534px))); } /* room for the reminder button */
   #daily-board-list .lb-row.spot { border-color: var(--text); }
   #daily-board-list .lb-row.me.spot { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   @media (prefers-reduced-motion: reduce) { .board-mtn .bflag { transition: none; } }
@@ -762,8 +762,29 @@
   .reminder-times button[aria-checked="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   .reminder-times button[aria-checked="true"] small { color: var(--accent); }
   .reminder-devid { margin: -6px 0 12px; user-select: all; }
-  .reminder-link { font-size: 0.8rem; margin-top: -4px; }
-  .reminder-link[hidden] { display: none; }
+  /* Daily board: while reminders are off this is a vivid call to action
+     (amber, bell that wiggles on arrival); once on it drops to a quiet link. */
+  .reminder-cta {
+    width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 10px 14px; border-radius: 10px; cursor: pointer; font: inherit; font-size: 0.92rem; font-weight: 650;
+    color: var(--text); border: 1.5px solid var(--accent); background: rgba(232, 135, 30, 0.14);
+    box-shadow: 0 0 18px rgba(232, 135, 30, 0.18);
+  }
+  .reminder-cta[hidden] { display: none; }
+  .reminder-cta svg { width: 18px; height: 18px; flex: none; color: var(--accent); transform-origin: 50% 10%; }
+  .reminder-cta.ring svg { animation: bell-ring 1s ease-in-out 0.5s 2; }
+  @keyframes bell-ring {
+    0%, 100% { transform: rotate(0); } 15% { transform: rotate(16deg); } 30% { transform: rotate(-14deg); }
+    45% { transform: rotate(10deg); } 60% { transform: rotate(-6deg); } 75% { transform: rotate(2deg); }
+  }
+  @media (hover: hover) { .reminder-cta:not(.on):hover { background: rgba(232, 135, 30, 0.22); } }
+  .reminder-cta.on {
+    width: auto; padding: 2px 6px; border: none; background: none; box-shadow: none;
+    font-size: 0.8rem; font-weight: 400; color: var(--muted); margin-top: -4px;
+  }
+  .reminder-cta.on svg { width: 14px; height: 14px; }
+  .reminder-cta.on u { text-underline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .reminder-cta.ring svg { animation: none; } }
   .install-actions button { flex: 1; padding: 10px; font-size: 0.9rem; border-radius: 10px; }
   /* Points at the browser button to tap first (Safari's bar sits just below
      the page on iPhone; in-app browsers put their menu top right). */
@@ -1059,7 +1080,7 @@
       <div class="board-mtn" id="daily-board-mtn" hidden></div>
       <div class="lb-list" id="daily-board-list"></div>
       <p class="note" id="daily-board-foot"></p>
-      <button class="linkbtn reminder-link" id="btn-reminder" type="button" hidden></button>
+      <button class="reminder-cta" id="btn-reminder" type="button" hidden></button>
       <div class="homelinks">
         <button class="ghost" id="btn-daily-board-flip" type="button" hidden></button>
         <button class="ghost" id="btn-daily-board-home" type="button">&larr; Home</button>
@@ -5472,9 +5493,15 @@
     b.hidden = !ability;
     if (!ability) return null;
     const r = reminderLocal();
-    b.textContent = remindersOnHere()
-      ? "🔔 Daily reminder: " + reminderTimeLabel(r.hour) + " · change"
-      : "🔔 Get a daily reminder";
+    const on = remindersOnHere();
+    const bell = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5a5.5 5.5 0 0 0-5.5 5.5v3.6L5 15.5v1h14v-1l-1.5-2.9V9A5.5 5.5 0 0 0 12 3.5Z" fill="currentColor"/><path d="M9.8 18.5a2.3 2.3 0 0 0 4.4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+    b.classList.toggle("on", on);
+    b.innerHTML = bell + (on
+      ? "<span>Reminder at " + reminderTimeLabel(r.hour) + " · <u>change</u></span>"
+      : "<span>Turn on daily reminders</span>");
+    // Re-trigger the bell wiggle each time the call to action appears.
+    b.classList.remove("ring");
+    if (!on) { void b.offsetWidth; b.classList.add("ring"); }
     return ability;
   }
   // Offer once, right after finishing a daily (dev mode: every time, for testing).
