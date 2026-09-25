@@ -570,7 +570,7 @@
   }
   .board-callout b { display: block; color: var(--accent); font-size: 0.62rem; letter-spacing: 0.1em; }
   /* The mountain takes ~150px, so the list gives some back to stay scroll-free. */
-  #screen-daily-board .lb-list { max-height: max(120px, min(48vh, calc(100vh - 480px))); }
+  #screen-daily-board .lb-list { max-height: max(120px, min(48vh, calc(100vh - 510px))); } /* -30px more for the reminder link */
   #daily-board-list .lb-row.spot { border-color: var(--text); }
   #daily-board-list .lb-row.me.spot { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   @media (prefers-reduced-motion: reduce) { .board-mtn .bflag { transition: none; } }
@@ -750,6 +750,20 @@
   .install-glyph svg { width: 15px; height: 15px; }
   .install-pill { display: inline-block; padding: 1px 7px; border-radius: 6px; background: rgba(255, 255, 255, 0.08); font-weight: 600; }
   .install-actions { display: flex; gap: 8px; }
+  /* Daily reminder sheet: pick a time (reuses the install sheet's frame). */
+  .reminder-times { display: flex; gap: 8px; margin: 0 0 14px; }
+  .reminder-times[hidden] { display: none; }
+  .reminder-times button {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1px;
+    padding: 9px 4px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg);
+    color: var(--text); font: inherit; font-size: 0.85rem; font-weight: 650; cursor: pointer;
+  }
+  .reminder-times button small { font-size: 0.72rem; font-weight: 400; color: var(--muted); }
+  .reminder-times button[aria-checked="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .reminder-times button[aria-checked="true"] small { color: var(--accent); }
+  .reminder-devid { margin: -6px 0 12px; user-select: all; }
+  .reminder-link { font-size: 0.8rem; margin-top: -4px; }
+  .reminder-link[hidden] { display: none; }
   .install-actions button { flex: 1; padding: 10px; font-size: 0.9rem; border-radius: 10px; }
   /* Points at the browser button to tap first (Safari's bar sits just below
      the page on iPhone; in-app browsers put their menu top right). */
@@ -1045,6 +1059,7 @@
       <div class="board-mtn" id="daily-board-mtn" hidden></div>
       <div class="lb-list" id="daily-board-list"></div>
       <p class="note" id="daily-board-foot"></p>
+      <button class="linkbtn reminder-link" id="btn-reminder" type="button" hidden></button>
       <div class="homelinks">
         <button class="ghost" id="btn-daily-board-flip" type="button" hidden></button>
         <button class="ghost" id="btn-daily-board-home" type="button">&larr; Home</button>
@@ -1347,6 +1362,24 @@
       <button class="primary" id="btn-install-done" type="button">Got it</button>
     </div>
   </div>
+  <!-- Daily reminder settings (same sheet styling as Add to Home Screen).
+       Filled per state by showReminderSheet(): ask / manage / iPhone-needs-
+       install / notifications blocked. -->
+  <div class="install-sheet" id="reminder-sheet" role="dialog" aria-modal="true" aria-labelledby="reminder-title" hidden>
+    <div class="install-head">
+      <div class="install-appicon"><svg viewBox="0 0 64 56" aria-hidden="true"><use href="#summit-mark"/></svg></div>
+      <div>
+        <h3 id="reminder-title"></h3>
+        <p class="install-sub" id="reminder-sub"></p>
+      </div>
+    </div>
+    <div class="reminder-times" id="reminder-times" role="radiogroup" aria-label="Reminder time"></div>
+    <p class="install-sub reminder-devid" id="reminder-devid" hidden></p>
+    <div class="install-actions">
+      <button class="ghost" id="btn-reminder-secondary" type="button"></button>
+      <button class="primary" id="btn-reminder-primary" type="button"></button>
+    </div>
+  </div>
   <svg class="install-arrow" id="install-arrow" viewBox="0 0 28 34" aria-hidden="true" hidden>
     <path d="M14 2v24M4 17l10 10 10-10" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>
@@ -1373,7 +1406,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
   import {
     getFirestore, doc, setDoc, getDoc, getDocs, updateDoc, onSnapshot, serverTimestamp,
-    arrayUnion, collection, query, where,
+    arrayUnion, arrayRemove, collection, query, where,
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
   import {
     getAuth, signInAnonymously, onAuthStateChanged,
@@ -1382,14 +1415,20 @@
     getAnalytics, logEvent,
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-analytics.js";
 
+  // Daily reminders: the web push certificate's PUBLIC key (Firebase console >
+  // Project settings > Cloud Messaging > Web Push certificates). Safe to ship.
+  const VAPID_KEY = "BPjs0ReIFPP-D4nv0dALo4_LiBJW7BwvDUTfLIuY_cZwD7Bq0DDiK2MSs4GFHi50oLjAXkns-ntRan5BV2sHWbg";
+  const FCM_URL = "https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging.js";
+
   const cfg = window.THREE21_FIREBASE_CONFIG;
-  let db = null, auth = null, analytics = null;
+  let db = null, auth = null, analytics = null, fbApp = null;
   if (cfg && cfg.apiKey && cfg.apiKey !== "REPLACE_ME") {
     let app = null;
     try {
       app = initializeApp(cfg);
       db = getFirestore(app);
       auth = getAuth(app);
+      fbApp = app;
     } catch (e) {
       db = null; auth = null;
     }
@@ -1502,6 +1541,39 @@
         await setDoc(doc(db, "players", uid), { tutorialSeen: true }, { merge: true });
       } catch (e) {}
     },
+    // ---- Daily reminders (web push via Firebase Cloud Messaging) ----
+    // players/{uid}.reminder = { on, hour (local 0-23), tz (IANA), tokens[],
+    // lastSentDay } — read by the hourly GitHub Actions sender
+    // (tools/reminders/send.mjs). One setting per player; one token per
+    // device. The messaging SDK is imported only when needed, so a failed
+    // fetch of it can never break the rest of the game.
+    async pushSupported() {
+      if (!fbApp || !("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) return false;
+      try { const m = await import(FCM_URL); return await m.isSupported(); } catch (e) { return false; }
+    },
+    // Needs notification permission already granted (ask from the tap first).
+    async enableReminders(hour, tz) {
+      if (!uid) throw new Error("not signed in");
+      const m = await import(FCM_URL);
+      const reg = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise((_, rej) => setTimeout(() => rej(new Error("service worker not ready")), 8000)),
+      ]);
+      const token = await m.getToken(m.getMessaging(fbApp), { vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
+      if (!token) throw new Error("no push token");
+      await setDoc(doc(db, "players", uid), {
+        reminder: { on: true, hour: hour, tz: tz, tokens: arrayUnion(token), updatedAt: serverTimestamp() },
+      }, { merge: true });
+      return token;
+    },
+    // Turn reminders off on THIS device (other devices keep theirs).
+    async disableReminders(token) {
+      try { const m = await import(FCM_URL); await m.deleteToken(m.getMessaging(fbApp)); } catch (e) {}
+      if (uid && token) {
+        await setDoc(doc(db, "players", uid), { reminder: { tokens: arrayRemove(token) } }, { merge: true });
+      }
+    },
+
     // Collection mode: record that this player has cleared CLIMBS[seedIndex].
     // arrayUnion so concurrent devices / repeats never duplicate an entry.
     async markSeedBeaten(seedIndex) {
@@ -2360,6 +2432,7 @@
   function show(name) {
     hideChipPopover(); // never leave a word definition floating over the next screen
     hideInstallSheet(); // ...or the Add to Home Screen how-to
+    hideReminderSheet(); // ...or the daily reminder sheet
     const el = screens[name];
     const arriving = el && el.hidden;
     for (const k in screens) screens[k].hidden = k !== name;
@@ -4226,6 +4299,8 @@
           { duration: 340, easing: "ease-out" }), 120 + mine * 55 + 200);
       }
       // ...and your flag gets planted on the mountain.
+      // Offer a daily reminder once, after the results have landed.
+      setTimeout(maybeOfferReminder, 1800);
       const myFlag = $("#daily-board-mtn .bflag.mine");
       if (myFlag) anim(myFlag, [{ opacity: 0, transform: "translateY(-10px)" }, { opacity: 1, transform: "translateY(0)" }],
         { duration: 420, delay: 250, easing: "cubic-bezier(.2,.8,.25,1.4)", fill: "backwards" });
@@ -4385,6 +4460,7 @@
     $("#daily-board-list").innerHTML = "<p class='note'>Loading…</p>";
     $("#daily-board-foot").textContent = "";
     show("dailyboard");
+    renderReminderLink();
 
     const paint = (entrants) => {
       if (!entrants) { $("#daily-board-list").innerHTML = "<p class='note'>Couldn't load the board.</p>"; return; }
@@ -5343,8 +5419,9 @@
   }
   $("#btn-home-install").addEventListener("click", openInstall);
   $("#btn-install-done").addEventListener("click", hideInstallSheet);
-  $("#install-scrim").addEventListener("click", hideInstallSheet);
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideInstallSheet(); });
+  // The scrim + Escape close whichever sheet is open (install or reminder).
+  $("#install-scrim").addEventListener("click", () => { hideInstallSheet(); hideReminderSheet(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { hideInstallSheet(); hideReminderSheet(); } });
   $("#btn-install-copy").addEventListener("click", () => {
     const b = $("#btn-install-copy");
     const link = gameLink();
@@ -5354,6 +5431,165 @@
     } else fail();
   });
   renderInstallButton();
+
+  // ---- Daily reminders ----
+  // A link on the daily board ("🔔 Get a daily reminder" / "Daily reminder:
+  // 6pm · change") opens a sheet to pick a time; it's also offered once,
+  // right after a player's first finished daily. The hourly GitHub Actions
+  // sender reminds players who haven't played yet today at their local time.
+  // iPhone only allows push for home-screen web apps, so Safari players are
+  // pointed at Add to Home Screen first.
+  const REMINDER_KEY = "three21.reminder";            // this device: { hour, token }
+  const REMINDER_ASKED_KEY = "three21.reminderOffered";
+  const REMINDER_TIMES = [
+    { hour: 8, label: "Morning", time: "8am" },
+    { hour: 12, label: "Lunch", time: "12pm" },
+    { hour: 18, label: "Evening", time: "6pm" },
+  ];
+  const DEFAULT_REMINDER_HOUR = 18;
+  let reminderHour = DEFAULT_REMINDER_HOUR; // the time picked in the open sheet
+  let reminderMode = null;                  // which sheet is showing
+  let reminderOpenedFrom = null;
+  const reminderTimeLabel = (h) => (REMINDER_TIMES.find((t) => t.hour === h) || { time: h + ":00" }).time;
+  function reminderLocal() {
+    try { return JSON.parse(localStorage.getItem(REMINDER_KEY) || "null"); } catch (e) { return null; }
+  }
+  function remindersOnHere() {
+    const r = reminderLocal();
+    return !!(r && r.token && "Notification" in window && Notification.permission === "granted");
+  }
+  // What this device can do: "push" (can turn reminders on), "install"
+  // (iPhone Safari: needs Add to Home Screen first) or null (hide it all).
+  async function reminderAbility() {
+    if (IN_APP) return null;
+    if (IS_IOS && !isStandalone()) return "install";
+    if (!window.MatchDB || !window.MatchDB.ready) return null;
+    return (await window.MatchDB.pushSupported()) ? "push" : null;
+  }
+  async function renderReminderLink() {
+    const b = $("#btn-reminder");
+    const ability = await reminderAbility();
+    b.hidden = !ability;
+    if (!ability) return null;
+    const r = reminderLocal();
+    b.textContent = remindersOnHere()
+      ? "🔔 Daily reminder: " + reminderTimeLabel(r.hour) + " · change"
+      : "🔔 Get a daily reminder";
+    return ability;
+  }
+  // Offer once, right after finishing a daily (dev mode: every time, for testing).
+  async function maybeOfferReminder() {
+    let offered = false;
+    try { offered = localStorage.getItem(REMINDER_ASKED_KEY) === "1"; } catch (e) {}
+    if ((offered && !isDev()) || remindersOnHere() || screens.dailyboard.hidden) return;
+    const ability = await reminderAbility();
+    if (!ability || screens.dailyboard.hidden || !$("#install-sheet").hidden) return;
+    try { localStorage.setItem(REMINDER_ASKED_KEY, "1"); } catch (e) {}
+    trackEv("reminder_offered", { ability: ability });
+    showReminderSheet();
+  }
+
+  async function showReminderSheet(forceMode) {
+    const ability = await reminderAbility();
+    if (!ability) return;
+    const blocked = ability === "push" && Notification.permission === "denied";
+    const mode = forceMode || (ability === "install" ? "install" : blocked ? "blocked" : remindersOnHere() ? "manage" : "ask");
+    reminderMode = mode;
+    const r = reminderLocal();
+    reminderHour = (r && r.hour) || DEFAULT_REMINDER_HOUR;
+    const set = (title, sub, primary, secondary) => {
+      $("#reminder-title").textContent = title;
+      $("#reminder-sub").textContent = sub;
+      $("#btn-reminder-primary").textContent = primary;
+      $("#btn-reminder-primary").disabled = false;
+      $("#btn-reminder-secondary").textContent = secondary || "";
+      $("#btn-reminder-secondary").hidden = !secondary;
+    };
+    const showTimes = mode === "ask" || mode === "manage";
+    if (mode === "ask") set("Want a daily reminder?", "We'll let you know when today's climb is waiting, only on days you haven't played yet.", "Remind me", "Not now");
+    else if (mode === "manage") set("Daily reminder", "You'll get a nudge at this time on days you haven't played yet.", "Save", "Turn off");
+    else if (mode === "install") set("Get a daily reminder", "iPhone only sends reminders to games on your Home Screen. Add Daily Climb there, open it from its icon, then turn reminders on here.", "Show me how", "Not now");
+    else if (mode === "blocked") set("Notifications are off", IS_IOS
+      ? "Turn them on in Settings › Notifications › Daily Climb, then try again."
+      : "Allow notifications for this site in your browser's settings, then try again.", "OK", null);
+    const times = $("#reminder-times");
+    times.hidden = !showTimes;
+    times.innerHTML = "";
+    if (showTimes) {
+      REMINDER_TIMES.forEach((t) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.setAttribute("role", "radio");
+        b.setAttribute("aria-checked", String(t.hour === reminderHour));
+        b.innerHTML = t.label + "<small>" + t.time + "</small>";
+        b.addEventListener("click", () => {
+          reminderHour = t.hour;
+          times.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+        });
+        times.appendChild(b);
+      });
+    }
+    // Dev mode: show the player ID to paste into the GitHub "send a test" run.
+    const devid = $("#reminder-devid");
+    devid.hidden = !(isDev() && window.MatchDB && window.MatchDB.uid);
+    if (!devid.hidden) devid.textContent = "Test ID: " + window.MatchDB.uid;
+    reminderOpenedFrom = document.activeElement;
+    $("#install-scrim").hidden = false;
+    $("#reminder-sheet").hidden = false;
+    $("#btn-reminder-primary").focus();
+  }
+  function hideReminderSheet() {
+    if ($("#reminder-sheet").hidden) return;
+    $("#reminder-sheet").hidden = true;
+    if ($("#install-sheet").hidden) $("#install-scrim").hidden = true;
+    if (reminderOpenedFrom && reminderOpenedFrom.focus) reminderOpenedFrom.focus();
+    reminderOpenedFrom = null;
+    reminderMode = null;
+  }
+  async function reminderPrimary() {
+    const btn = $("#btn-reminder-primary");
+    if (reminderMode === "install") { hideReminderSheet(); openInstall(); return; }
+    if (reminderMode === "blocked") { hideReminderSheet(); return; }
+    // Ask first, straight from the tap: Safari only allows the permission
+    // prompt from a user gesture, so nothing may be awaited before this.
+    let perm = Notification.permission;
+    if (perm !== "granted") {
+      try { perm = await Notification.requestPermission(); } catch (e) { perm = "denied"; }
+    }
+    if (perm !== "granted") {
+      trackEv("reminder_denied");
+      showReminderSheet("blocked");
+      return;
+    }
+    const hour = reminderHour;
+    btn.disabled = true;
+    btn.textContent = "Turning on…";
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+      const token = await window.MatchDB.enableReminders(hour, tz);
+      try { localStorage.setItem(REMINDER_KEY, JSON.stringify({ hour: hour, token: token })); } catch (e) {}
+      trackEv("reminder_on", { hour: hour });
+      hideReminderSheet();
+      renderReminderLink();
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = reminderMode === "manage" ? "Save" : "Remind me";
+      $("#reminder-sub").textContent = "Couldn't turn on reminders. Check your connection and try again.";
+    }
+  }
+  async function reminderSecondary() {
+    if (reminderMode === "manage") {
+      const r = reminderLocal();
+      try { await window.MatchDB.disableReminders(r && r.token); } catch (e) {}
+      try { localStorage.removeItem(REMINDER_KEY); } catch (e) {}
+      trackEv("reminder_off");
+      renderReminderLink();
+    }
+    hideReminderSheet();
+  }
+  $("#btn-reminder").addEventListener("click", () => showReminderSheet());
+  $("#btn-reminder-primary").addEventListener("click", reminderPrimary);
+  $("#btn-reminder-secondary").addEventListener("click", reminderSecondary);
 
   function syncSoundBtn() {
     const b = $("#btn-sound");
