@@ -1022,16 +1022,6 @@
       <p class="note whoami" id="home-whoami" hidden></p>
     </section>
 
-    <!-- DAILY CLIMB: intro / one-shot confirm -->
-    <section id="screen-daily-intro" hidden>
-      <h2 style="margin:0;font-size:1.3rem;">Today's climb</h2>
-      <p class="lede" id="daily-intro-date"></p>
-      <p class="lede">Three climbs, 3 letters up to 8. Your score is how many words you get.</p>
-      <p class="note">One attempt.</p>
-      <button class="primary" id="btn-daily-start" type="button">Start</button>
-      <button class="linkbtn" id="btn-daily-intro-back" type="button">&larr; Home</button>
-    </section>
-
     <!-- INVITE: share the game link -->
     <section id="screen-invite" hidden>
       <h2 style="margin:0;font-size:1.3rem;">Invite friends</h2>
@@ -2355,7 +2345,6 @@
     vswaiting: $("#screen-vs-waiting"),
     leaderboard: $("#screen-leaderboard"),
     vsreveal: $("#screen-vs-reveal"),
-    dailyintro: $("#screen-daily-intro"),
     dailyboard: $("#screen-daily-board"),
     invite: $("#screen-invite"),
     climbintro: $("#screen-climb-intro"),
@@ -4450,26 +4439,27 @@
     setHomeHero(playedToday);
   }
 
+  // Play goes straight into today's climb — no separate intro/confirm screen
+  // (the tutorial covers the rules; the home Play button is unmistakably the
+  // daily). Already played → today's board; mid-run → resume.
+  let dailyPlayBusy = false; // ignore extra taps while the server check below is in flight
   async function dailyPlayClick() {
+    if (dailyPlayBusy) return;
     const today = dailyKeyOf();
-    // Dev replay: skip the "already played" guards, always offer a fresh run.
-    if (isDev()) {
-      $("#daily-intro-date").textContent = dateLabel(today);
-      show("dailyintro");
-      return;
-    }
+    // Dev replay: skip the "already played" guards, always a fresh run.
+    if (isDev()) { startDailySession(); return; }
     if (myDailyLastDay === today) { showDailyBoard(today, { live: true }); return; }
     if (resumeState && resumeState.mode === "daily" && resumeState.dailyDay === today) { resumeGame(); return; }
+    dailyPlayBusy = true;
     let mine = null;
-    if (dbReady()) { try { mine = await window.MatchDB.getDailyEntrant(today); } catch (e) {} }
+    try {
+      if (dbReady()) { try { mine = await window.MatchDB.getDailyEntrant(today); } catch (e) {} }
+    } finally { dailyPlayBusy = false; }
     if (mine) { showDailyBoard(today, { live: true }); return; }
-    $("#daily-intro-date").textContent = dateLabel(today);
-    show("dailyintro");
+    startDailySession();
   }
   $("#btn-daily-play").addEventListener("click", dailyPlayClick);
   $("#btn-daily-compact").addEventListener("click", dailyPlayClick);
-  $("#btn-daily-start").addEventListener("click", startDailySession);
-  $("#btn-daily-intro-back").addEventListener("click", goHome);
   $("#btn-daily-board-home").addEventListener("click", goHome);
 
   function startHomeWatch() {
