@@ -238,6 +238,26 @@
     margin-bottom: -8px;
   }
 
+  /* Climbs: the Letters label as a word trail (see renderWordTrail). Same
+     height as the plain label so the play screen doesn't grow. */
+  .rowlabel.wordtrail-label { display: flex; align-items: center; min-height: 1.1rem; }
+  .wordtrail-wrap {
+    width: 100%; overflow: hidden; display: flex; justify-content: flex-end;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 22px);
+    mask-image: linear-gradient(90deg, transparent, #000 22px);
+  }
+  .wordtrail-wrap.fits { justify-content: flex-start; -webkit-mask-image: none; mask-image: none; }
+  .wordtrail { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+  .wordtrail-dots { display: inline-flex; gap: 3px; }
+  .wordtrail-dots i { width: 3px; height: 3px; border-radius: 50%; background: var(--muted); opacity: .55; }
+  .wordtrail-last { color: var(--accent); font-weight: 800; font-size: 0.82rem; animation: wordtrail-in .45s cubic-bezier(.2,.8,.25,1.2); }
+  .wordtrail-next {
+    border: 1px dashed var(--line); border-radius: 6px; padding: 0 6px;
+    letter-spacing: 0.04em; text-transform: none; line-height: 1.4;
+  }
+  @keyframes wordtrail-in { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .wordtrail-last { animation: none; } }
+
   .row {
     position: relative;
     display: flex;
@@ -1132,7 +1152,7 @@
         <div class="ascent-toast" id="ascent-toast" role="status" aria-live="polite"></div>
       </div>
 
-      <div class="rowlabel">Letters</div>
+      <div class="rowlabel" id="letters-label">Letters</div>
       <div class="row" id="tray"></div>
 
       <div class="rowlabel">Your word</div>
@@ -2559,6 +2579,7 @@
     stageShownAt = Date.now();
 
     render(true);
+    renderWordTrail();
 
     clearInterval(timerId);
     timerId = null;
@@ -2706,7 +2727,7 @@
   let resizeTimer = null;
   window.addEventListener("resize", () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => sizeTiles(tiles.length), 120);
+    resizeTimer = setTimeout(() => { sizeTiles(tiles.length); fitWordTrail(); }, 120);
   });
 
   function render(firstOfStage) {
@@ -3528,6 +3549,56 @@
   // single-letter ending.  Practice = one climb (mode "climb"); the Game of the
   // Day = three climbs back to back (mode "daily"), score = total rungs cleared.
   function isClimb() { return mode === "climb" || mode === "daily" || mode === "collection"; }
+
+  // Climbs: the "Letters" label above the tray becomes the climb so far —
+  // GET ··· GATE ··· [+1 letter] — so the player can see the word they just
+  // played (the "Nice — X" message clears as soon as the next letters drop).
+  // Earlier words dim, the last one amber; a long climb fades off the left so
+  // the newest word always shows. Other modes keep the plain label.
+  function renderWordTrail() {
+    const el = $("#letters-label");
+    if (!isClimb()) {
+      el.classList.remove("wordtrail-label");
+      el.textContent = "Letters";
+      return;
+    }
+    el.classList.add("wordtrail-label");
+    const words = currentRoundWords;
+    const wrap = document.createElement("div");
+    wrap.className = "wordtrail-wrap";
+    const trail = document.createElement("div");
+    trail.className = "wordtrail";
+    const dots = () => {
+      const d = document.createElement("span");
+      d.className = "wordtrail-dots";
+      d.setAttribute("aria-hidden", "true");
+      d.innerHTML = "<i></i><i></i><i></i>";
+      return d;
+    };
+    words.forEach((w, i) => {
+      const s = document.createElement("span");
+      s.textContent = w;
+      if (i === words.length - 1) s.className = "wordtrail-last";
+      trail.appendChild(s);
+      trail.appendChild(dots());
+    });
+    const next = document.createElement("span");
+    next.className = "wordtrail-next";
+    next.textContent = words.length ? "+1 letter" : "First word";
+    trail.appendChild(next);
+    wrap.appendChild(trail);
+    el.replaceChildren(wrap);
+    el.setAttribute("aria-label", words.length ? "Last word: " + words[words.length - 1] : "First word");
+    fitWordTrail();
+  }
+  // Left-aligned when the whole trail fits; otherwise pinned right with a fade
+  // on the left edge, so the oldest words are the ones that slip away.
+  function fitWordTrail() {
+    const wrap = document.querySelector("#letters-label .wordtrail-wrap");
+    if (!wrap) return;
+    wrap.classList.remove("fits");
+    wrap.classList.toggle("fits", wrap.firstElementChild.scrollWidth <= wrap.clientWidth);
+  }
   function climbRounds() { return mode === "daily" ? 3 : 1; }
 
   function isInflectionOf(word, prev) {
