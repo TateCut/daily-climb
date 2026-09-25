@@ -706,6 +706,64 @@
   .homelinks button { flex: 1; padding: 10px 12px; font-size: 0.9rem; }
   .homelinks .sound-toggle { flex: 0 0 auto; padding: 10px 12px; font-size: 1rem; line-height: 1; }
   .full-btn { width: 100%; padding: 10px 12px; font-size: 0.9rem; }
+
+  /* Add to Home Screen — shares Invite's row; each button sizes to its label. */
+  .install-row button { flex: 1 1 auto; white-space: nowrap; padding-block: 9px; } /* 1px trimmed each side: the icon made the row 2px taller than the old full-width button */
+  .install-row:has(#btn-home-install:not([hidden])) button { font-size: 0.85rem; padding-inline: 10px; }
+  #btn-home-install { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+  #btn-home-install[hidden] { display: none; }
+  #btn-home-install svg { width: 15px; height: 15px; flex: none; color: var(--accent); }
+  #btn-home-install.nudge { animation: install-nudge 2.4s ease-in-out 1.2s 2; }
+  @keyframes install-nudge {
+    0%, 100% { box-shadow: 0 0 0 0 transparent; }
+    40% { box-shadow: 0 0 0 3px rgba(232, 135, 30, 0.35); border-color: var(--accent); }
+  }
+  .install-scrim { position: fixed; inset: 0; z-index: 60; background: rgba(5, 7, 14, 0.55); }
+  .install-sheet {
+    position: fixed; z-index: 61; left: 50%; transform: translateX(-50%);
+    width: min(100% - 16px, 420px); bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+    background: var(--surface); border: 1px solid var(--line); border-radius: 22px;
+    padding: 18px 18px 16px; text-align: left; box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.45);
+    animation: install-up .3s cubic-bezier(.2,.8,.25,1.05);
+  }
+  .install-sheet.arrow-below { bottom: calc(env(safe-area-inset-bottom, 0px) + 50px); }
+  .install-sheet.arrow-above { bottom: auto; top: calc(env(safe-area-inset-top, 0px) + 50px); }
+  @keyframes install-up { from { opacity: 0; transform: translate(-50%, 24px); } to { opacity: 1; transform: translate(-50%, 0); } }
+  .install-head { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+  .install-appicon {
+    width: 52px; height: 52px; flex: none; border-radius: 12px; background: var(--bg);
+    box-shadow: 0 0 0 1px var(--line); display: flex; align-items: center; justify-content: center; color: var(--accent);
+  }
+  .install-appicon svg { width: 70%; height: auto; }
+  .install-sheet h3 { margin: 0; font-size: 1.02rem; line-height: 1.3; }
+  .install-sub { margin: 2px 0 0; color: var(--muted); font-size: 0.8rem; line-height: 1.4; overflow-wrap: anywhere; }
+  .install-steps { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+  .install-steps li { display: flex; align-items: center; gap: 10px; font-size: 0.88rem; line-height: 1.35; }
+  .install-steps .n {
+    width: 22px; height: 22px; flex: none; border-radius: 50%; background: var(--accent); color: #1c1005;
+    font-weight: 800; font-size: 0.74rem; display: flex; align-items: center; justify-content: center;
+  }
+  .install-glyph {
+    display: inline-flex; align-items: center; justify-content: center; vertical-align: -5px;
+    width: 24px; height: 22px; margin: 0 2px; border-radius: 6px; background: rgba(255, 255, 255, 0.08);
+  }
+  .install-glyph svg { width: 15px; height: 15px; }
+  .install-pill { display: inline-block; padding: 1px 7px; border-radius: 6px; background: rgba(255, 255, 255, 0.08); font-weight: 600; }
+  .install-actions { display: flex; gap: 8px; }
+  .install-actions button { flex: 1; padding: 10px; font-size: 0.9rem; border-radius: 10px; }
+  /* Points at the browser button to tap first (Safari's bar sits just below
+     the page on iPhone; in-app browsers put their menu top right). */
+  .install-arrow {
+    position: fixed; z-index: 62; width: 28px; height: 34px; color: var(--accent); pointer-events: none;
+    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.5)); animation: install-bob 1s ease-in-out infinite;
+  }
+  .install-arrow.down { bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); }
+  .install-arrow.up { top: calc(env(safe-area-inset-top, 0px) + 8px); scale: 1 -1; } /* flip, don't rotate: keeps translate(-50%) centering */
+  @keyframes install-bob { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, 7px); } }
+  @media (prefers-reduced-motion: reduce) {
+    #btn-home-install.nudge, .install-sheet, .install-arrow { animation: none; }
+    .install-arrow { transform: translateX(-50%); }
+  }
   .sound-toggle[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
   @media (hover: hover) {
     #daily-board-list .lb-row:hover { border-color: var(--muted); }
@@ -838,7 +896,8 @@
     <!-- Summit mark: the sun rising behind a back peak, and the main peak with
          the dotted trail you climb and a flag on top. One color (amber) — the
          back peak sits on a --bg knockout so the sun reads as behind it. -->
-    <svg class="brandmark" viewBox="0 0 64 56" aria-hidden="true">
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <symbol id="summit-mark" viewBox="0 0 64 56">
       <circle cx="44" cy="25" r="11" fill="currentColor" fill-opacity=".65"/>
       <polygon points="30,54 45,28 62,54" fill="var(--bg)"/>
       <polygon points="30,54 45,28 62,54" fill="currentColor" fill-opacity=".38"/>
@@ -846,7 +905,9 @@
       <path d="M11 51 L22 44 L15 36 L25 27 L21 21" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="0.1 4.6"/>
       <line x1="26" y1="14" x2="26" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
       <path d="M26 3.5 h10 l-2.6 3.2 l2.6 3.2 h-10 Z" fill="currentColor"/>
+      </symbol>
     </svg>
+    <svg class="brandmark" viewBox="0 0 64 56" aria-hidden="true"><use href="#summit-mark"/></svg>
     <h1>Daily <span class="brand-k">Climb</span></h1>
     <div class="daily-timer" id="daily-timer" hidden><span id="daily-timer-val">0:00</span></div>
 
@@ -948,7 +1009,16 @@
         <button class="ghost" id="btn-home-howto" type="button">How to play</button>
         <button class="ghost sound-toggle" id="btn-sound" type="button" aria-label="Sound" aria-pressed="false">&#128264;</button>
       </div>
-      <button class="ghost full-btn" id="btn-home-invite" type="button">Invite friends to play</button>
+      <!-- Invite shares its row with "Add to Home Screen" (the home screen has
+           no room for another row). Once the game is installed the install
+           button is hidden and Invite fills the row. See renderInstallButton(). -->
+      <div class="homelinks install-row">
+        <button class="ghost" id="btn-home-invite" type="button">Invite friends to play</button>
+        <button class="ghost" id="btn-home-install" type="button" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+          Add to Home Screen
+        </button>
+      </div>
       <p class="note whoami" id="home-whoami" hidden></p>
     </section>
 
@@ -1268,6 +1338,28 @@
     <b id="chip-popover-word"></b>
     <span id="chip-popover-def"></span>
   </div>
+
+  <!-- Add to Home Screen: iPhones can't be prompted to install, so this sheet
+       walks the player through Safari's steps (filled per platform / iOS
+       version by openInstall()), with an arrow at the browser button to tap. -->
+  <div class="install-scrim" id="install-scrim" hidden></div>
+  <div class="install-sheet" id="install-sheet" role="dialog" aria-modal="true" aria-labelledby="install-title" hidden>
+    <div class="install-head">
+      <div class="install-appicon"><svg viewBox="0 0 64 56" aria-hidden="true"><use href="#summit-mark"/></svg></div>
+      <div>
+        <h3 id="install-title">Add Daily Climb to your Home Screen</h3>
+        <p class="install-sub" id="install-sub"></p>
+      </div>
+    </div>
+    <ol class="install-steps" id="install-steps"></ol>
+    <div class="install-actions">
+      <button class="ghost" id="btn-install-copy" type="button" hidden>Copy link</button>
+      <button class="primary" id="btn-install-done" type="button">Got it</button>
+    </div>
+  </div>
+  <svg class="install-arrow" id="install-arrow" viewBox="0 0 28 34" aria-hidden="true" hidden>
+    <path d="M14 2v24M4 17l10 10 10-10" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
 
 <script>
   // Pre-paint routing: a returning player (cached profile) jumps straight to the
@@ -2278,6 +2370,7 @@
   };
   function show(name) {
     hideChipPopover(); // never leave a word definition floating over the next screen
+    hideInstallSheet(); // ...or the Add to Home Screen how-to
     const el = screens[name];
     const arriving = el && el.hidden;
     for (const k in screens) screens[k].hidden = k !== name;
@@ -5103,6 +5196,174 @@
       catch (e) { fail(); }
     }
   });
+
+  // ---- Add to Home Screen ----
+  // Android/desktop Chrome can be asked to install (beforeinstallprompt), so
+  // the button opens the browser's own dialog. iPhone can't be prompted by a
+  // page, so the button opens a how-to sheet with Safari's steps for the
+  // player's iOS version. In-app browsers (Instagram, TikTok...) can't add to
+  // the home screen at all, so they're told to open the page in a real browser.
+  // Hidden once the game runs from the home screen (standalone).
+  const UA = navigator.userAgent;
+  const IS_IPAD = /iPad/.test(UA) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const IS_IOS = IS_IPAD || /iPhone|iPod/.test(UA);
+  const IS_ANDROID = /Android/i.test(UA);
+  const IN_APP = /Instagram|FBAN|FBAV|FB_IAB|TikTok|musical_ly|BytedanceWebview|Snapchat|LinkedInApp|Line\//i.test(UA);
+  const IOS_OTHER_BROWSER = IS_IOS && /CriOS|FxiOS|EdgiOS|OPiOS/.test(UA);
+  const INSTALL_NUDGE_KEY = "three21.installNudged";
+  let deferredInstall = null;   // Chrome's saved beforeinstallprompt event
+  let installOpenedFrom = null; // element to return focus to when the sheet closes
+  const trackEv = (name, params) => { try { if (window.MatchDB) window.MatchDB.track(name, params); } catch (e) {} };
+  function isStandalone() {
+    try { return matchMedia("(display-mode: standalone)").matches || navigator.standalone === true; }
+    catch (e) { return false; }
+  }
+  // iOS 26+ Safari freezes the "OS 18_x" part of its user agent, so read
+  // Safari's own Version/NN (it tracks the iOS release) and fall back to OS NN.
+  function iosMajor() {
+    const m = UA.match(/Version\/(\d+)/) || UA.match(/OS (\d+)_/);
+    return m ? +m[1] : 0;
+  }
+  function canOfferInstall() {
+    if (isStandalone()) return false;
+    return IS_IOS || IS_ANDROID || !!deferredInstall;
+  }
+  function renderInstallButton() {
+    const btn = $("#btn-home-install");
+    const offer = canOfferInstall();
+    btn.hidden = !offer;
+    $("#btn-home-invite").textContent = offer ? "Invite friends" : "Invite friends to play";
+    if (offer) {
+      let nudged = false;
+      try { nudged = localStorage.getItem(INSTALL_NUDGE_KEY) === "1"; localStorage.setItem(INSTALL_NUDGE_KEY, "1"); } catch (e) {}
+      btn.classList.toggle("nudge", !nudged); // glows twice, the first time only
+    }
+  }
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault(); // keep Chrome's mini-infobar away; our button triggers it instead
+    deferredInstall = e;
+    renderInstallButton();
+  });
+  window.addEventListener("appinstalled", () => {
+    deferredInstall = null;
+    trackEv("app_installed");
+    hideInstallSheet();
+    renderInstallButton();
+  });
+
+  const GLYPH = {
+    share: '<path d="M8.5 9.5H7a1.5 1.5 0 0 0-1.5 1.5v8A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5v-8A1.5 1.5 0 0 0 17 9.5h-1.5M12 14V3.5M8.5 7 12 3.5 15.5 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+    dots: '<circle cx="6" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="18" cy="12" r="1.8" fill="currentColor"/>',
+    vdots: '<circle cx="12" cy="6" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="18" r="1.8" fill="currentColor"/>',
+    menu: '<path d="M5 7.5h14M5 12h14M5 16.5h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+    plus: '<rect x="3.5" y="3.5" width="17" height="17" rx="4.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>',
+  };
+  const glyph = (k) => '<span class="install-glyph"><svg viewBox="0 0 24 24" aria-hidden="true">' + GLYPH[k] + "</svg></span>";
+  const pill = (t) => '<span class="install-pill">' + t + "</span>";
+
+  // Which sheet to show: title, subtitle, steps (trusted HTML built above),
+  // and where the arrow points ({edge:"down"|"up", x: % from the left}).
+  function installGuide() {
+    if (IN_APP) {
+      const where = IS_IOS ? "Safari" : "Chrome";
+      return {
+        title: "Open this in " + where + " first",
+        sub: "This app's built-in browser can't add games to your Home Screen.",
+        steps: ["Tap " + glyph(IS_IOS ? "dots" : "vdots") + " at the top right",
+          "Choose <b>Open in browser</b> (or <b>Open in " + where + "</b>)",
+          "Tap <b>Add to Home Screen</b> again there"],
+        arrow: { edge: "up", x: 92 }, copy: true,
+      };
+    }
+    const sub = "It opens full-screen like an app, one tap from your home screen.";
+    if (IS_IOS && IOS_OTHER_BROWSER) {
+      return { title: "Add Daily Climb to your Home Screen", sub: sub,
+        steps: ["Tap " + glyph("share") + " <b>Share</b> in the address bar",
+          "Tap " + glyph("plus") + " <b>Add to Home Screen</b>", "Tap " + pill("Add")] };
+    }
+    if (IS_IPAD) {
+      return { title: "Add Daily Climb to your Home Screen", sub: sub,
+        steps: ["Tap " + glyph("share") + " <b>Share</b> at the top right",
+          "Tap " + glyph("plus") + " <b>Add to Home Screen</b>", "Tap " + pill("Add")],
+        arrow: { edge: "up", x: 91 } };
+    }
+    if (IS_IOS) {
+      const v = iosMajor();
+      if (v >= 27) return { title: "Add Daily Climb to your Home Screen", sub: sub,
+        steps: ["Tap " + glyph("menu") + " Safari's menu button (bottom left)",
+          "Tap " + glyph("share") + " <b>Share</b>, then <b>More</b>",
+          "Tap " + glyph("plus") + " <b>Add to Home Screen</b>, then " + pill("Add")],
+        arrow: { edge: "down", x: 20 } };
+      if (v === 26) return { title: "Add Daily Climb to your Home Screen", sub: sub,
+        steps: ["Tap " + glyph("dots") + " next to the address bar",
+          "Tap " + glyph("share") + " <b>Share</b>, then " + glyph("plus") + " <b>Add to Home Screen</b>",
+          "Tap " + pill("Add")],
+        arrow: { edge: "down", x: 88 } };
+      return { title: "Add Daily Climb to your Home Screen", sub: sub,
+        steps: ["Tap " + glyph("share") + " <b>Share</b> in Safari's bottom bar",
+          "Scroll down, tap " + glyph("plus") + " <b>Add to Home Screen</b>", "Tap " + pill("Add")],
+        arrow: { edge: "down", x: 50 } };
+    }
+    // Android (or desktop) when Chrome hasn't offered its install prompt yet.
+    return { title: "Add Daily Climb to your Home Screen", sub: sub,
+      steps: ["Tap " + glyph("vdots") + " at the top right of Chrome",
+        "Tap " + glyph("plus") + " <b>Add to Home screen</b> or <b>Install app</b>", "Tap " + pill("Install")],
+      arrow: { edge: "up", x: 94 } };
+  }
+
+  function openInstall() {
+    const kind = IN_APP ? "in_app" : IS_IOS ? "ios" : deferredInstall ? "prompt" : "android_steps";
+    trackEv("install_tap", { kind: kind });
+    // Chrome can install directly — use its real dialog.
+    if (deferredInstall && !IN_APP) {
+      const ev = deferredInstall;
+      deferredInstall = null; // one use per event; Chrome re-fires it if dismissed
+      ev.prompt();
+      ev.userChoice.then((c) => trackEv("install_choice", { outcome: c && c.outcome }))
+        .catch(() => {}).then(renderInstallButton);
+      return;
+    }
+    const g = installGuide();
+    $("#install-title").textContent = g.title;
+    $("#install-sub").textContent = g.sub;
+    $("#install-steps").innerHTML = g.steps.map((s, i) => '<li><span class="n">' + (i + 1) + "</span><span>" + s + "</span></li>").join("");
+    $("#btn-install-copy").hidden = !g.copy;
+    $("#btn-install-copy").textContent = "Copy link";
+    const sheet = $("#install-sheet"), arrow = $("#install-arrow");
+    sheet.classList.toggle("arrow-below", !!(g.arrow && g.arrow.edge === "down"));
+    sheet.classList.toggle("arrow-above", !!(g.arrow && g.arrow.edge === "up"));
+    arrow.toggleAttribute("hidden", !g.arrow); // an <svg>: no .hidden property, use the attribute
+    if (g.arrow) {
+      arrow.classList.toggle("down", g.arrow.edge === "down");
+      arrow.classList.toggle("up", g.arrow.edge === "up");
+      arrow.style.left = g.arrow.x + "%";
+    }
+    installOpenedFrom = document.activeElement;
+    $("#install-scrim").hidden = false;
+    sheet.hidden = false;
+    $("#btn-install-done").focus();
+  }
+  function hideInstallSheet() {
+    if ($("#install-sheet").hidden) return;
+    $("#install-sheet").hidden = true;
+    $("#install-scrim").hidden = true;
+    $("#install-arrow").setAttribute("hidden", "");
+    if (installOpenedFrom && installOpenedFrom.focus) installOpenedFrom.focus();
+    installOpenedFrom = null;
+  }
+  $("#btn-home-install").addEventListener("click", openInstall);
+  $("#btn-install-done").addEventListener("click", hideInstallSheet);
+  $("#install-scrim").addEventListener("click", hideInstallSheet);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideInstallSheet(); });
+  $("#btn-install-copy").addEventListener("click", () => {
+    const b = $("#btn-install-copy");
+    const link = gameLink();
+    const fail = () => { $("#install-sub").textContent = link; b.textContent = "Copy it from above"; };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(link).then(() => { b.textContent = "Link copied"; }).catch(fail);
+    } else fail();
+  });
+  renderInstallButton();
 
   function syncSoundBtn() {
     const b = $("#btn-sound");
