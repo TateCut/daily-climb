@@ -93,12 +93,14 @@
   body:has(#screen-climb-over:not([hidden])) .brandmark,
   body:has(#screen-climb-over:not([hidden])) h1,
   body:has(#screen-climb-roundend:not([hidden])) .brandmark,
-  body:has(#screen-climb-roundend:not([hidden])) h1 { display: none; }
+  body:has(#screen-climb-roundend:not([hidden])) h1,
+  body:has(#screen-patch-notes:not([hidden])) .brandmark,
+  body:has(#screen-patch-notes:not([hidden])) h1 { display: none; }
   /* No page scroll anywhere — every screen is sized to fit the viewport. The one
      list that can overflow (the leaderboard) scrolls inside itself instead. */
   html, body { overflow: hidden; overscroll-behavior: none; }
   /* The few inner scrollers draw their bar in the theme's line color. */
-  .lb-list, .collection-grid, .def { scrollbar-color: var(--line) transparent; scrollbar-width: thin; }
+  .lb-list, .collection-grid, .def, .patch-list { scrollbar-color: var(--line) transparent; scrollbar-width: thin; }
   /* Tutorial is a fixed card — kill touch-panning so a swipe is never stolen. */
   #screen-tutorial { touch-action: none; }
   h1 {
@@ -707,6 +709,42 @@
   .homelinks .sound-toggle { flex: 0 0 auto; padding: 10px 12px; font-size: 1rem; line-height: 1; }
   .full-btn { width: 100%; padding: 10px 12px; font-size: 0.9rem; }
 
+  /* Home footer: "Playing as …" + the version chip, on one line. */
+  .home-foot { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+  .home-foot .whoami { margin: 0; min-height: 0; }
+  .vchip {
+    display: inline-flex; align-items: center; gap: 5px; padding: 1px 9px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--muted);
+    font: inherit; font-size: 0.7rem; font-weight: 700; line-height: 1.5; cursor: pointer;
+  }
+  .vchip-dot { display: none; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+  .vchip.unread { color: var(--text); border-color: var(--accent); }
+  .vchip.unread .vchip-dot { display: block; animation: vchip-pulse 1.6s ease-in-out infinite; }
+  @keyframes vchip-pulse { 0%, 100% { box-shadow: 0 0 0 2px rgba(232, 135, 30, 0.25); } 50% { box-shadow: 0 0 0 5px rgba(232, 135, 30, 0.06); } }
+  /* Patch notes screen: one card per release, newest open. */
+  .patch-sub { margin: -8px 0 0; }
+  .patch-list {
+    width: 100%; display: flex; flex-direction: column; gap: 8px; text-align: left;
+    max-height: min(62vh, calc(100vh - 230px)); overflow-y: auto; overscroll-behavior: contain;
+  }
+  .patch-ver { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; flex: none; }
+  .patch-ver.latest { border-color: var(--accent); }
+  .patch-ver summary { list-style: none; cursor: pointer; padding: 11px 12px; display: flex; align-items: baseline; gap: 8px; }
+  .patch-ver summary::-webkit-details-marker { display: none; }
+  .patch-ver summary b { font-size: 0.92rem; }
+  .patch-title { flex: 1; min-width: 0; font-size: 0.82rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .patch-date { font-size: 0.7rem; color: var(--muted); white-space: nowrap; }
+  .patch-chev { color: var(--muted); transition: transform .2s; }
+  .patch-ver[open] .patch-chev { transform: rotate(90deg); }
+  .patch-new { width: 7px; height: 7px; flex: none; align-self: center; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px rgba(232, 135, 30, 0.25); } /* unread: same amber dot as the home chip */
+  .patch-notes { list-style: none; margin: 0; padding: 0 12px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .patch-notes li { font-size: 0.86rem; line-height: 1.45; }
+  .patch-tag { display: inline-block; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; border-radius: 5px; padding: 2px 6px; margin-right: 6px; vertical-align: 1px; }
+  .patch-tag.new { background: rgba(232, 135, 30, 0.18); color: var(--accent); }
+  .patch-tag.imp { background: rgba(127, 179, 255, 0.16); color: #7fb3ff; }
+  .patch-tag.fix { background: rgba(111, 208, 140, 0.16); color: var(--good); }
+  @media (prefers-reduced-motion: reduce) { .vchip.unread .vchip-dot { animation: none; } .patch-chev { transition: none; } }
+
   /* Add to Home Screen — shares Invite's row; each button sizes to its label. */
   .install-row button { flex: 1 1 auto; white-space: nowrap; padding-block: 9px; } /* 1px trimmed each side: the icon made the row 2px taller than the old full-width button */
   .install-row:has(#btn-home-install:not([hidden])) button { font-size: 0.85rem; padding-inline: 10px; }
@@ -1054,7 +1092,12 @@
           Add to Home Screen
         </button>
       </div>
-      <p class="note whoami" id="home-whoami" hidden></p>
+      <!-- Footer: who's playing + the version chip (opens the patch notes;
+           an amber dot means there's an update this player hasn't seen). -->
+      <div class="home-foot">
+        <p class="note whoami" id="home-whoami" hidden></p>
+        <button class="vchip" id="btn-patch-notes" type="button"><span class="vchip-dot" aria-hidden="true"></span><span id="vchip-label"></span></button>
+      </div>
     </section>
 
     <!-- INVITE: share the game link -->
@@ -1068,6 +1111,14 @@
       <p class="note" id="invite-note"></p>
       <button class="primary" id="btn-invite-share" type="button" hidden>Share&hellip;</button>
       <button class="linkbtn" id="btn-invite-home" type="button">&larr; Home</button>
+    </section>
+
+    <!-- PATCH NOTES — every release, newest first (filled from PATCH_NOTES) -->
+    <section id="screen-patch-notes" hidden>
+      <h2 style="margin:0;font-size:1.3rem;">Patch notes</h2>
+      <p class="note patch-sub">What's changed in Daily Climb</p>
+      <div class="patch-list" id="patch-list"></div>
+      <button class="linkbtn" id="btn-patch-home" type="button">&larr; Home</button>
     </section>
 
     <!-- DAILY CLIMB: leaderboard -->
@@ -2439,6 +2490,7 @@
     leaderboard: $("#screen-leaderboard"),
     vsreveal: $("#screen-vs-reveal"),
     dailyboard: $("#screen-daily-board"),
+    patchnotes: $("#screen-patch-notes"),
     invite: $("#screen-invite"),
     climbintro: $("#screen-climb-intro"),
     climbover: $("#screen-climb-over"),
@@ -5246,7 +5298,7 @@
     // the one element that scrolls itself, the leaderboard list.
     document.addEventListener("touchmove", (e) => {
       const t = e.target;
-      if (t && t.closest && (t.closest(".lb-list") || t.closest(".collection-grid") || t.closest(".def"))) return;
+      if (t && t.closest && (t.closest(".lb-list") || t.closest(".collection-grid") || t.closest(".def") || t.closest(".patch-list"))) return;
       if (e.cancelable) e.preventDefault();
     }, { passive: false });
   })();
@@ -5615,6 +5667,91 @@
     hideReminderSheet();
   }
   $("#btn-reminder").addEventListener("click", () => showReminderSheet());
+
+  // ---- Patch notes ----
+  // Every release players can see, NEWEST FIRST. On each "commit and push"
+  // with player-facing changes, add an entry at the top (version bump per
+  // semver: minor = new feature, patch = fix/tweak; 1.0.0 is saved for the
+  // game's launch, major bumps after that = overhaul;
+  // behind-the-scenes work gets no entry). Tags: "new" | "imp" | "fix".
+  // Lives here, inside the page, because the page is always fetched fresh
+  // (sw.js caches other files cache-first, so a notes file could go stale).
+  const PATCH_NOTES = [
+    { v: "0.1.0", date: "2026-09-28", title: "Patch notes are here",
+      notes: [
+        ["new", "See what's changed in every update. Tap the version number at the bottom of the home screen; an amber dot means there's something new."],
+      ] },
+  ];
+  const APP_VERSION = PATCH_NOTES[0].v;
+  const PATCH_SEEN_KEY = "three21.patchSeen"; // last version this player opened the notes for
+  const PATCH_TAG = { new: "New", imp: "Improved", fix: "Fixed" };
+  function patchSeen() {
+    try { return localStorage.getItem(PATCH_SEEN_KEY); } catch (e) { return null; }
+  }
+  function renderPatchChip() {
+    const btn = $("#btn-patch-notes");
+    const unread = patchSeen() !== APP_VERSION;
+    $("#vchip-label").textContent = "v" + APP_VERSION;
+    btn.classList.toggle("unread", unread);
+    btn.setAttribute("aria-label", "Patch notes, version " + APP_VERSION + (unread ? ", new update" : ""));
+  }
+  function patchDate(iso) {
+    const p = iso.split("-").map(Number);
+    return new Date(p[0], p[1] - 1, p[2], 12).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  }
+  function showPatchNotes() {
+    // Versions newer than the last one this player saw get a NEW tag.
+    const seenIdx = PATCH_NOTES.findIndex((p) => p.v === patchSeen());
+    const list = $("#patch-list");
+    list.replaceChildren();
+    PATCH_NOTES.forEach((p, i) => {
+      const card = document.createElement("details");
+      card.className = "patch-ver" + (i === 0 ? " latest" : "");
+      card.open = i === 0;
+      const sum = document.createElement("summary");
+      const ver = document.createElement("b");
+      ver.textContent = "v" + p.v;
+      sum.appendChild(ver);
+      if (seenIdx === -1 || i < seenIdx) {
+        const tag = document.createElement("span");
+        tag.className = "patch-new"; // amber dot, like the home chip
+        tag.setAttribute("role", "img");
+        tag.setAttribute("aria-label", "new");
+        sum.appendChild(tag);
+      }
+      const title = document.createElement("span");
+      title.className = "patch-title";
+      title.textContent = p.title;
+      const date = document.createElement("span");
+      date.className = "patch-date";
+      date.textContent = patchDate(p.date);
+      const chev = document.createElement("span");
+      chev.className = "patch-chev";
+      chev.setAttribute("aria-hidden", "true");
+      chev.textContent = "›";
+      sum.append(title, date, chev);
+      const ul = document.createElement("ul");
+      ul.className = "patch-notes";
+      p.notes.forEach(([t, text]) => {
+        const li = document.createElement("li");
+        const tag = document.createElement("span");
+        tag.className = "patch-tag " + t;
+        tag.textContent = PATCH_TAG[t] || t;
+        li.append(tag, document.createTextNode(text));
+        ul.appendChild(li);
+      });
+      card.append(sum, ul);
+      list.appendChild(card);
+    });
+    list.scrollTop = 0;
+    try { localStorage.setItem(PATCH_SEEN_KEY, APP_VERSION); } catch (e) {}
+    renderPatchChip();
+    trackEv("patch_notes_open", { version: APP_VERSION });
+    show("patchnotes");
+  }
+  $("#btn-patch-notes").addEventListener("click", showPatchNotes);
+  $("#btn-patch-home").addEventListener("click", goHome);
+  renderPatchChip();
   $("#btn-reminder-primary").addEventListener("click", reminderPrimary);
   $("#btn-reminder-secondary").addEventListener("click", reminderSecondary);
 
