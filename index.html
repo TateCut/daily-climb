@@ -96,12 +96,16 @@
   body:has(#screen-climb-roundend:not([hidden])) h1,
   body:has(#screen-patch-notes:not([hidden])) .brandmark,
   body:has(#screen-patch-notes:not([hidden])) h1,
-  body:has(#screen-restore:not([hidden])) h1 { display: none; }
+  body:has(#screen-restore:not([hidden])) h1,
+  body:has(#screen-profile:not([hidden])) .brandmark,
+  body:has(#screen-profile:not([hidden])) h1,
+  body:has(#screen-trophies:not([hidden])) .brandmark,
+  body:has(#screen-trophies:not([hidden])) h1 { display: none; }
   /* No page scroll anywhere — every screen is sized to fit the viewport. The one
      list that can overflow (the leaderboard) scrolls inside itself instead. */
   html, body { overflow: hidden; overscroll-behavior: none; }
   /* The few inner scrollers draw their bar in the theme's line color. */
-  .lb-list, .collection-grid, .def, .patch-list { scrollbar-color: var(--line) transparent; scrollbar-width: thin; }
+  .lb-list, .collection-grid, .def, .patch-list, .pf-scroll { scrollbar-color: var(--line) transparent; scrollbar-width: thin; }
   /* Tutorial is a fixed card — kill touch-panning so a swipe is never stolen. */
   #screen-tutorial { touch-action: none; }
   h1 {
@@ -710,6 +714,140 @@
   .homelinks .sound-toggle { flex: 0 0 auto; padding: 10px 12px; font-size: 1rem; line-height: 1; }
   .full-btn { width: 100%; padding: 10px 12px; font-size: 0.9rem; }
 
+  /* ---- Profile + trophies ---- */
+  .avatar-btn {
+    position: fixed; top: calc(env(safe-area-inset-top, 0px) + 12px); right: 12px; z-index: 5;
+    width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--accent); background: var(--surface);
+    color: var(--text); font: inherit; font-weight: 800; font-size: 1rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 4px rgba(232, 135, 30, 0.15);
+  }
+  .avatar-streak {
+    position: absolute; right: -7px; bottom: -6px; font-size: 0.62rem; font-weight: 800; line-height: 1.3;
+    background: var(--accent); color: #1c1005; border-radius: 999px; padding: 1px 5px; white-space: nowrap;
+  }
+  .avatar-streak[hidden] { display: none; }
+  .namebtn { font: inherit; color: var(--text); font-weight: 700; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+  .pf-top { width: 100%; display: flex; align-items: center; justify-content: space-between; }
+  .pf-back, .pf-spacer { width: 76px; text-align: left; }
+  .pf-ttl { font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .pf-scroll {
+    width: 100%; display: flex; flex-direction: column; gap: 12px; text-align: left;
+    max-height: calc(100vh - 130px); overflow-y: auto; overscroll-behavior: contain; padding: 2px 2px 8px;
+  }
+  .pf-scroll > * { flex: none; }
+  .pf-who { display: flex; align-items: center; gap: 12px; }
+  .pf-av { width: 58px; height: 58px; flex: none; border-radius: 50%; border: 2px solid var(--accent); background: var(--surface); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 800; }
+  .pf-who h2 { margin: 0; font-size: 1.3rem; overflow-wrap: anywhere; }
+  .pf-since { margin: 2px 0 0; font-size: 0.76rem; color: var(--muted); }
+  .pf-card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+  .pf-h { margin: 0 0 8px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  .pf-more { font: inherit; font-size: 0.74rem; letter-spacing: 0; text-transform: none; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; font-weight: 650; }
+  .pf-range { font-weight: 400; letter-spacing: 0; text-transform: none; }
+  .pf-streak { display: flex; align-items: center; gap: 12px; }
+  .pf-big { font-size: 2.2rem; font-weight: 800; line-height: 1; white-space: nowrap; }
+  .pf-streak-lbl { margin: 0; font-size: 0.8rem; color: var(--muted); line-height: 1.35; }
+  .pf-streak-lbl b { color: var(--text); }
+  .pf-best { margin-left: auto; text-align: right; font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
+  .pf-best b { display: block; font-size: 1.15rem; color: var(--text); }
+  .pf-shelf { display: flex; gap: 4px; justify-content: space-between; }
+  .pf-shelf:empty::before { content: "Climb a daily to earn your first trophy."; font-size: 0.8rem; color: var(--muted); }
+  .tr-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 20%; min-width: 0; background: none; border: 0; padding: 0; cursor: pointer; color: var(--muted); font: inherit; }
+  .tr-btn svg { width: 44px; height: 48px; }
+  .tr-btn span { font-size: 0.6rem; line-height: 1.2; text-align: center; }
+  .tr-btn.got span { color: var(--text); }
+  .pf-next { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 10px; }
+  .pf-next:empty { display: none; }
+  .pf-next svg { width: 34px; height: 37px; flex: none; }
+  .pf-next-txt { flex: 1; min-width: 0; }
+  .pf-next-txt b { display: block; font-size: 0.82rem; }
+  .pf-next-txt small { font-size: 0.72rem; color: var(--muted); }
+  .pf-bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 5px; }
+  .pf-bar i { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
+  .pf-podium { display: flex; align-items: flex-end; justify-content: center; gap: 8px; height: 100px; }
+  .pf-step { flex: 1; max-width: 84px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .pf-step b { font-size: 1.2rem; }
+  .pf-medal { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.78rem; color: #1c1005; }
+  .pf-block { width: 100%; border-radius: 8px 8px 0 0; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line); border-bottom: 0; }
+  .pf-step.g .pf-medal { background: #f2c14e; } .pf-step.s .pf-medal { background: #c9d1dc; } .pf-step.b .pf-medal { background: #d08a54; }
+  .pf-step.g .pf-block { height: 40px; border-color: rgba(242, 193, 78, 0.5); } .pf-step.s .pf-block { height: 28px; } .pf-step.b .pf-block { height: 18px; }
+  .pf-note { margin: 6px 0 0; font-size: 0.74rem; color: var(--muted); text-align: center; }
+  .pf-note:empty { display: none; }
+  .pf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .pf-stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 9px 6px; text-align: center; }
+  .pf-stat b { display: block; font-size: 1.05rem; }
+  .pf-stat small { display: block; margin-top: 2px; font-size: 0.64rem; color: var(--muted); line-height: 1.25; }
+  .pf-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .pf-dow { font-size: 0.58rem; color: var(--muted); text-align: center; }
+  .pf-cell { aspect-ratio: 1; border-radius: 5px; background: rgba(255, 255, 255, 0.04); border: 1px solid transparent; padding: 0; cursor: pointer; }
+  .pf-cell.l1, .pf-legend .l1 { background: rgba(232, 135, 30, 0.22); } .pf-cell.l2, .pf-legend .l2 { background: rgba(232, 135, 30, 0.45); }
+  .pf-cell.l3, .pf-legend .l3 { background: rgba(232, 135, 30, 0.72); } .pf-cell.l4, .pf-legend .l4 { background: var(--accent); }
+  .pf-cell.today { border-color: var(--text); }
+  .pf-cell.sel { outline: 2px solid var(--text); outline-offset: 1px; }
+  .pf-legend { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 6px; font-size: 0.6rem; color: var(--muted); }
+  .pf-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  .pf-dayinfo { margin: 8px 0 0; padding: 8px 10px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); font-size: 0.8rem; color: var(--muted); min-height: 2.6em; }
+  .pf-dayinfo b { color: var(--text); }
+  .pf-recent { display: flex; flex-direction: column; gap: 6px; }
+  .pf-recent:empty::before { content: "Your daily results will show up here."; font-size: 0.8rem; color: var(--muted); }
+  .pf-row { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; padding: 7px 9px; border-radius: 9px; background: rgba(255, 255, 255, 0.03); }
+  .pf-row .d { width: 50px; flex: none; color: var(--muted); }
+  .pf-row .sc small { color: var(--muted); }
+  .pf-row .rk { margin-left: auto; font-size: 0.74rem; color: var(--muted); }
+  .pf-row .rk.m1 { color: #f2c14e; font-weight: 700; } .pf-row .rk.m2 { color: #c9d1dc; font-weight: 700; } .pf-row .rk.m3 { color: #d08a54; font-weight: 700; }
+  .pf-row .t { width: 38px; text-align: right; font-size: 0.72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  /* trophy case */
+  .tr-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .tr-head .big { font-size: 1.9rem; font-weight: 800; line-height: 1; white-space: nowrap; }
+  .tr-head .big small { font-size: 0.9rem; color: var(--muted); font-weight: 600; }
+  .tr-head .of { font-size: 0.76rem; color: var(--muted); line-height: 1.3; }
+  .tr-legend { flex-basis: 100%; display: flex; gap: 10px; font-size: 0.66rem; color: var(--muted); }
+  .tr-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 3px; vertical-align: -1px; }
+  .tr-grp { margin: 6px 0 -4px; font-size: 0.64rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  .tr-fam { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; }
+  .tr-fam-top { display: flex; align-items: baseline; gap: 8px; }
+  .tr-fam-top b { font-size: 0.88rem; }
+  .tr-fam-top small { margin-left: auto; font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
+  .tr-tiers { display: flex; gap: 4px; margin-top: 8px; }
+  .tr-tiers .tr-btn { width: 25%; }
+  .tr-singles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .tr-single { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 9px 4px 8px; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; font: inherit; color: var(--muted); }
+  .tr-single svg { width: 40px; height: 44px; }
+  .tr-single b { font-size: 0.68rem; color: var(--text); text-align: center; line-height: 1.2; }
+  .tr-single small { font-size: 0.58rem; text-align: center; line-height: 1.2; }
+  .tr-single.locked b { color: var(--muted); }
+  /* trophy details sheet */
+  .tr-sheet { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+  .tr-sheet[hidden] { display: none; }
+  .tr-sheet-badge svg { width: 64px; height: 70px; }
+  .tr-sheet h3 { margin: 0; font-size: 1.1rem; }
+  .tr-sheet .install-sub { margin: 0; }
+  .tr-sheet-meta { margin: 0 0 6px; font-size: 0.74rem; color: var(--muted); }
+  .tr-sheet-meta b { color: var(--text); }
+  .tr-sheet .install-actions { width: 100%; }
+  /* trophy unlocked pop */
+  .tr-pop {
+    position: fixed; z-index: 62; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: min(100% - 24px, 380px); background: var(--surface); border: 1px solid var(--line); border-radius: 22px;
+    padding: 18px 16px 14px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); animation: tr-pop-in .35s cubic-bezier(.2,.8,.25,1.2);
+  }
+  .tr-pop[hidden] { display: none; }
+  .tr-pop-kick { margin: 0; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+  .tr-pop h3 { margin: 0; font-size: 1.15rem; }
+  .tr-pop .install-sub { margin: 0; }
+  .tr-pop .install-actions { width: 100%; margin-top: 8px; }
+  .tr-pop-badge { position: relative; width: 110px; height: 120px; display: flex; align-items: center; justify-content: center; }
+  .tr-pop-badge svg { position: relative; z-index: 1; width: 92px; height: 100px; animation: tr-badge-pop .7s cubic-bezier(.2,.8,.25,1.5); }
+  .tr-pop-rays {
+    position: absolute; inset: -18px; border-radius: 50%; animation: tr-spin 9s linear infinite;
+    background: conic-gradient(from 0deg, transparent 0 10%, rgba(242,193,78,.28) 10% 15%, transparent 15% 35%, rgba(242,193,78,.28) 35% 40%, transparent 40% 60%, rgba(242,193,78,.28) 60% 65%, transparent 65% 85%, rgba(242,193,78,.28) 85% 90%, transparent 90%);
+    -webkit-mask-image: radial-gradient(circle, #000 30%, transparent 70%); mask-image: radial-gradient(circle, #000 30%, transparent 70%);
+  }
+  @keyframes tr-pop-in { from { opacity: 0; transform: translate(-50%, -46%) scale(.94); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+  @keyframes tr-badge-pop { 0% { transform: scale(.3) rotate(-12deg); opacity: 0; } 60% { transform: scale(1.12) rotate(3deg); opacity: 1; } 100% { transform: none; } }
+  @keyframes tr-spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .tr-pop, .tr-pop-badge svg, .tr-pop-rays { animation: none; } }
+
   /* Username profiles: pick / restore screens + the claim sheet. */
   .uname-pick, #restore-form, .uname-done { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 14px; }
   .uname-pick[hidden], #restore-form[hidden], .uname-done[hidden], .claim-done[hidden], #claim-ask[hidden] { display: none; }
@@ -998,6 +1136,14 @@
          the dotted trail you climb and a flag on top. One color (amber) — the
          back peak sits on a --bg knockout so the sun reads as behind it. -->
     <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <!-- Trophy badge fills (bronze / silver / gold / summit / special) -->
+      <defs>
+        <linearGradient id="tg-bronze" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9a877"/><stop offset="1" stop-color="#9c5a2e"/></linearGradient>
+        <linearGradient id="tg-silver" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1f4f8"/><stop offset="1" stop-color="#8f9aab"/></linearGradient>
+        <linearGradient id="tg-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe08a"/><stop offset="1" stop-color="#c98f1a"/></linearGradient>
+        <linearGradient id="tg-summit" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e2f8ff"/><stop offset=".5" stop-color="#8fd8f5"/><stop offset="1" stop-color="#5b8fd6"/></linearGradient>
+        <linearGradient id="tg-special" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb866"/><stop offset="1" stop-color="#c2620e"/></linearGradient>
+      </defs>
       <symbol id="summit-mark" viewBox="0 0 64 56">
       <circle cx="44" cy="25" r="11" fill="currentColor" fill-opacity=".65"/>
       <polygon points="30,54 45,28 62,54" fill="var(--bg)"/>
@@ -1084,6 +1230,8 @@
 
     <!-- HOME (once signed in with a name) -->
     <section id="screen-home" hidden>
+      <!-- Profile: floats top-right (no row cost). Initial + streak tag. -->
+      <button class="avatar-btn" id="btn-avatar" type="button" aria-label="Your profile"><span id="avatar-initial"></span><span class="avatar-streak" id="avatar-streak" hidden></span></button>
       <p class="lede home-tagline" id="home-tagline">Every solve adds a letter. Climb all the way to 8.</p>
 
       <!-- Home hero: whichever of Daily Climb / Adventure Mode is the day's main
@@ -1180,6 +1328,53 @@
       <p class="note" id="invite-note"></p>
       <button class="primary" id="btn-invite-share" type="button" hidden>Share&hellip;</button>
       <button class="linkbtn" id="btn-invite-home" type="button">&larr; Home</button>
+    </section>
+
+    <!-- PROFILE — streaks, trophies, podium, stats, calendar, recent climbs
+         (filled by renderProfile from players/{uid}.history etc.) -->
+    <section id="screen-profile" hidden>
+      <div class="pf-top"><button class="linkbtn pf-back" id="btn-profile-home" type="button">&larr; Home</button><span class="pf-ttl">Profile</span><span class="pf-spacer"></span></div>
+      <div class="pf-scroll" id="profile-scroll">
+        <div class="pf-who">
+          <div class="pf-av" id="pf-av"></div>
+          <div><h2 id="pf-name"></h2><p class="pf-since" id="pf-since"></p></div>
+        </div>
+        <div class="pf-card">
+          <h3 class="pf-h">Streak</h3>
+          <div class="pf-streak">
+            <div class="pf-big" id="pf-streak"></div>
+            <p class="pf-streak-lbl" id="pf-streak-lbl"></p>
+            <div class="pf-best"><b id="pf-best"></b>best ever</div>
+          </div>
+        </div>
+        <div class="pf-card">
+          <h3 class="pf-h">Trophies <button class="pf-more" id="btn-trophies" type="button"></button></h3>
+          <div class="pf-shelf" id="pf-shelf"></div>
+          <div class="pf-next" id="pf-next"></div>
+        </div>
+        <div class="pf-card">
+          <h3 class="pf-h">Daily podium</h3>
+          <div class="pf-podium" id="pf-podium"></div>
+          <p class="pf-note" id="pf-podium-note"></p>
+        </div>
+        <div class="pf-grid" id="pf-stats"></div>
+        <div class="pf-card">
+          <h3 class="pf-h">Your dailies <span class="pf-range" id="pf-range"></span></h3>
+          <div class="pf-cal" id="pf-cal"></div>
+          <div class="pf-legend">fewer words <i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i> 18/18</div>
+          <p class="pf-dayinfo" id="pf-dayinfo">Tap a day to see how it went.</p>
+        </div>
+        <div class="pf-card">
+          <h3 class="pf-h">Recent climbs</h3>
+          <div class="pf-recent" id="pf-recent"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TROPHY CASE — every trophy family's tiers, one-offs, secrets -->
+    <section id="screen-trophies" hidden>
+      <div class="pf-top"><button class="linkbtn pf-back" id="btn-trophies-back" type="button">&larr; Profile</button><span class="pf-ttl">Trophy case</span><span class="pf-spacer"></span></div>
+      <div class="pf-scroll" id="trophy-scroll"></div>
     </section>
 
     <!-- PATCH NOTES — every release, newest first (filled from PATCH_NOTES) -->
@@ -1544,6 +1739,25 @@
       <div class="install-actions"><button class="primary" id="btn-claim-done" type="button">Done</button></div>
     </div>
   </div>
+  <!-- Trophy details (tap a trophy) — same sheet frame as the others. -->
+  <div class="install-sheet tr-sheet" id="trophy-sheet" role="dialog" aria-modal="true" aria-labelledby="tr-sheet-name" hidden>
+    <div class="tr-sheet-badge" id="tr-sheet-badge"></div>
+    <h3 id="tr-sheet-name"></h3>
+    <p class="install-sub" id="tr-sheet-how"></p>
+    <p class="tr-sheet-meta" id="tr-sheet-meta"></p>
+    <div class="install-actions"><button class="primary" id="btn-tr-sheet-close" type="button">Close</button></div>
+  </div>
+  <!-- Trophy unlocked! (queued; shown on home / board / profile screens) -->
+  <div class="tr-pop" id="trophy-pop" role="dialog" aria-modal="true" aria-labelledby="tr-pop-name" hidden>
+    <p class="tr-pop-kick" id="tr-pop-kick">Trophy unlocked!</p>
+    <div class="tr-pop-badge"><div class="tr-pop-rays"></div><div id="tr-pop-badge"></div></div>
+    <h3 id="tr-pop-name"></h3>
+    <p class="install-sub" id="tr-pop-how"></p>
+    <div class="install-actions">
+      <button class="ghost" id="btn-tr-pop-see" type="button">See trophies</button>
+      <button class="primary" id="btn-tr-pop-ok" type="button">Nice!</button>
+    </div>
+  </div>
   <svg class="install-arrow" id="install-arrow" viewBox="0 0 28 34" aria-hidden="true" hidden>
     <path d="M14 2v24M4 17l10 10 10-10" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>
@@ -1801,6 +2015,22 @@
       return this.getPlayer();
     },
 
+    // ---- Profile + trophies ----
+    // players/{uid}.history / .stats are written by the once-a-day job
+    // (tools/stats/finalize.mjs); the game only adds earned trophies here,
+    // { id: "YYYY-MM-DD" } merged so other devices' awards are kept.
+    async saveTrophies(map) {
+      if (!uid || !map || !Object.keys(map).length) return;
+      try { await setDoc(doc(db, "players", uid), { trophies: map }, { merge: true }); } catch (e) {}
+    },
+    // { id: percent of climbers holding it } from the daily job, or null.
+    async getTrophyRarity() {
+      try {
+        const s = await getDoc(doc(db, "dailies", "_meta"));
+        return s.exists() ? (s.data().trophyRarity || null) : null;
+      } catch (e) { return null; }
+    },
+
     // Collection mode: record that this player has cleared CLIMBS[seedIndex].
     // arrayUnion so concurrent devices / repeats never duplicate an entry.
     async markSeedBeaten(seedIndex) {
@@ -1975,7 +2205,10 @@
         const p = snap.exists() ? snap.data() : {};
         if (p.dailyLastDay === day) return; // already counted
         const streak = (p.dailyLastDay === prevDay) ? (p.dailyStreak || 0) + 1 : 1;
-        await setDoc(doc(db, "players", uid), { dailyStreak: streak, dailyLastDay: day }, { merge: true });
+        await setDoc(doc(db, "players", uid), {
+          dailyStreak: streak, dailyLastDay: day,
+          bestStreak: Math.max(p.bestStreak || 0, streak), // profile + streak trophies
+        }, { merge: true });
       } catch (e) {}
     },
   };
@@ -2648,6 +2881,8 @@
     dailyboard: $("#screen-daily-board"),
     patchnotes: $("#screen-patch-notes"),
     restore: $("#screen-restore"),
+    profile: $("#screen-profile"),
+    trophies: $("#screen-trophies"),
     invite: $("#screen-invite"),
     climbintro: $("#screen-climb-intro"),
     climbover: $("#screen-climb-over"),
@@ -2664,6 +2899,8 @@
     hideInstallSheet(); // ...or the Add to Home Screen how-to
     hideReminderSheet(); // ...or the daily reminder sheet
     hideClaimSheet(); // ...or the claim-a-username sheet
+    hideTrophySheet(); hideTrophyPop(); // ...or trophy overlays
+    setTimeout(() => drainTrophyQueue(), 450); // queued "Trophy unlocked!" pops wait for a calm screen
     const el = screens[name];
     const arriving = el && el.hidden;
     for (const k in screens) screens[k].hidden = k !== name;
@@ -3617,7 +3854,11 @@
       el.textContent = "";
       if (!name) { el.hidden = true; return; }
       el.appendChild(document.createTextNode("Playing as "));
-      const b = document.createElement("b"); b.textContent = name; el.appendChild(b);
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "namebtn"; b.textContent = name;
+      b.setAttribute("aria-label", "Your profile");
+      b.addEventListener("click", showProfile);
+      el.appendChild(b);
       // A claimed username is the profile's key, so it isn't changeable here;
       // until then, "change" opens the username screen (claim one, or a plain
       // name if profiles aren't switched on).
@@ -3844,13 +4085,16 @@
     myBeatenSeeds = Array.isArray(p.beatenSeeds) ? p.beatenSeeds.slice() : [];
     if (p.tutorialSeen) tutorialSeen = true;
     try {
-      ["three21.resume", "three21.reminder"].forEach((k) => localStorage.removeItem(k));
+      ["three21.resume", "three21.reminder", "three21.today"].forEach((k) => localStorage.removeItem(k));
       if (tutorialSeen) localStorage.setItem("three21.tut", "1");
     } catch (e) {}
+    todayResult = null;
+    myPlayer = p;
     resumeState = null;
     cacheProfile();
     prefillNames(myUsername);
     trackEv("profile_restored");
+    checkTrophies();
     const alive = myDailyStreak > 0 && (myDailyLastDay === dailyKeyOf() || myDailyLastDay === shiftDayKey(dailyKeyOf(), -1));
     $("#restore-done-title").textContent = "Welcome back, " + myUsername + "!";
     const stats = $("#restore-stats");
@@ -4437,6 +4681,8 @@
       window.MatchDB.track("daily_round_complete", { round: round });
     }
 
+    // Secret trophy: cleared this climb with 2 of 3 strikes used.
+    if (completed && guessesLeft === 1 && (mode === "climb" || mode === "daily")) awardTrophy("comeback");
     const isLastRound = round >= climbRounds();
     if (isLastRound && completed) { climbSessionDone(); return; }
 
@@ -4642,7 +4888,7 @@
   function submitCollectionResult() {
     const got = roundWords[0] || [];
     const completed = got.length === 6;
-    if (completed) markSeedBeatenLocally(collectionSeed);
+    if (completed) { markSeedBeatenLocally(collectionSeed); checkTrophies(); }
     $("#co-title").textContent = completed ? "Climb beaten!" : "Climb over";
     $("#co-label").textContent = completed ? "Your ladder" : "You cleared";
     fillChips($("#co-words"), got);
@@ -4757,9 +5003,12 @@
       });
       await window.MatchDB.bumpStreak(dailyDay, prevDay);
       const p = await window.MatchDB.getPlayer();
-      if (p) { myDailyStreak = p.dailyStreak || 0; myDailyLastDay = p.dailyLastDay || null; }
+      if (p) { myDailyStreak = p.dailyStreak || 0; myDailyLastDay = p.dailyLastDay || null; myPlayer = p; }
       cacheProfile();
     } catch (e) {}
+    // Profile + trophies: today counts right away (final place comes tomorrow).
+    setTodayResult({ t: total, s: sessionStrikes, ms: solveMs, h: hintUsed, at: Date.now() });
+    checkTrophies();
     clearResume();
     showDailyBoard(dailyDay, { live: true, justFinished: true });
     if (totalRungs >= 12) setTimeout(() => confetti({ big: totalRungs >= 16 }), 350);
@@ -4806,7 +5055,10 @@
       // ...and your flag gets planted on the mountain.
       // After the results land: offer to claim a username (unclaimed players,
       // once a day), otherwise the one-time daily reminder offer.
-      setTimeout(async () => { if (!(await maybeOfferClaim())) maybeOfferReminder(); }, 1800);
+      setTimeout(async () => {
+        if (trophyQueue.length || !$("#trophy-pop").hidden) { drainTrophyQueue(); return; } // trophies first
+        if (!(await maybeOfferClaim())) maybeOfferReminder();
+      }, 1800);
       const myFlag = $("#daily-board-mtn .bflag.mine");
       if (myFlag) anim(myFlag, [{ opacity: 0, transform: "translateY(-10px)" }, { opacity: 1, transform: "translateY(0)" }],
         { duration: 420, delay: 250, easing: "cubic-bezier(.2,.8,.25,1.4)", fill: "backwards" });
@@ -4999,6 +5251,7 @@
   }
 
   function renderDailyCard() {
+    updateAvatar();
     renderAdventureProgress();
     const btn = $("#btn-daily-play");
     const meta = $("#daily-meta");
@@ -5731,7 +5984,7 @@
     // the one element that scrolls itself, the leaderboard list.
     document.addEventListener("touchmove", (e) => {
       const t = e.target;
-      if (t && t.closest && (t.closest(".lb-list") || t.closest(".collection-grid") || t.closest(".def") || t.closest(".patch-list"))) return;
+      if (t && t.closest && (t.closest(".lb-list") || t.closest(".collection-grid") || t.closest(".def") || t.closest(".patch-list") || t.closest(".pf-scroll"))) return;
       if (e.cancelable) e.preventDefault();
     }, { passive: false });
   })();
@@ -5926,8 +6179,8 @@
   $("#btn-home-install").addEventListener("click", openInstall);
   $("#btn-install-done").addEventListener("click", hideInstallSheet);
   // The scrim + Escape close whichever sheet is open (install or reminder).
-  $("#install-scrim").addEventListener("click", () => { hideInstallSheet(); hideReminderSheet(); hideClaimSheet(); });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { hideInstallSheet(); hideReminderSheet(); hideClaimSheet(); } });
+  $("#install-scrim").addEventListener("click", () => { hideInstallSheet(); hideReminderSheet(); hideClaimSheet(); hideTrophySheet(); if (!$("#trophy-pop").hidden) { hideTrophyPop(); setTimeout(drainTrophyQueue, 250); } });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { hideInstallSheet(); hideReminderSheet(); hideClaimSheet(); hideTrophySheet(); if (!$("#trophy-pop").hidden) { hideTrophyPop(); setTimeout(drainTrophyQueue, 250); } } });
   $("#btn-install-copy").addEventListener("click", () => {
     const b = $("#btn-install-copy");
     const link = gameLink();
@@ -6110,6 +6363,11 @@
   // Lives here, inside the page, because the page is always fetched fresh
   // (sw.js caches other files cache-first, so a notes file could go stale).
   const PATCH_NOTES = [
+    { v: "0.3.0", date: "2026-09-28", title: "Profiles & trophies",
+      notes: [
+        ["new", "Your profile: streaks, podium finishes, fastest climb, a calendar of every daily and more. Tap your avatar or your name."],
+        ["new", "32 trophies to earn, from streaks and perfect climbs to wins and a few secrets. Past climbs count!"],
+      ] },
     { v: "0.2.0", date: "2026-09-28", title: "Save your profile",
       notes: [
         ["new", "Claim a username to keep your streak and progress safe, even if you delete the app or switch phones."],
@@ -6190,6 +6448,501 @@
   $("#btn-patch-notes").addEventListener("click", showPatchNotes);
   $("#btn-patch-home").addEventListener("click", goHome);
   renderPatchChip();
+
+  // ---- Profile + trophies ----
+  // History comes from players/{uid}.history, written once a day by the stats
+  // job (tools/stats/finalize.mjs) with each finished day's final place:
+  //   history["YYYY-MM-DD"] = { t words, s wrong words, ms time, h hint used,
+  //                             at finished (epoch ms), r final place, n players }
+  // Today's result (not final yet) comes from todayResult. Trophies are worked
+  // out here from that, saved to players/{uid}.trophies { id: "YYYY-MM-DD" }
+  // (never taken back), and announced with a pop-up.
+  let myPlayer = {};        // last-read players/{uid} doc (history, stats, bestStreak, trophies)
+  let todayResult = null;   // { base, t, s, ms, h, at } for today's finished daily, until the job finalizes it
+  let trophyRarity = null;  // { id: percent } from dailies/_meta, loaded lazily
+  const TODAY_KEY = "three21.today";
+  try {
+    const t = JSON.parse(localStorage.getItem(TODAY_KEY) || "null");
+    if (t && t.base) todayResult = t;
+  } catch (e) {}
+
+  const TROPHY_GLYPH = {
+    flame: '<path d="M12 2.5c.8 3.2 4.6 5 4.6 9.6a4.6 4.6 0 0 1-9.2 0c0-2.3 1.2-3.7 2.4-4.8.1 1.8 1 2.8 2.2 3.1-.7-2.8.1-5.5 0-7.9Z" fill="currentColor"/>',
+    peak: '<path d="M2.5 19.5 9.5 7l3.2 5.4 2.1-3.1 6.7 10.2Z" fill="currentColor"/><path d="M9.5 7v-4.5l3.6 1.3-3.6 1.3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>',
+    crown: '<path d="M3.5 17.5h17l1-9.5-5.2 3.8L12 4.5l-4.3 7.3L2.5 8Z" fill="currentColor"/><rect x="3.5" y="18.8" width="17" height="2.2" rx="1" fill="currentColor"/>',
+    podium: '<path d="M3 13h5.6v8H3zM9.2 8.5h5.6V21H9.2zM15.4 15h5.6v6h-5.6z" fill="currentColor"/>',
+    compass: '<circle cx="12" cy="12" r="8.8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.8 8.2 13.2 13.2 8.2 15.8 10.8 10.8Z" fill="currentColor"/>',
+    calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m8.6 14.6 2.2 2.2 4.6-4.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+    bolt: '<path d="M13.5 2.5 5 13.5h5.8L9.5 21.5 19 10h-6.2Z" fill="currentColor"/>',
+    star: '<path d="m12 3 2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 17l-5.4 2.8 1.1-6.1L3.2 9.4l6.1-.8Z" fill="currentColor"/>',
+    check: '<path d="m4.5 12.5 5 5 10-11" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>',
+    gem: '<path d="M7 4h10l4 5-9 11.5L3 9Z" fill="currentColor"/><path d="M3 9h18M9.5 4 8 9l4 11.5L16 9l-1.5-5" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="1.2"/>',
+    moon: '<path d="M15.5 3.2A8.8 8.8 0 1 0 20.8 16a7.4 7.4 0 0 1-5.3-12.8Z" fill="currentColor"/>',
+    sun: '<circle cx="12" cy="12" r="4.4" fill="currentColor"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+    heart: '<path d="M12 20.5s-8-4.8-8-10.6A4.5 4.5 0 0 1 12 7.2a4.5 4.5 0 0 1 8 2.7c0 5.8-8 10.6-8 10.6Z" fill="currentColor"/>',
+    three: '<text x="12" y="17.5" text-anchor="middle" font-size="15" font-weight="900" fill="currentColor" font-family="system-ui,sans-serif">3</text>',
+    q: '<text x="12" y="17.5" text-anchor="middle" font-size="15" font-weight="900" fill="currentColor" font-family="system-ui,sans-serif">?</text>',
+  };
+  const TIER_ORDER = ["bronze", "silver", "gold", "summit"];
+  const TIER_NAME = { bronze: "Bronze", silver: "Silver", gold: "Gold", summit: "Summit", special: "Special", secret: "Secret" };
+  // Hexagonal trophy badge (fills are the tg-* gradients in the logo <svg>).
+  function trophyBadge(tier, glyph, locked) {
+    const shape = "20,1.5 37.5,11.5 37.5,32.5 20,42.5 2.5,32.5 2.5,11.5";
+    const g = TROPHY_GLYPH[glyph] || "";
+    if (locked) {
+      return '<svg viewBox="0 0 40 44" aria-hidden="true"><polygon points="' + shape + '" fill="#191d2c" stroke="#3a4260" stroke-width="1.5"/>' +
+        '<g transform="translate(10 12) scale(.83)" style="color:#4a5270">' + g + "</g></svg>";
+    }
+    return '<svg viewBox="0 0 40 44" aria-hidden="true"><polygon points="' + shape + '" fill="url(#tg-' + tier + ')"/>' +
+      '<polygon points="20,5 34.4,13.3 34.4,30.7 20,39 5.6,30.7 5.6,13.3" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1"/>' +
+      '<g transform="translate(10 12) scale(.83)" style="color:rgba(28,16,5,.82)">' + g + "</g></svg>";
+  }
+
+  // The trophy list. Families climb bronze → silver → gold → summit; ids are
+  // "<family>-<threshold>". Singles are one-offs (secret ones hide until earned).
+  const TROPHY_FAMILIES = [
+    { id: "streak", group: "Streaks", glyph: "flame", name: "Streak", unit: "day streak",
+      tiers: [[3, "Warm Up"], [7, "One Week Wonder"], [30, "Iron Climber"], [100, "Century Climber"]],
+      how: (n) => "Play " + n + " days in a row" },
+    { id: "summit", group: "Summits", glyph: "peak", name: "Perfect climbs", unit: "perfect climbs",
+      tiers: [[1, "First Summit"], [10, "Summit Seeker"], [50, "Peak Bagger"], [100, "Mountain Legend"]],
+      how: (n) => n === 1 ? "Get all 18 words in a daily" : "Get all 18 words in " + n + " dailies" },
+    { id: "wins", group: "Wins & podiums", glyph: "crown", name: "Daily wins", unit: "wins",
+      tiers: [[1, "First Win"], [5, "Front Runner"], [25, "Dynasty"], [100, "King of the Mountain"]],
+      how: (n) => n === 1 ? "Finish 1st in a daily" : "Finish 1st in " + n + " dailies" },
+    { id: "podium", group: "Wins & podiums", glyph: "podium", name: "Podium finishes", unit: "top-3 finishes",
+      tiers: [[1, "On the Podium"], [10, "Podium Regular"], [50, "Podium Fixture"]],
+      how: (n) => n === 1 ? "Finish top 3 in a daily" : "Finish top 3 in " + n + " dailies" },
+    { id: "adventure", group: "Adventure", glyph: "compass", name: "Adventure", unit: "climbs beaten",
+      tiers: [[10, "Explorer"], [50, "Trailblazer"], [250, "Cartographer"], [CLIMBS.length || 746, "Conqueror"]],
+      how: (n) => n === (CLIMBS.length || 746) ? "Beat every Adventure climb" : "Beat " + n + " Adventure climbs" },
+    { id: "days", group: "Dedication", glyph: "calendar", name: "Dailies played", unit: "dailies",
+      tiers: [[10, "Regular"], [50, "Devoted"], [100, "Centurion"], [365, "A Year on the Mountain"]],
+      how: (n) => "Play " + n + " dailies" },
+  ];
+  const TROPHY_SINGLES = [
+    { id: "speed", name: "Speed Climber", glyph: "bolt", how: "Perfect daily in under 5 minutes" },
+    { id: "lightning", name: "Lightning", glyph: "bolt", how: "Perfect daily in under 3 minutes" },
+    { id: "purist", name: "Purist", glyph: "star", how: "Perfect daily without using a hint" },
+    { id: "clean", name: "Clean Climb", glyph: "check", how: "Perfect daily with no wrong words" },
+    { id: "flawless", name: "Flawless", glyph: "gem", how: "Perfect daily: no hint and no wrong words" },
+    { id: "threepeat", name: "Three-Peat", glyph: "three", how: "Win the daily 3 days in a row" },
+    { id: "owl", name: "Night Owl", glyph: "moon", how: "Finish a daily between midnight and 4am", secret: true },
+    { id: "early", name: "Early Bird", glyph: "sun", how: "Finish a daily between 4am and 7am", secret: true },
+    { id: "comeback", name: "Comeback", glyph: "heart", how: "Clear a climb after using 2 strikes", secret: true },
+  ];
+  const TROPHY_TOTAL = TROPHY_FAMILIES.reduce((a, f) => a + f.tiers.length, 0) + TROPHY_SINGLES.length;
+  // id → { name, how, tier, glyph, secret }
+  function trophyInfo(id) {
+    const s = TROPHY_SINGLES.find((x) => x.id === id);
+    if (s) return { name: s.name, how: s.how, tier: "special", glyph: s.glyph, secret: !!s.secret };
+    const dash = id.lastIndexOf("-");
+    const f = TROPHY_FAMILIES.find((x) => x.id === id.slice(0, dash));
+    const n = +id.slice(dash + 1);
+    const ti = f ? f.tiers.findIndex((t) => t[0] === n) : -1;
+    if (!f || ti < 0) return null;
+    return { name: f.tiers[ti][1], how: f.how(n), tier: TIER_ORDER[ti], glyph: f.glyph, family: f, n: n };
+  }
+
+  // Local-date helpers on "YYYY-MM-DD".
+  const nextDayBase = (base) => { const p = base.split("-").map(Number); return dayKeyOf(new Date(p[0], p[1] - 1, p[2] + 1, 12)); };
+  const baseLabel = (base) => { const p = base.split("-").map(Number); return new Date(p[0], p[1] - 1, p[2], 12).toLocaleDateString(undefined, { month: "short", day: "numeric" }); };
+  function streakAlive() {
+    const today = dailyKeyOf();
+    return myDailyStreak > 0 && (myDailyLastDay === today || myDailyLastDay === shiftDayKey(today, -1)) ? myDailyStreak : 0;
+  }
+  // Every finished daily, oldest first: finalized history + today's (not final yet).
+  function dailyEntries() {
+    const h = (myPlayer && myPlayer.history) || {};
+    const list = Object.keys(h).filter((k) => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort().map((k) => Object.assign({ base: k }, h[k]));
+    if (todayResult && !h[todayResult.base]) list.push(Object.assign({}, todayResult));
+    return list;
+  }
+
+  // Which trophies this player has earned (id → date first earned) + progress.
+  function evaluateTrophies() {
+    const entries = dailyEntries();
+    const earned = {};
+    const put = (id, date) => { if (!earned[id]) earned[id] = date; };
+    const fam = (id) => TROPHY_FAMILIES.find((f) => f.id === id);
+    const hit = (id, value, date) => fam(id).tiers.forEach(([n]) => { if (value >= n) put(id + "-" + n, date); });
+    let days = 0, perfect = 0, wins = 0, podium = 0, run = 0, bestRun = 0, prev = null, winRun = 0, lastWin = null;
+    entries.forEach((e) => {
+      days++; hit("days", days, e.base);
+      run = prev && nextDayBase(prev) === e.base ? run + 1 : 1;
+      prev = e.base;
+      bestRun = Math.max(bestRun, run);
+      hit("streak", run, e.base);
+      if ((e.t || 0) >= 18) {
+        perfect++; hit("summit", perfect, e.base);
+        if (e.ms > 0 && e.ms < 300000) put("speed", e.base);
+        if (e.ms > 0 && e.ms < 180000) put("lightning", e.base);
+        if (!e.h) put("purist", e.base);
+        if (!e.s) put("clean", e.base);
+        if (!e.h && !e.s) put("flawless", e.base);
+      }
+      if (e.r === 1) {
+        wins++; hit("wins", wins, e.base);
+        winRun = lastWin && nextDayBase(lastWin) === e.base ? winRun + 1 : 1;
+        lastWin = e.base;
+        if (winRun >= 3) put("threepeat", e.base);
+      }
+      if (e.r >= 1 && e.r <= 3) { podium++; hit("podium", podium, e.base); }
+      if (e.at) {
+        const hr = new Date(e.at).getHours();
+        if (hr < 4) put("owl", e.base); else if (hr < 7) put("early", e.base);
+      }
+    });
+    const today = dayKeyOf();
+    const best = Math.max(bestRun, (myPlayer && myPlayer.bestStreak) || 0, streakAlive());
+    hit("streak", best, today);
+    hit("adventure", myBeatenSeeds.length, today);
+    // Stored awards win (their real dates, other devices, Comeback).
+    Object.assign(earned, (myPlayer && myPlayer.trophies) || {});
+    return { earned: earned, entries: entries,
+      have: { streak: best, summit: perfect, wins: wins, podium: podium, adventure: myBeatenSeeds.length, days: days } };
+  }
+
+  // Award anything newly earned: save it and queue the pop-ups. The very first
+  // check for a player (no trophies saved yet) folds a backlog into one
+  // "you've earned N trophies" pop instead of a stream of them.
+  const trophyQueue = [];
+  function checkTrophies() {
+    if (!dbReady() || !window.MatchDB || !window.MatchDB.hasAuth || isDev()) return;
+    const hadAny = !!(myPlayer && myPlayer.trophies);
+    const stored = (myPlayer && myPlayer.trophies) || {};
+    const earned = evaluateTrophies().earned;
+    const fresh = Object.keys(earned).filter((id) => !stored[id] && trophyInfo(id));
+    if (!fresh.length) return;
+    const add = {};
+    fresh.forEach((id) => { add[id] = earned[id]; });
+    myPlayer.trophies = Object.assign({}, stored, add);
+    window.MatchDB.saveTrophies(add);
+    trackEv("trophies_earned", { count: fresh.length });
+    if ((!hadAny && fresh.length > 1) || fresh.length > 3) trophyQueue.push({ summary: fresh });
+    else fresh.forEach((id) => trophyQueue.push({ id: id }));
+    setTimeout(drainTrophyQueue, 300);
+  }
+  // Instant awards that history can't show (Comeback).
+  function awardTrophy(id) {
+    if (!dbReady() || !window.MatchDB || !window.MatchDB.hasAuth || isDev()) return;
+    if (myPlayer.trophies && myPlayer.trophies[id]) return;
+    const add = {}; add[id] = dayKeyOf();
+    myPlayer.trophies = Object.assign({}, myPlayer.trophies || {}, add);
+    window.MatchDB.saveTrophies(add);
+    trophyQueue.push({ id: id });
+  }
+
+  function currentScreen() {
+    for (const k in screens) if (!screens[k].hidden) return k;
+    return null;
+  }
+  const TROPHY_POP_SCREENS = ["home", "dailyboard", "profile", "trophies", "collectionover", "climbover"];
+  const anySheetOpen = () => ["#install-sheet", "#reminder-sheet", "#claim-sheet", "#trophy-sheet"].some((s) => !$(s).hidden);
+  function drainTrophyQueue() {
+    if (!trophyQueue.length || !$("#trophy-pop").hidden || anySheetOpen()) return;
+    if (TROPHY_POP_SCREENS.indexOf(currentScreen()) < 0) return; // never mid-climb
+    showTrophyPop(trophyQueue.shift());
+  }
+  function showTrophyPop(item) {
+    let badgeHtml, name, how, kick = "Trophy unlocked!";
+    if (item.summary) {
+      const infos = item.summary.map(trophyInfo).filter(Boolean);
+      const top = infos.slice().sort((a, b) => TIER_ORDER.indexOf(b.tier) - TIER_ORDER.indexOf(a.tier))[0];
+      badgeHtml = trophyBadge(top.tier, top.glyph);
+      kick = "Trophies unlocked!";
+      name = infos.length + " trophies earned";
+      how = "From your climbs so far. See them all in your trophy case.";
+    } else {
+      const t = trophyInfo(item.id);
+      badgeHtml = trophyBadge(t.tier, t.glyph);
+      name = t.name;
+      how = t.how + ".";
+      if (trophyRarity && trophyRarity[item.id] != null) how += " Earned by " + trophyRarity[item.id] + "% of climbers.";
+    }
+    $("#tr-pop-kick").textContent = kick;
+    $("#tr-pop-badge").innerHTML = badgeHtml;
+    $("#tr-pop-name").textContent = name;
+    $("#tr-pop-how").textContent = how;
+    $("#install-scrim").hidden = false;
+    $("#trophy-pop").hidden = false;
+    FX.play("streak");
+    confetti();
+    $("#btn-tr-pop-ok").focus();
+  }
+  function hideTrophyPop() {
+    if ($("#trophy-pop").hidden) return;
+    $("#trophy-pop").hidden = true;
+    if (!anySheetOpen()) $("#install-scrim").hidden = true;
+  }
+  $("#btn-tr-pop-ok").addEventListener("click", () => { hideTrophyPop(); setTimeout(drainTrophyQueue, 250); });
+  $("#btn-tr-pop-see").addEventListener("click", () => { hideTrophyPop(); showTrophyCase(); });
+
+  // Home avatar: initial + live streak.
+  function updateAvatar() {
+    const btn = $("#btn-avatar");
+    if (!btn) return;
+    const name = myUsername || storedName || "";
+    $("#avatar-initial").textContent = name ? [...name][0].toUpperCase() : "?";
+    const s = streakAlive();
+    $("#avatar-streak").hidden = !s;
+    $("#avatar-streak").textContent = s ? s + "🔥" : "";
+    btn.setAttribute("aria-label", "Your profile" + (s ? ", " + s + "-day streak" : ""));
+  }
+
+  // ---- Profile screen ----
+  async function showProfile() {
+    renderProfile();
+    show("profile");
+    $("#profile-scroll").scrollTop = 0;
+    // Refresh from the server (the daily job may have added history), and pick
+    // up today's result if it was played on another device.
+    if (!dbReady() || !window.MatchDB || !window.MatchDB.hasAuth) return;
+    const today = dailyKeyOf();
+    const [p, mine] = await Promise.all([
+      window.MatchDB.getPlayer(),
+      !todayResult && myDailyLastDay === today ? window.MatchDB.getDailyEntrant(today) : Promise.resolve(null),
+    ]);
+    if (p) myPlayer = p;
+    if (mine && !todayResult) setTodayResult({ t: mine.total, s: mine.strikes, ms: mine.solveMs, h: mine.hintUsed, at: mine.finishedAt });
+    if (!screens.profile.hidden) renderProfile();
+    checkTrophies();
+  }
+  function setTodayResult(r) {
+    todayResult = { base: dayBase(dailyKeyOf()), t: r.t || 0, s: r.s || 0, ms: r.ms || 0, h: !!r.h, at: r.at || Date.now() };
+    try { localStorage.setItem(TODAY_KEY, JSON.stringify(todayResult)); } catch (e) {}
+  }
+  const ordinalOf = (n) => ordinal(n);
+  function renderProfile() {
+    const ev = evaluateTrophies();
+    const entries = ev.entries;
+    const name = myUsername || storedName || "Climber";
+    $("#pf-av").textContent = [...name][0].toUpperCase();
+    $("#pf-name").textContent = name;
+    const earnedIds = Object.keys(ev.earned).filter((id) => trophyInfo(id));
+    const since = entries.length ? (() => { const p = entries[0].base.split("-").map(Number); return new Date(p[0], p[1] - 1, 1).toLocaleDateString(undefined, { month: "short", year: "numeric" }); })() : null;
+    $("#pf-since").textContent = (since ? "Climbing since " + since + " · " : "") +
+      entries.length + (entries.length === 1 ? " daily" : " dailies") + " · " + earnedIds.length + (earnedIds.length === 1 ? " trophy" : " trophies");
+
+    // Streak
+    const cur = streakAlive();
+    const playedToday = myDailyLastDay === dailyKeyOf();
+    $("#pf-streak").textContent = cur + (cur ? "🔥" : "");
+    const lbl = $("#pf-streak-lbl");
+    lbl.replaceChildren();
+    const b = document.createElement("b"); b.textContent = "day streak"; lbl.append(b, document.createElement("br"));
+    lbl.append(playedToday ? "Played today ✓ Back tomorrow for " + (cur + 1) : cur ? "Play today to make it " + (cur + 1) : "Play today to start one");
+    $("#pf-best").textContent = ev.have.streak;
+
+    // Trophies: count, latest five, next one to earn
+    $("#btn-trophies").textContent = earnedIds.length + " of " + TROPHY_TOTAL + " · See all ›";
+    const latest = earnedIds.slice().sort((a, b) => (ev.earned[b] || "").localeCompare(ev.earned[a] || "")).slice(0, 5);
+    const shelf = $("#pf-shelf");
+    shelf.replaceChildren();
+    latest.forEach((id) => {
+      const t = trophyInfo(id);
+      const btn = document.createElement("button");
+      btn.type = "button"; btn.className = "tr-btn got";
+      btn.innerHTML = trophyBadge(t.tier, t.glyph);
+      const s = document.createElement("span"); s.textContent = t.name; btn.appendChild(s);
+      btn.addEventListener("click", () => showTrophySheet(id));
+      shelf.appendChild(btn);
+    });
+    let next = null;
+    TROPHY_FAMILIES.forEach((f) => {
+      const ti = f.tiers.findIndex(([n]) => !ev.earned[f.id + "-" + n]);
+      if (ti < 0) return;
+      const pct = Math.min(1, ev.have[f.id] / f.tiers[ti][0]);
+      if (!next || pct > next.pct) next = { f: f, ti: ti, pct: pct };
+    });
+    const nextEl = $("#pf-next");
+    nextEl.replaceChildren();
+    if (next) {
+      const [n, tname] = next.f.tiers[next.ti];
+      nextEl.innerHTML = trophyBadge(TIER_ORDER[next.ti], next.f.glyph, true) + '<div class="pf-next-txt"><b></b><small></small><div class="pf-bar"><i></i></div></div>';
+      nextEl.querySelector("b").textContent = "Next: " + tname;
+      nextEl.querySelector("small").textContent = Math.min(ev.have[next.f.id], n) + " / " + n + " " + next.f.unit;
+      nextEl.querySelector(".pf-bar i").style.width = Math.round(next.pct * 100) + "%";
+    }
+
+    // Podium
+    const counts = [1, 2, 3].map((r) => entries.filter((e) => e.r === r).length);
+    $("#pf-podium").innerHTML = [["s", 2, counts[1]], ["g", 1, counts[0]], ["b", 3, counts[2]]].map(([cls, r, c]) =>
+      '<div class="pf-step ' + cls + '"><b>' + c + '</b><span class="pf-medal">' + r + '</span><div class="pf-block"></div></div>').join("");
+    $("#pf-podium-note").textContent = counts[0] + counts[1] + counts[2] === 0
+      ? "Finish top 3 in a daily to get on the podium. Places are final once everyone's day is over."
+      : "";
+
+    // Stats
+    const perfect = entries.filter((e) => (e.t || 0) >= 18);
+    const fastest = perfect.filter((e) => e.ms > 0).reduce((m, e) => Math.min(m, e.ms), Infinity);
+    const avg = entries.length ? (entries.reduce((a, e) => a + (e.t || 0), 0) / entries.length).toFixed(1) : "–";
+    const stats = [
+      [entries.length, "days played"],
+      [perfect.length, "perfect climbs (18/18)"],
+      [fastest === Infinity ? "–" : fmtDuration(fastest), "fastest perfect climb"],
+      [avg, "average words"],
+      [entries.filter((e) => !e.h).length + " ★", "no-hint days"],
+      [myBeatenSeeds.length, "Adventure climbs beaten"],
+    ];
+    const grid = $("#pf-stats");
+    grid.replaceChildren();
+    stats.forEach(([v, label]) => {
+      const d = document.createElement("div"); d.className = "pf-stat";
+      const bb = document.createElement("b"); bb.textContent = v;
+      const sm = document.createElement("small"); sm.textContent = label;
+      d.append(bb, sm); grid.appendChild(d);
+    });
+
+    // Calendar: the last 35 days, weeks starting Monday
+    const byBase = {};
+    entries.forEach((e) => { byBase[e.base] = e; });
+    const days = [];
+    const now = new Date();
+    for (let i = 34; i >= 0; i--) days.push(dayKeyOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() - i, 12)));
+    $("#pf-range").textContent = baseLabel(days[0]) + " – " + baseLabel(days[days.length - 1]);
+    const cal = $("#pf-cal");
+    cal.replaceChildren();
+    ["M", "T", "W", "T", "F", "S", "S"].forEach((w) => { const s = document.createElement("span"); s.className = "pf-dow"; s.textContent = w; cal.appendChild(s); });
+    const p0 = days[0].split("-").map(Number);
+    const lead = (new Date(p0[0], p0[1] - 1, p0[2], 12).getDay() + 6) % 7;
+    for (let i = 0; i < lead; i++) cal.appendChild(document.createElement("span"));
+    const info = $("#pf-dayinfo");
+    info.textContent = "Tap a day to see how it went.";
+    days.forEach((base, i) => {
+      const e = byBase[base];
+      const c = document.createElement("button");
+      c.type = "button";
+      c.className = "pf-cell" + (e ? " l" + ((e.t || 0) >= 18 ? 4 : e.t >= 14 ? 3 : e.t >= 10 ? 2 : 1) : "") + (i === days.length - 1 ? " today" : "");
+      c.setAttribute("aria-label", baseLabel(base));
+      c.addEventListener("click", () => {
+        cal.querySelectorAll(".sel").forEach((x) => x.classList.remove("sel"));
+        c.classList.add("sel");
+        info.replaceChildren();
+        const d = document.createElement("b"); d.textContent = baseLabel(base);
+        info.appendChild(d);
+        if (!e) { info.append(" · didn't play"); return; }
+        info.append(" · " + (e.t || 0) + "/18 words · " +
+          (e.r ? "finished " + ordinalOf(e.r) + " of " + e.n : "final place after today") +
+          (e.ms ? " · " + fmtDuration(e.ms) : "") + (e.h ? "" : " · ★ no hint"));
+      });
+      cal.appendChild(c);
+    });
+
+    // Recent climbs
+    const recent = $("#pf-recent");
+    recent.replaceChildren();
+    entries.slice(-5).reverse().forEach((e) => {
+      const row = document.createElement("div"); row.className = "pf-row";
+      const d = document.createElement("span"); d.className = "d"; d.textContent = baseLabel(e.base);
+      const sc = document.createElement("span"); sc.className = "sc"; sc.innerHTML = "<b></b><small>/18</small>"; sc.querySelector("b").textContent = e.t || 0;
+      const rk = document.createElement("span"); rk.className = "rk" + (e.r && e.r <= 3 ? " m" + e.r : "");
+      rk.textContent = e.r ? ordinalOf(e.r) + " of " + e.n : "today";
+      const t = document.createElement("span"); t.className = "t"; t.textContent = e.ms ? fmtDuration(e.ms) : "";
+      row.append(d, sc, rk, t);
+      recent.appendChild(row);
+    });
+  }
+
+  // ---- Trophy case ----
+  async function showTrophyCase() {
+    renderTrophyCase();
+    show("trophies");
+    $("#trophy-scroll").scrollTop = 0;
+    if (!trophyRarity && dbReady() && window.MatchDB) {
+      trophyRarity = await window.MatchDB.getTrophyRarity();
+    }
+  }
+  function renderTrophyCase() {
+    const ev = evaluateTrophies();
+    const earnedCount = Object.keys(ev.earned).filter((id) => trophyInfo(id)).length;
+    const box = $("#trophy-scroll");
+    box.replaceChildren();
+    const head = document.createElement("div");
+    head.className = "tr-head";
+    head.innerHTML = '<div class="big"></div><div class="of">trophies<br>earned</div><div class="tr-legend">' +
+      '<span><i style="background:#d08a54"></i>Bronze</span><span><i style="background:#c9d1dc"></i>Silver</span>' +
+      '<span><i style="background:#f2c14e"></i>Gold</span><span><i style="background:#9fe3ff"></i>Summit</span></div>';
+    head.querySelector(".big").innerHTML = earnedCount + "<small> / " + TROPHY_TOTAL + "</small>";
+    box.appendChild(head);
+    const addGroup = (label) => { const g = document.createElement("div"); g.className = "tr-grp"; g.textContent = label; box.appendChild(g); };
+    let lastGroup = null;
+    TROPHY_FAMILIES.forEach((f) => {
+      if (f.group !== lastGroup) { addGroup(f.group); lastGroup = f.group; }
+      const card = document.createElement("div");
+      card.className = "tr-fam";
+      const top = document.createElement("div");
+      top.className = "tr-fam-top";
+      const b = document.createElement("b"); b.textContent = f.name;
+      const sm = document.createElement("small");
+      sm.textContent = f.id === "streak" ? "best: " + ev.have.streak + " days" : ev.have[f.id] + " " + f.unit;
+      top.append(b, sm);
+      const row = document.createElement("div");
+      row.className = "tr-tiers";
+      f.tiers.forEach(([n, tname], ti) => {
+        const id = f.id + "-" + n, got = !!ev.earned[id];
+        const btn = document.createElement("button");
+        btn.type = "button"; btn.className = "tr-btn" + (got ? " got" : "");
+        btn.innerHTML = trophyBadge(TIER_ORDER[ti], f.glyph, !got);
+        const s = document.createElement("span"); s.textContent = tname; btn.appendChild(s);
+        btn.addEventListener("click", () => showTrophySheet(id));
+        row.appendChild(btn);
+      });
+      card.append(top, row);
+      box.appendChild(card);
+    });
+    [["One-offs", false], ["Secret", true]].forEach(([label, secret]) => {
+      addGroup(label);
+      const grid = document.createElement("div");
+      grid.className = "tr-singles";
+      TROPHY_SINGLES.filter((s) => !!s.secret === secret).forEach((s) => {
+        const got = !!ev.earned[s.id];
+        const btn = document.createElement("button");
+        btn.type = "button"; btn.className = "tr-single" + (got ? "" : " locked");
+        btn.innerHTML = secret && !got ? trophyBadge("special", "q", true) : trophyBadge("special", s.glyph, !got);
+        const nm = document.createElement("b"); nm.textContent = secret && !got ? "Secret" : s.name;
+        const sm = document.createElement("small");
+        sm.textContent = got ? "Earned " + baseLabel(ev.earned[s.id]) : secret ? "Keep climbing" : s.how;
+        btn.append(nm, sm);
+        btn.addEventListener("click", () => showTrophySheet(s.id));
+        grid.appendChild(btn);
+      });
+      box.appendChild(grid);
+    });
+  }
+  function showTrophySheet(id) {
+    const t = trophyInfo(id);
+    if (!t) return;
+    const ev = evaluateTrophies();
+    const got = ev.earned[id];
+    const hidden = t.secret && !got;
+    $("#tr-sheet-badge").innerHTML = hidden ? trophyBadge("special", "q", true) : trophyBadge(t.tier, t.glyph, !got);
+    $("#tr-sheet-name").textContent = hidden ? "Secret trophy" : t.name;
+    $("#tr-sheet-how").textContent = hidden ? "Keep climbing to find out." : t.how;
+    const meta = $("#tr-sheet-meta");
+    meta.replaceChildren();
+    const tierB = document.createElement("b"); tierB.textContent = TIER_NAME[t.secret ? "secret" : t.tier];
+    meta.appendChild(tierB);
+    let rest = "";
+    if (got) rest += " · Earned " + baseLabel(got);
+    else if (t.family) rest += " · " + Math.min(ev.have[t.family.id], t.n) + " / " + t.n + " " + t.family.unit;
+    else if (!hidden) rest += " · Not yet";
+    if (trophyRarity && trophyRarity[id] != null) rest += " · Earned by " + trophyRarity[id] + "% of climbers";
+    meta.append(rest);
+    $("#install-scrim").hidden = false;
+    $("#trophy-sheet").hidden = false;
+    $("#btn-tr-sheet-close").focus();
+  }
+  function hideTrophySheet() {
+    if ($("#trophy-sheet").hidden) return;
+    $("#trophy-sheet").hidden = true;
+    if ($("#trophy-pop").hidden && !["#install-sheet", "#reminder-sheet", "#claim-sheet"].some((s) => !$(s).hidden)) $("#install-scrim").hidden = true;
+  }
+  $("#btn-tr-sheet-close").addEventListener("click", hideTrophySheet);
+  $("#btn-avatar").addEventListener("click", showProfile);
+  $("#btn-profile-home").addEventListener("click", goHome);
+  $("#btn-trophies").addEventListener("click", showTrophyCase);
+  $("#btn-trophies-back").addEventListener("click", showProfile);
   $("#btn-reminder-primary").addEventListener("click", reminderPrimary);
   $("#btn-reminder-secondary").addEventListener("click", reminderSecondary);
 
@@ -6272,6 +7025,7 @@
         // away a valid identity and bounce the player to the name screen.
         if (player && player.name) storedName = player.name;
         if (player && player.username) { myUsername = player.username; storedName = player.username; }
+        if (player) myPlayer = player;
         cacheProfile();
         if (!storedName) {
           if (!screens.loading.hidden || !screens.landing.hidden || !screens.vsjoin.hidden) {
@@ -6282,6 +7036,7 @@
         prefillNames(storedName);
         if (!code && (!screens.loading.hidden || !screens.landing.hidden)) leaveLoading(goHome);
         else if (!code && !screens.home.hidden) renderDailyCard(); // refresh the optimistic home
+        checkTrophies(); // e.g. yesterday's final place just landed
       });
     }
 
