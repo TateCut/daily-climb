@@ -215,6 +215,30 @@ service cloud.firestore {
         allow update, delete: if false;   // one attempt, no do-overs
       }
     }
+
+    // Username profiles (index.html MatchDB.claimUsername / restoreProfile).
+    // usernames: public "is this name taken?"; only the account whose
+    // username sign-in matches may reserve it, and never change or free it.
+    match /usernames/{name} {
+      allow read: if true;
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.username.lower() == name
+                    && request.auth.token.email == name + '@players.dailyclimb.invalid';
+      allow update, delete: if false;
+    }
+    // recovery: each profile's recovery code. Never readable from the game —
+    // the creator looks codes up in the Firebase console.
+    match /recovery/{name} {
+      allow read: if false;
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid
+                    && name.matches('^[a-z0-9_]{3,16}$');
+      allow update: if request.auth != null
+                    && resource.data.uid == request.auth.uid
+                    && request.resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
   }
 }
 ```

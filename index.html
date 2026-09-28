@@ -95,7 +95,8 @@
   body:has(#screen-climb-roundend:not([hidden])) .brandmark,
   body:has(#screen-climb-roundend:not([hidden])) h1,
   body:has(#screen-patch-notes:not([hidden])) .brandmark,
-  body:has(#screen-patch-notes:not([hidden])) h1 { display: none; }
+  body:has(#screen-patch-notes:not([hidden])) h1,
+  body:has(#screen-restore:not([hidden])) h1 { display: none; }
   /* No page scroll anywhere — every screen is sized to fit the viewport. The one
      list that can overflow (the leaderboard) scrolls inside itself instead. */
   html, body { overflow: hidden; overscroll-behavior: none; }
@@ -709,6 +710,33 @@
   .homelinks .sound-toggle { flex: 0 0 auto; padding: 10px 12px; font-size: 1rem; line-height: 1; }
   .full-btn { width: 100%; padding: 10px 12px; font-size: 0.9rem; }
 
+  /* Username profiles: pick / restore screens + the claim sheet. */
+  .uname-pick, #restore-form, .uname-done { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .uname-pick[hidden], #restore-form[hidden], .uname-done[hidden], .claim-done[hidden], #claim-ask[hidden] { display: none; }
+  .ufield { width: 100%; display: flex; flex-direction: column; gap: 5px; text-align: left; }
+  .ufield label { font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .ucode { text-transform: uppercase; letter-spacing: 0.06em; font-weight: 650; }
+  .ucode::placeholder { font-weight: 400; letter-spacing: 0.02em; }
+  .ustatus { margin: 0; min-height: 1.2em; font-size: 0.78rem; color: var(--muted); }
+  .ustatus.ok { color: var(--good); }
+  .ustatus.bad { color: var(--warn); }
+  .ucheck {
+    width: 54px; height: 54px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: rgba(111, 208, 140, 0.15); color: var(--good); font-size: 1.6rem;
+  }
+  .uname-done-title, .restore-title { margin: 0; font-size: 1.3rem; }
+  .uemail { color: var(--text); font-weight: 600; user-select: all; overflow-wrap: anywhere; }
+  .restore-help { margin: 0; line-height: 1.5; }
+  .restore-stats { display: flex; gap: 8px; width: 100%; }
+  .restore-stats div { flex: 1; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 4px; }
+  .restore-stats b { display: block; font-size: 1.15rem; }
+  .restore-stats small { font-size: 0.68rem; color: var(--muted); }
+  #claim-sheet #claim-ask { display: flex; flex-direction: column; gap: 10px; }
+  .claim-title { margin: 0; font-size: 1.05rem; line-height: 1.3; }
+  .claim-sub { margin: 0; }
+  .claim-done { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+  .claim-done h3 { margin: 0; font-size: 1.05rem; }
+
   /* Home footer: "Playing as …" + the version chip, on one line. */
   .home-foot { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
   .home-foot .whoami { margin: 0; min-height: 0; }
@@ -992,11 +1020,52 @@
     </section>
 
     <!-- NAME (first run / edit) -->
+    <!-- USERNAME — pick a unique username (the profile's key; see claimUsername).
+         Falls back to a plain name if profiles aren't available. -->
     <section id="screen-name" hidden>
-      <p class="lede" id="name-lede">What should your friends see you as? You can change it later.</p>
-      <input class="nameinput" id="name-input" type="text" placeholder="Your name" maxlength="24" autocomplete="off">
-      <button class="primary" id="name-save" type="button">Continue</button>
-      <p class="note" id="name-note"></p>
+      <div class="uname-pick" id="uname-pick">
+        <p class="lede" id="name-lede">Pick a username. It's how friends see you on the leaderboard, and how you get your profile back.</p>
+        <div class="ufield">
+          <label for="name-input">Username</label>
+          <input class="nameinput" id="name-input" type="text" placeholder="e.g. summit_sam" maxlength="16" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+          <p class="ustatus" id="name-note" aria-live="polite"></p>
+        </div>
+        <button class="primary" id="name-save" type="button">Continue</button>
+        <button class="linkbtn" id="btn-have-profile" type="button">I already have a profile</button>
+      </div>
+      <div class="uname-done" id="uname-done" hidden>
+        <div class="ucheck" aria-hidden="true">✓</div>
+        <h2 class="uname-done-title" id="uname-done-title"></h2>
+        <p class="lede">Your streak and progress are saved to your username. If you ever lose the app, email your username to <span class="uemail">tate.cutcliffe@gmail.com</span> for your recovery code.</p>
+        <button class="primary" id="uname-done-go" type="button">Play</button>
+      </div>
+    </section>
+
+    <!-- RESTORE — get a profile back with username + recovery code -->
+    <section id="screen-restore" hidden>
+      <div id="restore-form">
+        <h2 class="restore-title">Welcome back</h2>
+        <p class="lede">Enter your username and recovery code to get your profile back.</p>
+        <div class="ufield">
+          <label for="restore-name">Username</label>
+          <input class="nameinput" id="restore-name" type="text" maxlength="16" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+        </div>
+        <div class="ufield">
+          <label for="restore-code">Recovery code</label>
+          <input class="nameinput ucode" id="restore-code" type="text" placeholder="WORD-WORD-1234" maxlength="24" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false">
+          <p class="ustatus bad" id="restore-note" aria-live="polite"></p>
+        </div>
+        <button class="primary" id="restore-go" type="button">Restore my profile</button>
+        <p class="note restore-help">Don't have your code? Email your username to<br><span class="uemail">tate.cutcliffe@gmail.com</span></p>
+        <button class="linkbtn" id="restore-back" type="button">&larr; New player instead</button>
+      </div>
+      <div class="uname-done" id="restore-done" hidden>
+        <div class="ucheck" aria-hidden="true">✓</div>
+        <h2 class="uname-done-title" id="restore-done-title"></h2>
+        <div class="restore-stats" id="restore-stats"></div>
+        <p class="lede">Everything's right where you left it.</p>
+        <button class="primary" id="restore-done-go" type="button">Play</button>
+      </div>
     </section>
 
     <!-- TUTORIAL (first run, or "How to play") -->
@@ -1452,6 +1521,29 @@
       <button class="primary" id="btn-reminder-primary" type="button"></button>
     </div>
   </div>
+  <!-- Claim a username (existing players; offered once a day after a finished
+       daily). Same sheet frame as Add to Home Screen. -->
+  <div class="install-sheet" id="claim-sheet" role="dialog" aria-modal="true" aria-labelledby="claim-title" hidden>
+    <div id="claim-ask">
+      <h3 class="claim-title" id="claim-title"></h3>
+      <p class="install-sub claim-sub">Claim a username so your streak and progress stay yours, even if you delete the app or switch phones.</p>
+      <div class="ufield">
+        <label for="claim-input">Username</label>
+        <input class="nameinput" id="claim-input" type="text" maxlength="16" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+        <p class="ustatus" id="claim-note" aria-live="polite"></p>
+      </div>
+      <div class="install-actions">
+        <button class="ghost" id="btn-claim-later" type="button">Later</button>
+        <button class="primary" id="btn-claim-go" type="button">Claim it</button>
+      </div>
+    </div>
+    <div class="claim-done" id="claim-done" hidden>
+      <div class="ucheck" aria-hidden="true">✓</div>
+      <h3 id="claim-done-title"></h3>
+      <p class="install-sub">Your streak is safe. Lost the app? Email your username to <span class="uemail">tate.cutcliffe@gmail.com</span> for your recovery code.</p>
+      <div class="install-actions"><button class="primary" id="btn-claim-done" type="button">Done</button></div>
+    </div>
+  </div>
   <svg class="install-arrow" id="install-arrow" viewBox="0 0 28 34" aria-hidden="true" hidden>
     <path d="M14 2v24M4 17l10 10 10-10" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>
@@ -1478,10 +1570,11 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
   import {
     getFirestore, doc, setDoc, getDoc, getDocs, updateDoc, onSnapshot, serverTimestamp,
-    arrayUnion, arrayRemove, collection, query, where,
+    arrayUnion, arrayRemove, collection, query, where, deleteDoc,
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
   import {
     getAuth, signInAnonymously, onAuthStateChanged,
+    linkWithCredential, EmailAuthProvider, signInWithEmailAndPassword,
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
   import {
     getAnalytics, logEvent,
@@ -1491,6 +1584,10 @@
   // Project settings > Cloud Messaging > Web Push certificates). Safe to ship.
   const VAPID_KEY = "BPjs0ReIFPP-D4nv0dALo4_LiBJW7BwvDUTfLIuY_cZwD7Bq0DDiK2MSs4GFHi50oLjAXkns-ntRan5BV2sHWbg";
   const FCM_URL = "https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging.js";
+
+  // Username profiles sign in with a made-up address per username; it never
+  // receives mail (.invalid is a reserved domain). Firebase accepts the format.
+  const usernameEmail = (key) => key + "@players.dailyclimb.invalid";
 
   const cfg = window.THREE21_FIREBASE_CONFIG;
   let db = null, auth = null, analytics = null, fbApp = null;
@@ -1644,6 +1741,64 @@
       if (uid && token) {
         await setDoc(doc(db, "players", uid), { reminder: { tokens: arrayRemove(token) } }, { merge: true });
       }
+    },
+
+    // ---- Username profiles ----
+    // A player claims a unique username; the game makes a random recovery
+    // code for it. Under the hood the username + code become an email/password
+    // sign-in (a made-up address that never gets mail) LINKED to the player's
+    // current anonymous account, so the uid — and every streak, Adventure
+    // climb and leaderboard entry saved under it — stays the same. Restoring
+    // on a new device signs in with username + code and gets that uid back.
+    //   usernames/{lowercase}  { uid, username }        public: name taken?
+    //   recovery/{lowercase}   { uid, username, code }  no client reads — the
+    //                          creator looks codes up in the Firebase console.
+    // Errors thrown with .code: "taken" | "not-set-up" (provider or rules not
+    // switched on yet) | "no-auth" | a Firebase auth/... code.
+    async isUsernameTaken(username) {
+      try {
+        const snap = await getDoc(doc(db, "usernames", username.toLowerCase()));
+        return snap.exists();
+      } catch (e) {
+        throw Object.assign(new Error("usernames unreadable"), { code: e.code === "permission-denied" ? "not-set-up" : (e.code || "network") });
+      }
+    },
+    async claimUsername(username, codeDisplay, codePlain) {
+      const user = auth && auth.currentUser;
+      if (!user || !uid) throw Object.assign(new Error("not signed in"), { code: "no-auth" });
+      const key = username.toLowerCase();
+      if (await this.isUsernameTaken(username)) throw Object.assign(new Error("taken"), { code: "taken" });
+      // 1. The recovery record first (create-only, so a name someone else is
+      //    mid-claiming reads as taken).
+      const recRef = doc(db, "recovery", key);
+      try {
+        await setDoc(recRef, { uid: uid, username: username, code: codeDisplay, created: serverTimestamp() });
+      } catch (e) {
+        throw Object.assign(new Error("recovery write refused"), { code: "taken" });
+      }
+      // 2. Attach username + code as a sign-in to THIS account (same uid).
+      try {
+        await linkWithCredential(user, EmailAuthProvider.credential(usernameEmail(key), codePlain));
+      } catch (e) {
+        try { await deleteDoc(recRef); } catch (err) {}
+        if (e.code === "auth/email-already-in-use" || e.code === "auth/credential-already-in-use") {
+          throw Object.assign(new Error("taken"), { code: "taken" });
+        }
+        if (e.code === "auth/operation-not-allowed") throw Object.assign(new Error("provider off"), { code: "not-set-up" });
+        throw e;
+      }
+      // 3. Public reservation + profile. The rules check the sign-in's email
+      //    matches the name, so refresh the token to include it first.
+      try { await user.getIdToken(true); } catch (e) {}
+      await setDoc(doc(db, "usernames", key), { uid: uid, username: username });
+      await setDoc(doc(db, "players", uid), { username: username, name: username, updatedAt: Date.now() }, { merge: true });
+    },
+    // Sign in as an existing profile. Returns its player doc (or null).
+    async restoreProfile(username, codePlain) {
+      if (!auth) throw Object.assign(new Error("no auth"), { code: "no-auth" });
+      await signInWithEmailAndPassword(auth, usernameEmail(username.toLowerCase()), codePlain);
+      uid = auth.currentUser ? auth.currentUser.uid : uid;
+      return this.getPlayer();
     },
 
     // Collection mode: record that this player has cleared CLIMBS[seedIndex].
@@ -2125,6 +2280,7 @@
   let unwatchEntrants = null;
   let unwatchHome = null;
   let storedName = "";      // persistent display name (players/{uid}), once auth resolves
+  let myUsername = null;    // claimed unique username (players/{uid}.username), or null if not claimed yet
   let tutorialSeen = false; // players/{uid}.tutorialSeen, or the localStorage fallback
   let pendingMatchCode = null;
 
@@ -2491,6 +2647,7 @@
     vsreveal: $("#screen-vs-reveal"),
     dailyboard: $("#screen-daily-board"),
     patchnotes: $("#screen-patch-notes"),
+    restore: $("#screen-restore"),
     invite: $("#screen-invite"),
     climbintro: $("#screen-climb-intro"),
     climbover: $("#screen-climb-over"),
@@ -2506,6 +2663,7 @@
     hideChipPopover(); // never leave a word definition floating over the next screen
     hideInstallSheet(); // ...or the Add to Home Screen how-to
     hideReminderSheet(); // ...or the daily reminder sheet
+    hideClaimSheet(); // ...or the claim-a-username sheet
     const el = screens[name];
     const arriving = el && el.hidden;
     for (const k in screens) screens[k].hidden = k !== name;
@@ -3460,39 +3618,311 @@
       if (!name) { el.hidden = true; return; }
       el.appendChild(document.createTextNode("Playing as "));
       const b = document.createElement("b"); b.textContent = name; el.appendChild(b);
-      el.appendChild(document.createTextNode(" · "));
-      const btn = document.createElement("button");
-      btn.className = "linkbtn"; btn.type = "button"; btn.textContent = "change";
-      btn.addEventListener("click", showNameScreen);
-      el.appendChild(btn);
+      // A claimed username is the profile's key, so it isn't changeable here;
+      // until then, "change" opens the username screen (claim one, or a plain
+      // name if profiles aren't switched on).
+      if (!myUsername) {
+        el.appendChild(document.createTextNode(" · "));
+        const btn = document.createElement("button");
+        btn.className = "linkbtn"; btn.type = "button";
+        btn.textContent = "change";
+        btn.addEventListener("click", showNameScreen);
+        el.appendChild(btn);
+      }
       el.hidden = false;
     });
   }
 
+  // ---- Username profiles ----
+  // Players claim a unique username; the game makes a recovery code the
+  // creator can look up (Firestore recovery/{name}) and give out, so a
+  // profile survives deleting the app or switching phones. See
+  // MatchDB.claimUsername / restoreProfile. Until usernames are switched on
+  // in Firebase, the username screen falls back to saving a plain name.
+  const USERNAME_RE = /^[A-Za-z0-9_]{3,16}$/;
+  const USERNAME_HINT = "3–16 letters, numbers or _";
+  // Recovery codes: WORD-WORD-1234 from 128 plain words (~27 bits); guessing
+  // is throttled by Firebase's sign-in rate limits.
+  const CODE_WORDS = ("MAPLE RIVER CEDAR STONE CLOUD EMBER FROST BLOOM CANYON SUMMIT RIDGE TRAIL " +
+    "OTTER HERON FALCON BADGER RAVEN MOOSE BISON TIGER PANDA KOALA LLAMA ZEBRA " +
+    "APPLE MANGO LEMON OLIVE PEACH GRAPE MELON CHERRY BERRY HONEY COCOA PEPPER " +
+    "AMBER CORAL IVORY JADE PEARL RUBY TOPAZ ONYX SILVER COPPER BRONZE GOLDEN " +
+    "NORTH SOUTH EAST WEST DELTA MESA GLACIER HARBOR ISLAND LAGOON MEADOW PRAIRIE " +
+    "COMET ORBIT NOVA LUNAR SOLAR STAR PLANET ROCKET BEACON LANTERN CANDLE SPARK " +
+    "PIANO VIOLIN DRUM FLUTE BANJO CELLO TUBA HARP BRAVO TANGO SALSA DISCO " +
+    "BRICK TOWER BRIDGE CASTLE CABIN TENT CAMP COMPASS ANCHOR SAIL KAYAK CANOE " +
+    "PENCIL CRAYON MARBLE KITE YOYO PUZZLE RIDDLE WAFFLE PRETZEL MUFFIN BAGEL NOODLE " +
+    "THUNDER BREEZE RAINBOW SUNNY MISTY STORMY WINTER SPRING SUMMER AUTUMN DAWN DUSK").split(" ");
+  function makeRecoveryCode() {
+    const r = new Uint32Array(3);
+    crypto.getRandomValues(r);
+    const w1 = CODE_WORDS[r[0] % CODE_WORDS.length];
+    let w2 = CODE_WORDS[r[1] % CODE_WORDS.length];
+    if (w2 === w1) w2 = CODE_WORDS[(r[1] + 1) % CODE_WORDS.length];
+    const n = String(1000 + (r[2] % 9000));
+    return { display: w1 + "-" + w2 + "-" + n, plain: w1 + w2 + n };
+  }
+  // What the player types → the sign-in secret (case, dashes and spaces ignored).
+  const normalizeCode = (s) => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  // Are username profiles switched on in Firebase (Email/Password sign-in +
+  // the usernames/recovery rules)? Probed once after sign-in: until they are,
+  // the game keeps the old plain-name flow and never offers a username.
+  let profilesReady = false;
+  async function probeProfiles() {
+    if (!dbReady() || !window.MatchDB) return false;
+    try { await window.MatchDB.isUsernameTaken("probe"); profilesReady = true; }
+    catch (e) { profilesReady = false; }
+    return profilesReady;
+  }
+  function canClaimUsername() {
+    return profilesReady && dbReady() && !!window.MatchDB && !!window.MatchDB.hasAuth && !myUsername;
+  }
+
+  // Live "✓ Available / ✗ Taken" under a username field (debounced).
+  function wireUsernameCheck(input, note, button) {
+    let timer = null, seq = 0;
+    const set = (cls, msg, ok) => { note.className = "ustatus" + (cls ? " " + cls : ""); note.textContent = msg; button.disabled = !ok; };
+    const check = () => {
+      const v = input.value.trim();
+      clearTimeout(timer);
+      if (!canClaimUsername()) { set("", v ? "" : "", !!v); return; } // plain-name fallback: anything non-empty
+      if (!v) { set("", USERNAME_HINT, false); return; }
+      if (!USERNAME_RE.test(v)) { set("bad", "Only letters, numbers and _ (3–16)", false); return; }
+      set("", "Checking…", false);
+      const mine = ++seq;
+      timer = setTimeout(async () => {
+        try {
+          const taken = await window.MatchDB.isUsernameTaken(v);
+          if (mine !== seq) return;
+          if (taken) set("bad", "✗ Taken, try another", false);
+          else set("ok", "✓ Available", true);
+        } catch (e) {
+          if (mine !== seq) return;
+          set("", USERNAME_HINT, true); // can't check right now; the claim itself decides
+        }
+      }, 350);
+    };
+    input.addEventListener("input", check);
+    return check;
+  }
+
+  // Claim `username` for this player. Shows progress/errors in `note`;
+  // resolves "claimed" | "fallback" (profiles not set up: saved as a plain
+  // name) | null (failed — message already shown).
+  async function claimUsernameFlow(username, note, button, busyLabel) {
+    const idle = button.textContent;
+    button.disabled = true;
+    button.textContent = busyLabel || "Saving…";
+    const done = () => { button.disabled = false; button.textContent = idle; };
+    if (!USERNAME_RE.test(username)) {
+      note.className = "ustatus bad"; note.textContent = "Only letters, numbers and _ (3–16)";
+      done(); return null;
+    }
+    const code = makeRecoveryCode();
+    try {
+      await window.MatchDB.claimUsername(username, code.display, code.plain);
+    } catch (e) {
+      if (e && e.code === "not-set-up") {
+        // Usernames aren't switched on in Firebase yet: keep today's behavior.
+        await savePlainName(username);
+        done(); return "fallback";
+      }
+      note.className = "ustatus bad";
+      note.textContent = e && e.code === "taken"
+        ? "✗ Taken, try another"
+        : "Couldn't save that. Check your connection and try again.";
+      done(); return null;
+    }
+    myUsername = username;
+    storedName = username;
+    playerName = username;
+    cacheProfile();
+    prefillNames(username);
+    trackEv("username_claimed");
+    done(); return "claimed";
+  }
+  async function savePlainName(val) {
+    storedName = val;
+    playerName = val;
+    cacheProfile();
+    if (window.MatchDB) await window.MatchDB.savePlayerName(val);
+    prefillNames(val);
+  }
+
+  let nameScreenFirstEver = false;
+  const checkNameField = wireUsernameCheck($("#name-input"), $("#name-note"), $("#name-save"));
   function showNameScreen() {
+    const claimable = canClaimUsername();
+    $("#uname-pick").hidden = false;
+    $("#uname-done").hidden = true;
+    $("#btn-have-profile").hidden = !claimable || !!myUsername;
+    $("#name-input").maxLength = claimable ? 16 : 24;
+    $("#name-input").placeholder = claimable ? "e.g. summit_sam" : "Your name";
     $("#name-input").value = storedName || "";
-    $("#name-note").textContent = "";
     $("#name-lede").textContent = pendingMatchCode
       ? "You've been invited to a game! Pick a name the others will see."
-      : "What should your friends see you as? You can change it later.";
+      : claimable
+        ? "Pick a username. It's how friends see you on the leaderboard, and how you get your profile back."
+        : "What should your friends see you as? You can change it later.";
     show("name");
+    checkNameField();
     $("#name-input").focus();
   }
 
   async function nameContinue() {
     const val = $("#name-input").value.trim().slice(0, 24);
-    if (!val) { $("#name-note").textContent = "Enter a name to continue."; return; }
-    const firstEver = !storedName;
-    $("#name-save").disabled = true;
-    storedName = val;
-    playerName = val;
-    cacheProfile();
-    if (window.MatchDB) await window.MatchDB.savePlayerName(val);
-    $("#name-save").disabled = false;
-    prefillNames(val);
-    if (firstEver && !tutorialSeen) { showTutorial(); return; }
+    if (!val) { $("#name-note").className = "ustatus bad"; $("#name-note").textContent = "Enter a name to continue."; return; }
+    nameScreenFirstEver = !storedName;
+    if (!canClaimUsername()) {
+      $("#name-save").disabled = true;
+      await savePlainName(val);
+      $("#name-save").disabled = false;
+      afterNameSaved();
+      return;
+    }
+    const result = await claimUsernameFlow(val, $("#name-note"), $("#name-save"));
+    if (result === "fallback") { afterNameSaved(); return; }
+    if (result !== "claimed") return;
+    $("#uname-done-title").textContent = nameScreenFirstEver ? "Welcome, " + val + "!" : "Saved as " + val;
+    $("#uname-pick").hidden = true;
+    $("#uname-done").hidden = false;
+    $("#uname-done-go").focus();
+  }
+  function afterNameSaved() {
+    if (nameScreenFirstEver && !tutorialSeen) { showTutorial(); return; }
     afterNameOrTutorial();
   }
+  $("#uname-done-go").addEventListener("click", afterNameSaved);
+
+  // Restore: username + recovery code → sign in as that profile.
+  function showRestoreScreen() {
+    $("#restore-form").hidden = false;
+    $("#restore-done").hidden = true;
+    $("#restore-name").value = "";
+    $("#restore-code").value = "";
+    $("#restore-note").textContent = "";
+    show("restore");
+    $("#restore-name").focus();
+  }
+  async function restoreGo() {
+    const name = $("#restore-name").value.trim();
+    const code = normalizeCode($("#restore-code").value);
+    const note = $("#restore-note"), btn = $("#restore-go");
+    note.className = "ustatus bad";
+    if (!USERNAME_RE.test(name) || code.length < 6) {
+      note.textContent = "Enter your username and the code you were given.";
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = "Restoring…";
+    let player = null;
+    try {
+      player = await window.MatchDB.restoreProfile(name, code);
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = "Restore my profile";
+      const c = e && e.code;
+      note.textContent = c === "auth/too-many-requests"
+        ? "Too many tries. Wait a few minutes, then try again."
+        : c === "auth/network-request-failed"
+          ? "Couldn't connect. Check your connection and try again."
+          : c === "auth/operation-not-allowed"
+            ? "Profiles aren't switched on yet."
+            : "That username and code don't match. Check the code and try again.";
+      trackEv("profile_restore_failed", { reason: c || "unknown" });
+      return;
+    }
+    // Adopt the restored profile wholesale (this device's old anonymous
+    // progress, run in progress and reminder registration belonged to a
+    // different player).
+    const p = player || {};
+    myUsername = p.username || name;
+    storedName = myUsername;
+    playerName = myUsername;
+    myDailyStreak = p.dailyStreak || 0;
+    myDailyLastDay = p.dailyLastDay || null;
+    myBeatenSeeds = Array.isArray(p.beatenSeeds) ? p.beatenSeeds.slice() : [];
+    if (p.tutorialSeen) tutorialSeen = true;
+    try {
+      ["three21.resume", "three21.reminder"].forEach((k) => localStorage.removeItem(k));
+      if (tutorialSeen) localStorage.setItem("three21.tut", "1");
+    } catch (e) {}
+    resumeState = null;
+    cacheProfile();
+    prefillNames(myUsername);
+    trackEv("profile_restored");
+    const alive = myDailyStreak > 0 && (myDailyLastDay === dailyKeyOf() || myDailyLastDay === shiftDayKey(dailyKeyOf(), -1));
+    $("#restore-done-title").textContent = "Welcome back, " + myUsername + "!";
+    const stats = $("#restore-stats");
+    stats.replaceChildren();
+    [[(alive ? myDailyStreak : 0) + (alive && myDailyStreak ? "🔥" : ""), "day streak"], [myBeatenSeeds.length, "climbs beaten"]].forEach(([v, label]) => {
+      const d = document.createElement("div");
+      const b = document.createElement("b"); b.textContent = v;
+      const s = document.createElement("small"); s.textContent = label;
+      d.append(b, s);
+      stats.appendChild(d);
+    });
+    $("#restore-form").hidden = true;
+    $("#restore-done").hidden = false;
+    btn.disabled = false;
+    btn.textContent = "Restore my profile";
+    $("#restore-done-go").focus();
+  }
+  $("#btn-have-profile").addEventListener("click", showRestoreScreen);
+  $("#restore-go").addEventListener("click", restoreGo);
+  $("#restore-code").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); restoreGo(); } });
+  $("#restore-back").addEventListener("click", showNameScreen);
+  $("#restore-done-go").addEventListener("click", goHome);
+
+  // Existing players: after a finished daily, offer (once a day) to claim a
+  // username so their streak can't be lost. The reminder offer waits its turn.
+  const CLAIM_OFFER_KEY = "three21.claimOffered"; // day key the offer was last shown
+  let claimOpenedFrom = null;
+  const checkClaimField = wireUsernameCheck($("#claim-input"), $("#claim-note"), $("#btn-claim-go"));
+  async function maybeOfferClaim() {
+    if (!profilesReady) await probeProfiles();
+    if (!canClaimUsername() || screens.dailyboard.hidden) return false;
+    const today = dailyKeyOf();
+    let offered = null;
+    try { offered = localStorage.getItem(CLAIM_OFFER_KEY); } catch (e) {}
+    if (offered === today && !isDev()) return false;
+    try { localStorage.setItem(CLAIM_OFFER_KEY, today); } catch (e) {}
+    showClaimSheet();
+    trackEv("username_offered");
+    return true;
+  }
+  function showClaimSheet() {
+    const alive = myDailyStreak > 1 && (myDailyLastDay === dailyKeyOf() || myDailyLastDay === shiftDayKey(dailyKeyOf(), -1));
+    $("#claim-title").textContent = alive ? "🔥 Keep your " + myDailyStreak + "-day streak safe" : "Keep your progress safe";
+    $("#claim-ask").hidden = false;
+    $("#claim-done").hidden = true;
+    $("#claim-input").value = storedName || "";
+    claimOpenedFrom = document.activeElement;
+    $("#install-scrim").hidden = false;
+    $("#claim-sheet").hidden = false;
+    checkClaimField();
+    $("#claim-input").focus();
+  }
+  function hideClaimSheet() {
+    if ($("#claim-sheet").hidden) return;
+    $("#claim-sheet").hidden = true;
+    if ($("#install-sheet").hidden && $("#reminder-sheet").hidden) $("#install-scrim").hidden = true;
+    if (claimOpenedFrom && claimOpenedFrom.focus) claimOpenedFrom.focus();
+    claimOpenedFrom = null;
+  }
+  $("#btn-claim-go").addEventListener("click", async () => {
+    const val = $("#claim-input").value.trim();
+    const result = await claimUsernameFlow(val, $("#claim-note"), $("#btn-claim-go"), "Claiming…");
+    if (result === "fallback") { hideClaimSheet(); return; }
+    if (result !== "claimed") return;
+    $("#claim-done-title").textContent = "Saved as " + val;
+    $("#claim-ask").hidden = true;
+    $("#claim-done").hidden = false;
+    $("#btn-claim-done").focus();
+  });
+  $("#btn-claim-later").addEventListener("click", hideClaimSheet);
+  $("#btn-claim-done").addEventListener("click", hideClaimSheet);
+  $("#claim-input").addEventListener("keydown", (e) => { if (e.key === "Enter" && !$("#btn-claim-go").disabled) { e.preventDefault(); $("#btn-claim-go").click(); } });
   function afterNameOrTutorial() {
     if (pendingMatchCode) { show("vsjoin"); loadJoinPreview(pendingMatchCode); }
     else goHome();
@@ -3683,6 +4113,7 @@
         dailyLastDay: myDailyLastDay || null,
         dailyStreak: myDailyStreak || 0,
         beatenSeeds: myBeatenSeeds || [],
+        username: myUsername || null,
       }));
     } catch (e) {}
   }
@@ -3694,6 +4125,7 @@
       if (typeof p.dailyStreak === "number") myDailyStreak = p.dailyStreak;
       if (p.dailyLastDay) myDailyLastDay = p.dailyLastDay;
       if (Array.isArray(p.beatenSeeds)) myBeatenSeeds = p.beatenSeeds;
+      if (p.username) myUsername = p.username;
     } catch (e) {}
   }
 
@@ -4372,8 +4804,9 @@
           { duration: 340, easing: "ease-out" }), 120 + mine * 55 + 200);
       }
       // ...and your flag gets planted on the mountain.
-      // Offer a daily reminder once, after the results have landed.
-      setTimeout(maybeOfferReminder, 1800);
+      // After the results land: offer to claim a username (unclaimed players,
+      // once a day), otherwise the one-time daily reminder offer.
+      setTimeout(async () => { if (!(await maybeOfferClaim())) maybeOfferReminder(); }, 1800);
       const myFlag = $("#daily-board-mtn .bflag.mine");
       if (myFlag) anim(myFlag, [{ opacity: 0, transform: "translateY(-10px)" }, { opacity: 1, transform: "translateY(0)" }],
         { duration: 420, delay: 250, easing: "cubic-bezier(.2,.8,.25,1.4)", fill: "backwards" });
@@ -5493,8 +5926,8 @@
   $("#btn-home-install").addEventListener("click", openInstall);
   $("#btn-install-done").addEventListener("click", hideInstallSheet);
   // The scrim + Escape close whichever sheet is open (install or reminder).
-  $("#install-scrim").addEventListener("click", () => { hideInstallSheet(); hideReminderSheet(); });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { hideInstallSheet(); hideReminderSheet(); } });
+  $("#install-scrim").addEventListener("click", () => { hideInstallSheet(); hideReminderSheet(); hideClaimSheet(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { hideInstallSheet(); hideReminderSheet(); hideClaimSheet(); } });
   $("#btn-install-copy").addEventListener("click", () => {
     const b = $("#btn-install-copy");
     const link = gameLink();
@@ -5677,6 +6110,11 @@
   // Lives here, inside the page, because the page is always fetched fresh
   // (sw.js caches other files cache-first, so a notes file could go stale).
   const PATCH_NOTES = [
+    { v: "0.2.0", date: "2026-09-28", title: "Save your profile",
+      notes: [
+        ["new", "Claim a username to keep your streak and progress safe, even if you delete the app or switch phones."],
+        ["new", "On a new phone? Tap \"I already have a profile\" and enter your username and recovery code."],
+      ] },
     { v: "0.1.0", date: "2026-09-28", title: "Patch notes are here",
       notes: [
         ["new", "See what's changed in every update. Tap the version number at the bottom of the home screen; an amber dot means there's something new."],
@@ -5823,7 +6261,7 @@
     // Once anonymous auth resolves, adopt the real profile (or ask for a name).
     if (dbReady()) {
       window.MatchDB.whenReady(async () => {
-        const player = await window.MatchDB.getPlayer();
+        const [player] = await Promise.all([window.MatchDB.getPlayer(), probeProfiles()]);
         if (player) {
           if (player.tutorialSeen) tutorialSeen = true;
           myDailyStreak = player.dailyStreak || 0;
@@ -5833,6 +6271,7 @@
         // Keep the cached name if the server read failed (offline) — don't blow
         // away a valid identity and bounce the player to the name screen.
         if (player && player.name) storedName = player.name;
+        if (player && player.username) { myUsername = player.username; storedName = player.username; }
         cacheProfile();
         if (!storedName) {
           if (!screens.loading.hidden || !screens.landing.hidden || !screens.vsjoin.hidden) {
