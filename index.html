@@ -6377,6 +6377,10 @@
   // Lives here, inside the page, because the page is always fetched fresh
   // (sw.js caches other files cache-first, so a notes file could go stale).
   const PATCH_NOTES = [
+    { v: "0.3.3", date: "2026-09-29", title: "Cleaner climbs",
+      notes: [
+        ["fix", "Swapped out 11 Adventure climbs that used words that didn't belong in the game."],
+      ] },
     { v: "0.3.2", date: "2026-09-29", title: "Better first words",
       notes: [
         ["fix", "Five climbs used to start with EMS. They now start with everyday words instead."],

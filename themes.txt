@@ -1,0 +1,178 @@
+# Themes for the themed daily (read by gen-calendar.pl).
+#
+#   == id | Name | emoji | phrase
+#   words that count as the theme word (5+ letters, any order, any lines)
+#
+# The phrase finishes "A ___ hides in each climb." on the home screen.
+# A word only matters if it's in a climb; unused words are harmless.
+# @holiday MM-DD id   puts that theme on that date every year
+# @holiday thanksgiving id   (4th Thursday in November)
+
+@holiday 01-01 party
+@holiday 02-14 feelings
+@holiday 07-04 party
+@holiday 10-31 spooky
+@holiday thanksgiving food
+@holiday 12-25 holidays
+
+== ocean | Ocean | 🌊 | ocean word
+anchor anchors boating boatman coast coaster coasters corals currents harbor harbour lagoon manta marina
+marine marines mermaid mermaids oysters paddle paddles pearl pearls pelican pirate pirates sailing salmon
+sardine scallop seaman seawater shallow snapper swimmer tides trident tsunami turtle turtles whale
+
+== food | Food | 🍝 | food word
+almonds apples apricot baked bologna boiled bread brisket butter butters candies caramel carrot carrots
+caterer caterers catering cereal cheerios cooking cream croissant dessert desserts diner diners dinners
+eater eating entrees feasting flavor flavors flavour flavours fondue garlic garnish ginger gourmet grain
+grains grilled grocer grocery latte lentils lunches mangoes mashed mince nachos noodles olive oranges
+parsley pastries peaches pickled pickles raisin recipes roasted roasting salad salads salami salsa sauce
+scones sesame simmer spice spinach steamed strudel supper sushi tangerine taste tasted tasting toasted
+tomato turnips vegan vinegar walnuts yoghurt
+
+== sports | Sports | ⚽ | sports word
+archer archers archery athletes athletic basket baskets bowling cricket croquet cycling dribble fitness
+goalie hurdles karate leagues medal medals pitcher racehorse racer racers racing rodeo rowing scored
+scores scoring skating skiing snooker sparring sport sporting sports stadium stamina tackled tackling
+teams tennis trainee trainees trainer trainers training trophies tryouts winners wrestling
+
+== weather | Weather | 🌦 | weather word
+climate drought forecast freezing rained raining rains showers snowing solstice steamy stormed storming
+sundown sunrise thunder typhoon weather winds winter winters
+
+== animals | Animals | 🐾 | animal word
+animal animals antlers badger barking bears beasts beavers birds bluebird canine cattle cranes creature
+creatures crickets eagles gibbons gorilla hamster herring horse horses insects lemur leopard lioness lions
+locusts mantis meowing monkeys otter panthers parrots pelican pigeons ponies primate primates raccoon raven
+ravens reptile reptiles roaches robin rodents rooster sable serpent serpents snake snout sparrow spider
+starling steed tigress whiskers
+
+== music | Music | 🎵 | music word
+anthem blues carol choir chords clarinet encore jingles maestro musical opera orchestra orchestral pianist
+piper rapper rappers recital singer singers songwriter soprano strings trumpets tuned whistle whistler
+
+== space | Space | 🚀 | space word
+alien aliens asteroid asteroids craters earth earthlings eclipse launcher martian martians meteors orbital
+orbiting planet planets rockets solar space spaced starry stars stellar
+
+== garden | Garden | 🌿 | garden word
+acorn arbor blooming blooms blossom botany flora flower flowers flowery foliage forest forests garden
+gardener gardeners gardens harvest heather lavender linden orchids planted planting plants roses sprout
+sprouts trees vineyard vineyards violets
+
+== travel | Travel | ✈️ | travel word
+airline airports airship hotels resort resorts roads route souvenir souvenirs streetcar tourism tourist
+tours trains transit traveled travelers traveling travelled travellers travelling travels trips voyager countries countryside
+
+== home | Home | 🏠 | home word
+attic basement bedroom bedrooms blanket blankets blender carpet carpets cellars closet closets cushion
+cutlery doors doorstep fridge hearth kitchen mattress plates platter restroom saucer saucers spoons
+staircase stairs storeroom table terrace thermos tiles toaster utensils wardrobe windows
+
+== clothing | Clothing | 👗 | clothing word
+blouse boots cashmere clothes collars costume costumes dress flannel garment garments girdle helmets
+jackets leather necktie paisley pants ribbon sandals scarves shirt shoes sleeves slipper sweater trouser
+trousers uniform uniforms
+
+== treasure | Treasure | 💎 | treasure word
+anklet anklets bangles casket chalice diamond earring earrings emerald emeralds pearl pearls pirates
+riches sapphire silver sterling treasured trinket trinkets wealth
+
+== colors | Colors | 🎨 | color word
+carmine color colored coloring colors coloured colours crimson emerald green lavender olive oranges
+scarlet silver silvery violet violets whites
+
+== art | Art | 🖌 | art word
+artist artiste artists carving carvings curator drawing gallery imagery marble paint painted painter
+painters painting paints portraits potter pottery sculpture sketch tapestry perspective
+
+== jobs | Jobs | 👷 | job word
+actor actress builder builders butler cashier chemist dealer doorman editors farmer farmers fireman
+gardener inspector janitor lawyers mailman manager managers mechanic miner miners nurses painter pastor
+pilot plumber plumbers porter porters priest rancher ranchers secretary senator sheriff singer surgeon
+teacher teachers trucker waiter waiters waitress writers
+
+== school | School | 📚 | school word
+chapter chapters dictation equation equations grades graders history learn learning lecture lectures
+lesson lessons literary readers reading recital scholar science seminar spelling studies studying
+teacher teachers teaching tested writing
+
+== party | Party | 🎉 | party word
+carnival carol cheers christen congrats dance dances easter greeting greetings parades partied parties
+presents shindig toasted toasting wedding present
+
+== holidays | Holidays | 🎄 | holiday word
+angel angelic angels candles carol cheers feasting greetings presents snowing winter winters wreath present
+
+== spooky | Spooky | 👻 | spooky word
+cackles cadaver dungeon fright frighten gloom goblin goblins hallowed haunt haunted macabre monster
+monsters morgue nightmares omens potions scared scarier scariest screams sorcery specter spider spirits
+witch witches
+
+== royalty | Royalty | 👑 | royal word
+baroness castle castles chalice citadel crowned crowning empire fortress heiress kings knights majesty
+monarch monarchy nobles palace palaces princes princess realms regency reign scepter sultan throne
+thrones viscount
+
+== feelings | Feelings | ❤️ | feelings word
+adored adores adoring anger angered angrier angrily annoyed ashamed bitterness cheered delights despair
+ecstatic enraged excited fearful gloom grief jitters longing lovers nostalgic pleased pleasure pride
+proud sadder serenity startled tears tender upset worried yearning
+
+== body | Body | 🩺 | body word
+ankles aspirin bladder bones breath breathe chest dental dentures elbows eyelids fingers forearm heads
+healing health healthy heart hearts hygiene liver medical nails nurses organ patients shoulder sternum
+surgeon thighs veins
+
+== road | On the Road | 🚗 | road word
+barge braking buses carts chariot diesel driver drivers driving engine engines gasoline gondola motorcade
+plane roads scooter sedan steering streetcar tires tractor tractors trains transit truck trucker pedestrian pedestrians interstate
+
+== fire | Fire | 🔥 | fire word
+blazes burned candle candles charred embers fireball fireman flames flare flares hearth heater heating
+incense lantern lanterns smoke smokey spark sparked sparkle tinder torched torches
+
+== games | Games | 🎲 | game word
+arcade bingo cards casino charades checkers croquet gambler gamblers gaming marbles raffle riddle snooker
+trick
+
+== farm | Farm | 🚜 | farm word
+barrow cattle farmer farmers farming grain grains grazing harvest horse horses pasture ponies ranch
+rancher ranchers rooster saddle stable tractor tractors turnips
+
+== mountains | Mountains | ⛰ | mountain word
+alpine bedrock boulder boulders camper campers camping craters descent glacier granite gravel heights
+pebbles pinnacle plateau ridge slopes stone stones terrain trail trailing trails valleys
+
+== time | Time | ⏰ | time word
+anytime centuries clocked dates evening evenings interval intervals longtime meantime minutes moment
+mornings night period periods seconds years
+
+== numbers | Numbers | 🔢 | number word
+hundreds seven seventh seventy sixties thirteen three triple doubles single percent
+
+== family | Family | 👪 | family word
+auntie aunts bachelor bride brother brothers cousin elder elders father fathers grandson heirs kindred
+mother mothers niece nieces relatives sister sisters spouse stepson uncles wedding widower generation
+
+== movies | Movies & TV | 🎬 | movie word
+actor actors actress backstage camera cameras caption captions cartoon cartoons cinema comedian filmed
+filming matinee montage movies onstage scene scenes screen screens script scripts sitcom stage starred
+starring theater theaters theatre theatres video videos viewers
+
+== science | Science | 🔬 | science word
+atoms botany chemical chemist equation formula genes genetic genius laser magnet magnetism magnets methane
+neural nitrogen nucleus organism particle particles photon protein proteins protons reactor reactors
+research science thermal
+
+== money | Money | 💰 | money word
+auction bankers budgets cashier costs debts discount earnings euros income invest investment investor
+investors invoice markets payments pesos price prices receipt receipts refund retail riches richest
+rupees salaries sales savings traders trading wealth wealthy
+
+== tools | Tools | 🔨 | tool word
+blade builder builders crowbar drilled forceps ladder ladders lumber nailed nails plaster pliers ratchet
+sander sawing scalpel sickle spade stapler welding wiring
+
+== mystery | Mystery | 🔍 | detective word
+arrest arrested arresting arrests clues constable forensic heist inquest inspector larceny robbing
+sergeant sheriff sherlock suspect trial trials verdict witness interrogate secretive
