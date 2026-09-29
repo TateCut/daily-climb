@@ -165,3 +165,20 @@ weber
 yon
 # Not a real everyday word (Tate)
 ems
+# Tate's 4-5 letter review, 2026-09-29 (climbs now start at 4 letters)
+heil
+nance
+duce
+sora
+liang
+maria
+monte
+congo
+paris
+dolce
+senor
+inter
+alan
+pooh
+romeo
+thou

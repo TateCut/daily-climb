@@ -98,6 +98,8 @@
   body:has(#screen-climb-over:not([hidden])) h1,
   body:has(#screen-climb-roundend:not([hidden])) .brandmark,
   body:has(#screen-climb-roundend:not([hidden])) h1,
+  body:has(#screen-calendar:not([hidden])) .brandmark,
+  body:has(#screen-calendar:not([hidden])) h1,
   body:has(#screen-patch-notes:not([hidden])) .brandmark,
   body:has(#screen-patch-notes:not([hidden])) h1,
   body:has(#screen-restore:not([hidden])) h1,
@@ -612,6 +614,41 @@
   .dchip-peaks i:nth-child(3) { border-bottom-width: 11px; }
   .dchip-i { font-size: 0.64rem; font-weight: 800; border: 1px solid currentColor; border-radius: 50%; width: 14px; height: 14px;
     display: inline-flex; align-items: center; justify-content: center; opacity: 0.85; }
+  .tt-chips { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .dchip.calchip { color: var(--text); border-color: var(--line); }
+  .dchip.calchip svg { width: 13px; height: 13px; }
+  .dchip.static { cursor: default; }
+  /* Theme calendar screen. */
+  .cal-month { width: 100%; }
+  .cal-mhead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .cal-mhead b { font-size: 1rem; }
+  .cal-nav { font: inherit; font-size: 1.1rem; width: 36px; height: 30px; border-radius: 9px; border: 1px solid var(--line); background: var(--surface); color: var(--text); cursor: pointer; }
+  .cal-nav:disabled { opacity: 0.3; cursor: default; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+  .cal-dow { font-size: 0.64rem; color: var(--muted); letter-spacing: 0.06em; }
+  .cal-day { position: relative; height: 40px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text);
+    font: inherit; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .cal-day.none { background: transparent; border-color: transparent; cursor: default; }
+  .cal-day.past { opacity: 0.6; }
+  .cal-day.today { border-color: var(--accent); }
+  .cal-day.sel { box-shadow: 0 0 0 2px var(--gold) inset; border-color: var(--gold); opacity: 1; }
+  .cal-n { position: absolute; top: 2px; left: 4px; font-size: 0.56rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .cal-e { font-size: 1.05rem; line-height: 1; }
+  .cal-star { position: absolute; top: 1px; right: 3px; font-size: 0.56rem; color: var(--tier-s); }
+  .cal-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; }
+  .cal-day.T .cal-bar { background: var(--tier-t); }
+  .cal-day.R .cal-bar { background: var(--tier-r); }
+  .cal-day.S .cal-bar { background: var(--tier-s); }
+  .cal-day.played::after { content: ""; position: absolute; top: 4px; right: 4px; width: 5px; height: 5px; border-radius: 50%; background: var(--good); }
+  .cal-day.played:has(.cal-star)::after { top: auto; bottom: 6px; }
+  .cal-detail { width: 100%; min-height: 128px; display: flex; flex-direction: column; align-items: center; gap: 5px; text-align: center; }
+  .cal-date { font-size: 0.78rem; color: var(--muted); }
+  .cal-theme { font-size: 1.35rem; font-weight: 900; letter-spacing: 0.06em; color: var(--gold); line-height: 1.1; }
+  .cal-meta { font-size: 0.78rem; color: var(--muted); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: center; }
+  .cal-note { margin: 0; font-size: 0.84rem; color: var(--muted); line-height: 1.4; }
+  .cal-note b { color: var(--gold); letter-spacing: 0.03em; }
+  .cal-note.you { color: var(--text); }
+  .cal-go { margin-top: 4px; min-height: 44px; font-size: 0.95rem; padding: 0 20px; }
   /* Difficulty sheet. */
   #difficulty-sheet h3 { margin-bottom: 4px; }
   .tier-T { color: var(--tier-t); } .tier-R { color: var(--tier-r); } .tier-S { color: var(--tier-s); }
@@ -1171,6 +1208,8 @@
     font-weight: 700; font-size: 1.15rem; text-transform: uppercase;
   }
   .tut-tile.accent { border-color: var(--accent); color: var(--accent); }
+  .tut-visual.tight { gap: 5px; flex-wrap: nowrap; }
+  .tut-visual.tight .tut-tile { width: 30px; height: 36px; font-size: 1rem; }
   .tut-tile.no { border-color: var(--warn); color: var(--warn); opacity: 0.5; }
   .tut-slot { width: 36px; height: 42px; border: 1px dashed var(--line); border-radius: 8px; }
   .tut-arrow { color: var(--muted); font-size: 1.3rem; }
@@ -1318,7 +1357,10 @@
         <div class="tt-big"><span class="tt-em" id="tt-emoji" aria-hidden="true"></span><span id="tt-name"></span></div>
         <p class="tt-cap" id="tt-cap"></p>
         <svg class="tt-mtn" id="tt-mtn" viewBox="0 0 300 140" role="img"></svg>
-        <button class="dchip" id="btn-difficulty" type="button"></button>
+        <div class="tt-chips">
+          <button class="dchip" id="btn-difficulty" type="button"></button>
+          <button class="dchip calchip" id="btn-calendar" type="button"><svg viewBox="0 0 14 14" aria-hidden="true"><rect x="1.5" y="2.5" width="11" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M1.5 6h11M4.5 1v3M9.5 1v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>Calendar</button>
+        </div>
       </div>
 
       <!-- Home hero: whichever of Daily Climb / Adventure Mode is the day's main
@@ -1470,6 +1512,23 @@
       <p class="note patch-sub">What's changed in Daily Climb</p>
       <div class="patch-list" id="patch-list"></div>
       <button class="linkbtn" id="btn-patch-home" type="button">&larr; Home</button>
+    </section>
+
+    <!-- THEME CALENDAR: every themed day. Coming days show only their theme
+         and difficulty; past days reveal their theme words, your result and
+         a link to that day's leaderboard. -->
+    <section id="screen-calendar" hidden>
+      <h2 style="margin:0;font-size:1.3rem;">Theme calendar</h2>
+      <div class="cal-month">
+        <div class="cal-mhead">
+          <button class="cal-nav" id="cal-prev" type="button" aria-label="Previous month">&lsaquo;</button>
+          <b id="cal-mname"></b>
+          <button class="cal-nav" id="cal-next" type="button" aria-label="Next month">&rsaquo;</button>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+      <div class="cal-detail" id="cal-detail" aria-live="polite"></div>
+      <button class="linkbtn" id="btn-cal-home" type="button">&larr; Home</button>
     </section>
 
     <!-- DAILY CLIMB: leaderboard -->
@@ -1699,7 +1758,7 @@
     <!-- CLIMB: intro -->
     <section id="screen-climb-intro" hidden>
       <h2 style="margin:0;font-size:1.3rem;">Climb</h2>
-      <p class="lede">Start with a 3-letter word. Solve it and a letter is added &mdash; rearrange them all into a new word, up to eight.</p>
+      <p class="lede">Start with a 4-letter word. Solve it and a letter is added &mdash; rearrange them all into a new word, up to eight.</p>
       <p class="lede">No free rides: a word can't just be the one before it plus <b>-s</b>, <b>-d</b>, <b>-r</b> or <b>-n</b>.</p>
       <p class="note">Easy &middot; 3 Strikes &middot; no clock.</p>
       <button class="primary" id="btn-climb-start" type="button">Start</button>
@@ -2998,6 +3057,7 @@
     vsreveal: $("#screen-vs-reveal"),
     dailyboard: $("#screen-daily-board"),
     patchnotes: $("#screen-patch-notes"),
+    calendar: $("#screen-calendar"),
     restore: $("#screen-restore"),
     profile: $("#screen-profile"),
     trophies: $("#screen-trophies"),
@@ -3018,6 +3078,7 @@
     hideReminderSheet(); // ...or the daily reminder sheet
     hideClaimSheet(); // ...or the claim-a-username sheet
     hideTrophySheet(); hideTrophyPop(); // ...or trophy overlays
+    if (!$("#difficulty-sheet").hidden) hideDifficultySheet(); // ...or the Trail/Ridge/Summit explainer
     setTimeout(() => drainTrophyQueue(), 450); // queued "Trophy unlocked!" pops wait for a calm screen
     const el = screens[name];
     const arriving = el && el.hidden;
@@ -4313,8 +4374,8 @@
   // ---- tutorial ----
   const TUTORIAL = [
     {
-      h: "Start with three letters",
-      p: "Every climb opens with a 3-letter word. Rearrange the letters into a real word.",
+      h: "Start with four letters",
+      p: "Every climb opens with a 4-letter word. Rearrange the letters into a real word.",
       visual: "pool",
     },
     {
@@ -4358,12 +4419,12 @@
   function tutVisual(kind) {
     const tile = (ch, cls) => '<span class="tut-tile' + (cls ? " " + cls : "") + '">' + ch + "</span>";
     const arrow = '<span class="tut-arrow">&rarr;</span>';
-    if (kind === "pool") return tile("e") + tile("a") + tile("r");
-    if (kind === "grow") return tile("r") + tile("a") + tile("t") + arrow +
-      tile("t") + tile("r") + tile("a") + tile("p", "accent");
-    if (kind === "nope") return tile("c") + tile("a") + tile("t") +
+    if (kind === "pool") return tile("e") + tile("t") + tile("a") + tile("r");
+    if (kind === "grow") return tile("r") + tile("a") + tile("t") + tile("e") + arrow +
+      tile("s", "accent") + tile("t") + tile("a") + tile("r") + tile("e");
+    if (kind === "nope") return tile("c") + tile("a") + tile("r") + tile("e") +
       '<span class="tut-arrow tut-x">&times;</span>' +
-      tile("c", "no") + tile("a", "no") + tile("t", "no") + tile("s", "no");
+      tile("c", "no") + tile("a", "no") + tile("r", "no") + tile("e", "no") + tile("s", "no");
     if (kind === "strikes") return '<span class="guesspip spent"></span>' +
       '<span class="guesspip spent"></span><span class="guesspip"></span>';
     if (kind === "theme") return '<span class="tut-theme">🍝 FOOD</span><span class="tut-row">' +
@@ -4397,6 +4458,7 @@
   function renderTut(dir) {
     const s = tutDeck[tutStep];
     $("#tut-visual").innerHTML = tutVisual(s.visual);
+    $("#tut-visual").classList.toggle("tight", s.visual === "grow" || s.visual === "nope"); // 4 → 5 tiles on one line
     $("#tut-h").textContent = s.h;
     $("#tut-p").textContent = s.p;
     const dots = $("#tut-dots");
@@ -4780,7 +4842,7 @@
       dailyClimbs = dailyTheme.climbs;
       dailyClimbIndices = dailyClimbs.map((p) => {   // 8-letter climbs also live in Adventure Mode
         const i = CLIMB_BY_TOP.get(p.c[p.c.length - 1]);
-        return i != null && CLIMBS[i].c.join() === p.c.join() ? i : null;
+        return i != null ? i : null; // same top word = same Adventure climb, even if the daily takes another path
       });
     } else {
       dailyClimbIndices = pickDailyClimbIndices(day);
@@ -5573,9 +5635,9 @@
 
   // ---- Home: today's theme (themed days) ----
   const TIER_INFO = [
-    ["T", "Trail", "Peaks around 7–8 letters · about 17 words"],
-    ["R", "Ridge", "A 9-letter peak or trickier climbs · 18–20 words"],
-    ["S", "Summit", "A 10- or 11-letter peak · 21–24 words"],
+    ["T", "Trail", "Peaks around 7–8 letters · about 14 words"],
+    ["R", "Ridge", "A 9-letter peak or trickier climbs · 15–17 words"],
+    ["S", "Summit", "A 10- or 11-letter peak · 18–22 words"],
   ];
   // Today's three peaks, heights = peak lengths; each flag "?", or gold with
   // the found word, or grey + struck with the missed one.
@@ -5680,6 +5742,119 @@
     $("#install-scrim").hidden = true;
   }
   $("#btn-difficulty").addEventListener("click", showDifficultySheet);
+
+  // ---- Theme calendar ----
+  // Every themed day on a month grid. Coming days show only their theme and
+  // difficulty (no climbs); past days, and today once played, reveal the theme
+  // words, your result and a link to that day's leaderboard.
+  let calMonth = null; // [year, month 0-11] on screen
+  let calSel = null;   // "YYYY-MM-DD" selected
+  const CAL_DOW = ["M", "T", "W", "T", "F", "S", "S"];
+  const baseOfDate = (y, m, d) => y + "-" + String(m + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+  function calBounds() { // first and last month the calendar covers
+    const a = CAL.start.split("-").map(Number);
+    const last = new Date(a[0], a[1] - 1, a[2] + CAL.days.length - 1, 12);
+    return [[a[0], a[1] - 1], [last.getFullYear(), last.getMonth()]];
+  }
+  // Your result for a day: finalized history, or today's result on this device.
+  function calResult(base) {
+    const h = myPlayer && myPlayer.history && myPlayer.history[base];
+    if (h) return h;
+    return todayResult && todayResult.base === base ? todayResult : null;
+  }
+  function showCalendar(base) {
+    if (!CAL) return;
+    calSel = base || dayBase(dailyKeyOf());
+    const p = calSel.split("-").map(Number);
+    calMonth = [p[0], p[1] - 1];
+    renderCalendar();
+    show("calendar");
+  }
+  function renderCalendar() {
+    const [y, m] = calMonth, [lo, hi] = calBounds(), today = dayBase(dailyKeyOf());
+    $("#cal-mname").textContent = new Date(y, m, 1, 12).toLocaleDateString(undefined, { month: "long", year: "numeric" });
+    $("#cal-prev").disabled = y < lo[0] || (y === lo[0] && m <= lo[1]);
+    $("#cal-next").disabled = y > hi[0] || (y === hi[0] && m >= hi[1]);
+    const grid = $("#cal-grid");
+    grid.replaceChildren(...CAL_DOW.map((d) => { const e = document.createElement("span"); e.className = "cal-dow"; e.textContent = d; return e; }));
+    const lead = (new Date(y, m, 1, 12).getDay() + 6) % 7, n = new Date(y, m + 1, 0, 12).getDate();
+    for (let i = 0; i < lead; i++) grid.appendChild(document.createElement("span"));
+    for (let d = 1; d <= n; d++) {
+      const base = baseOfDate(y, m, d), t = themedDay(base);
+      const b = document.createElement("button");
+      b.type = "button";
+      const num = document.createElement("span");
+      num.className = "cal-n";
+      num.textContent = d;
+      if (!t) { b.className = "cal-day none"; b.disabled = true; b.appendChild(num); grid.appendChild(b); continue; }
+      const when = base < today ? "past" : base === today ? "today" : "future";
+      b.className = "cal-day " + t.tier + " " + when + (base === calSel ? " sel" : "") + (calResult(base) ? " played" : "");
+      b.dataset.base = base;
+      b.setAttribute("aria-label", new Date(y, m, d, 12).toLocaleDateString(undefined, { month: "long", day: "numeric" }) +
+        ": " + t.theme.name + ", " + DAY_TIER[t.tier] + (when === "today" ? ", today" : ""));
+      const em = document.createElement("span");
+      em.className = "cal-e";
+      em.setAttribute("aria-hidden", "true");
+      em.textContent = t.theme.emoji;
+      b.append(num, em);
+      if (t.star) { const st = document.createElement("span"); st.className = "cal-star"; st.setAttribute("aria-hidden", "true"); st.textContent = "★"; b.appendChild(st); }
+      const bar = document.createElement("span");
+      bar.className = "cal-bar";
+      b.appendChild(bar);
+      grid.appendChild(b);
+    }
+    renderCalDetail();
+  }
+  function renderCalDetail() {
+    const box = $("#cal-detail"), t = themedDay(calSel), today = dayBase(dailyKeyOf());
+    box.replaceChildren();
+    if (!t) return;
+    const p = calSel.split("-").map(Number);
+    const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; box.appendChild(e); return e; };
+    el("div", "cal-date", new Date(p[0], p[1] - 1, p[2], 12).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) +
+      (calSel === today ? " · today" : ""));
+    el("div", "cal-theme", t.theme.emoji + " " + t.theme.name.toUpperCase());
+    const peaks = t.climbs.map((c) => c.c[c.c.length - 1].length);
+    const words = t.climbs.reduce((a, c) => a + c.c.length, 0);
+    const row = el("div", "cal-meta");
+    const chip = document.createElement("span");
+    chip.className = "dchip static " + t.tier;
+    chip.textContent = DAY_TIER[t.tier] + (t.star ? " ★" : "");
+    row.append(chip, " " + peaks.join(" · ") + " letters · " + words + " words");
+    if (calSel > today) { el("p", "cal-note", "Climbs unlock on the day."); return; }
+    const r = calResult(calSel);
+    const played = !!r || (calSel === today && myDailyLastDay === dailyKeyOf());
+    if (calSel < today || played) {
+      // Safe to show once the day is over or played.
+      const tw = el("p", "cal-note");
+      tw.append("The " + t.theme.word + "s: ");
+      t.words.forEach((ws, i) => { const b = document.createElement("b"); b.textContent = ws[0].toUpperCase(); tw.append(i ? ", " : "", b); });
+    }
+    if (r) {
+      el("p", "cal-note you", "You got " + (r.t || 0) + " of " + (r.m || words) + " words" +
+        (r.th != null ? " · " + t.theme.emoji + " " + r.th + "/" + t.climbs.length : "") +
+        (r.r && r.n ? " · " + ordinal(r.r) + " of " + r.n : ""));
+    } else if (calSel < today) {
+      el("p", "cal-note", "You didn't play this one.");
+    }
+    const go = el("button", "primary cal-go");
+    go.type = "button";
+    if (calSel === today && !played) { go.textContent = "Play today's climb"; go.onclick = dailyPlayClick; }
+    else {
+      go.textContent = calSel === today ? "See today's standings" : "See the leaderboard";
+      go.onclick = () => showDailyBoard(calSel + DAILY_SALT, { live: calSel === today });
+    }
+  }
+  $("#btn-calendar").addEventListener("click", () => showCalendar());
+  $("#btn-cal-home").addEventListener("click", goHome);
+  $("#cal-prev").addEventListener("click", () => { calMonth = calMonth[1] ? [calMonth[0], calMonth[1] - 1] : [calMonth[0] - 1, 11]; renderCalendar(); });
+  $("#cal-next").addEventListener("click", () => { calMonth = calMonth[1] < 11 ? [calMonth[0], calMonth[1] + 1] : [calMonth[0] + 1, 0]; renderCalendar(); });
+  $("#cal-grid").addEventListener("click", (e) => {
+    const b = e.target.closest(".cal-day[data-base]");
+    if (!b) return;
+    calSel = b.dataset.base;
+    renderCalendar();
+  });
   $("#btn-difficulty-done").addEventListener("click", hideDifficultySheet);
 
   function renderDailyCard() {
@@ -6799,6 +6974,12 @@
   // Lives here, inside the page, because the page is always fetched fresh
   // (sw.js caches other files cache-first, so a notes file could go stale).
   const PATCH_NOTES = [
+    { v: "0.5.0", date: "2026-09-29", title: "Fresh starts",
+      notes: [
+        ["new", "A theme calendar. Tap Calendar on the home screen to see what's coming up and look back at past days, their theme words and your results."],
+        ["imp", "Every climb now starts with a 4-letter word, so no more odd 3-letter warm-ups like AIN or ERE. Adventure Mode changes now, and the daily switches over from tomorrow."],
+        ["fix", "Swapped out a handful of obscure or unsuitable words, like SORA and LIANG."],
+      ] },
     { v: "0.4.0", date: "2026-09-29", title: "Themed climbs",
       notes: [
         ["new", "Every daily has a theme. A theme word hides in each of the three climbs. Find it and it glows gold."],

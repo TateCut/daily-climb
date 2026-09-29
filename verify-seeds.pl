@@ -49,8 +49,31 @@ while ($climbs_raw =~ /\{c:\[([^\]]+)\],a:\[([^\]]+)\]\}/g) {
     my ($c_part, $a_part) = ($1, $2);
     my @c = ($c_part =~ /"([^"]*)"/g);
     my @a = ($a_part =~ /"([^"]*)"/g);
-    push @seeds, { c => \@c, a => \@a };
+    push @seeds, { c => \@c, a => \@a, start => 4 };
 }
+# ---- and every climb in the themed calendar (daily-calendar.js) ----
+# Its climbs carry no a[] (the game derives it), so rebuild it here. Day 0
+# (2026-09-29) was played with 3-letter starts; every later day starts at 4.
+{
+    open(my $dfh, "<:raw", "$root/daily-calendar.js") or die "daily-calendar.js: $!";
+    local $/ = "\n";
+    my $day = -1;
+    while (my $line = <$dfh>) {
+        next unless $line =~ /^\{"c":\[(\[.*?\])\],"k"/;
+        $day++;
+        my $cs = $1;
+        while ($cs =~ /\[([^\]]*)\]/g) {
+            my @c = ($1 =~ /"([a-z]+)"/g);
+            my @a;
+            for my $i (0 .. $#c - 1) { my %h; $h{$_}++ for split //, $c[$i+1]; $h{$_}-- for split //, $c[$i]; push @a, (grep { $h{$_} > 0 } keys %h)[0] // "?"; }
+            push @seeds, { c => \@c, a => \@a, start => ($day == 0 ? 3 : 4), where => "calendar day $day" };
+        }
+    }
+    close $dfh;
+}
+# climb-blocklist.txt: no climb may use a blocked word (calendar day 0 is history)
+my %blocked;
+if (open(my $bfh, "<", "$root/climb-blocklist.txt")) { local $/ = "\n"; while (<$bfh>) { s/#.*//; s/\s+//g; $blocked{$_} = 1 if length; } }
 print "loaded " . scalar(@seeds) . " seeds\n\n";
 
 sub sorted_letters { return join("", sort split //, lc(shift)); }
@@ -75,11 +98,14 @@ for my $seed (@seeds) {
     my @a = @{ $seed->{a} };
     my @problems;
 
-    if (@c < 5 || @c > 9) { push @problems, "c has " . scalar(@c) . " entries, expected 5-9 (peaks of 7-11 letters)"; }
+    my $start = $seed->{start};
+    my ($lo, $hi) = (7 - $start + 1, 11 - $start + 1);   # peaks of 7-11 letters
+    if (@c < $lo || @c > $hi) { push @problems, "c has " . scalar(@c) . " entries, expected $lo-$hi (peaks of 7-11 letters from $start)"; }
+    if ($start == 4) { my @b = grep { $blocked{$_} } @c; push @problems, "uses blocked word(s): @b" if @b; }
     if (@a != @c - 1) { push @problems, "a has " . scalar(@a) . " entries, expected " . (@c - 1); }
 
     for my $i (0 .. $#c) {
-        my $expect_len = 3 + $i;
+        my $expect_len = $start + $i;
         if (length($c[$i]) != $expect_len) {
             push @problems, "c[$i]='$c[$i]' has length " . length($c[$i]) . ", expected $expect_len";
         }

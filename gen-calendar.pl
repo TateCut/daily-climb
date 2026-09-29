@@ -5,13 +5,16 @@ use JSON::PP;
 use Time::Local;
 binmode STDOUT, ':encoding(UTF-8)';
 
+# !! The LIVE calendar is played from 2026-09-29 and was patched in place for
+# !! v0.5.0 (4-letter starts, cut words). Re-running this rebuilds EVERY day,
+# !! past ones included. To extend the calendar, append new days instead.
 # Builds daily-calendar.js: the themed daily, one entry per day from START.
 # Each day = one theme + three climbs whose peaks rise (non-decreasing, last
 # higher than first, at most one 7-letter climb), each climb holding a theme
 # word (5+ letters, from themes.txt). Days are Trail / Ridge / Summit:
-#   Trail  7·8·8 with easier climbs                         ~17 words
-#   Ridge  a 9-letter peak, or 7·8·8 with harder climbs     ~18-20
-#   Summit a 10- or 11-letter peak (★ = 11)                 21-24
+#   Trail  7·8·8 with easier climbs                         ~14 words (climbs start at 4 letters from v0.5.0)
+#   Ridge  a 9-letter peak, or 7·8·8 with harder climbs     ~15-17
+#   Summit a 10- or 11-letter peak (★ = 11)                 18-22
 # mixed about 6:3:1 in a shuffled order that's the same for everyone:
 # never more than 3 Trail days in a row, never two Summits back to back,
 # ★ days spread out. Themes rotate evenly, never within a few days of
