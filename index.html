@@ -32,6 +32,10 @@
     --mtn-near: #12141f;
     --sun-core: #fff2d6;
     --sun-ring: #ffb266;
+    --gold: #f2c14e;      /* theme words */
+    --tier-t: #6fd08c;    /* Trail */
+    --tier-r: #e8871e;    /* Ridge */
+    --tier-s: #9fb8ff;    /* Summit */
     --tile-w: 48px; /* set from JS (sizeTiles) so a row's letters always fit on one line */
     color-scheme: dark;
     /* No background here on purpose: body's sky gradient must propagate to
@@ -554,6 +558,72 @@
   .ascent-toast span { overflow: hidden; text-overflow: ellipsis; }
   .ascent-toast svg { width: 13px; height: 15px; flex: none; }
   @media (prefers-reduced-motion: reduce) { #ascentRivals g, .ascent-toast { transition: none; } }
+  .ascent-toast.theme { border-color: var(--gold); color: var(--gold); font-weight: 750; max-width: calc(72% - 8px);
+    box-shadow: 0 0 16px rgba(242, 193, 78, 0.3), 0 10px 26px rgba(0, 0, 0, 0.45); }
+
+  /* ---- Themed dailies ---- */
+  /* Climb screen: "🍝 FOOD ⚑PASTA ⚑SAUCE ⚑?" under the round line. */
+  .themestrip { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap;
+    font-size: 0.74rem; font-weight: 800; letter-spacing: 0.06em; color: var(--gold); margin: -8px 0 -6px; }
+  .themestrip[hidden] { display: none; }
+  .ts-flag { display: inline-flex; align-items: center; gap: 3px; font-size: 0.66rem; letter-spacing: 0.04em; color: var(--muted); }
+  .ts-flag svg { width: 9px; height: 13px; }
+  .ts-flag.got { color: var(--gold); }
+  .ts-flag.miss { text-decoration: line-through; opacity: 0.7; }
+  .ts-flag.fresh { animation: ts-pulse 1.6s ease-in-out 3; }
+  @keyframes ts-pulse { 50% { filter: drop-shadow(0 0 5px rgba(242, 193, 78, 0.9)); } }
+  .wordtrail .wordtrail-theme { color: var(--gold); text-shadow: 0 0 10px rgba(242, 193, 78, 0.5); font-weight: 800; }
+  /* Between climbs: the theme word, found or missed. */
+  .theme-reveal { margin: 0; width: 100%; border-radius: 12px; padding: 10px 12px; text-align: left; font-size: 0.9rem; line-height: 1.45; }
+  .theme-reveal[hidden] { display: none; }
+  #cre-words .tw { border-color: var(--gold); color: var(--gold); box-shadow: 0 0 10px rgba(242, 193, 78, 0.3); }
+  .theme-reveal.got { background: rgba(242, 193, 78, 0.1); border: 1px solid rgba(242, 193, 78, 0.45); }
+  .theme-reveal.miss { background: rgba(240, 122, 106, 0.08); border: 1px solid rgba(240, 122, 106, 0.4); }
+  .theme-reveal b { color: var(--gold); letter-spacing: 0.03em; }
+  .theme-reveal .you { color: var(--warn); font-weight: 700; letter-spacing: 0.03em; }
+  /* Leaderboard: theme words found. */
+  .lb-theme { font-size: 0.74rem; font-weight: 700; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .lb-theme.all { color: var(--gold); }
+  /* Home: the logo and name shrink to one row to make room for the theme. */
+  body.theme-home:has(#screen-home:not([hidden])) .brandmark { display: inline-block; height: 30px; margin: 0 8px 10px 0; vertical-align: middle; }
+  body.theme-home:has(#screen-home:not([hidden])) h1 { display: inline-block; font-size: 1.45rem; margin: 0 0 10px; vertical-align: middle; }
+  .today-theme { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .today-theme[hidden] { display: none; }
+  .tt-lab { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); }
+  /* The word itself sits dead centre; the emoji hangs off its left edge. */
+  .tt-big { position: relative; font-size: 2.3rem; font-weight: 900; letter-spacing: 0.08em; padding-left: 0.08em; line-height: 1;
+    color: var(--gold); text-shadow: 0 0 22px rgba(242, 193, 78, 0.35); }
+  .tt-em { position: absolute; right: 100%; top: 50%; transform: translateY(-50%); margin-right: 10px; font-size: 1.7rem; letter-spacing: 0; text-shadow: none; }
+  .tt-cap { margin: 0; font-size: 0.9rem; color: var(--muted); }
+  .tt-cap b { color: var(--text); }
+  .tt-mtn { display: block; width: 230px; max-width: 100%; height: auto; margin-top: 2px; }
+  .today-theme.after .tt-mtn { width: 150px; }
+  .today-theme.after .tt-cap { font-size: 0.82rem; }
+  .today-theme.after .tt-big { font-size: 1.9rem; }
+  .today-theme.after .tt-em { font-size: 1.4rem; }
+  .dchip { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 3px 9px 3px 8px; font: inherit;
+    font-size: 0.78rem; font-weight: 750; border: 1px solid; background: transparent; cursor: pointer; white-space: nowrap; }
+  .dchip.T { color: var(--tier-t); border-color: rgba(111, 208, 140, 0.55); }
+  .dchip.R { color: var(--tier-r); border-color: rgba(232, 135, 30, 0.6); }
+  .dchip.S { color: var(--tier-s); border-color: rgba(159, 184, 255, 0.6); }
+  .dchip-peaks { display: inline-flex; align-items: flex-end; gap: 1px; }
+  .dchip-peaks i { display: block; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 7px solid currentColor; }
+  .dchip-peaks i:nth-child(2) { border-bottom-width: 9px; }
+  .dchip-peaks i:nth-child(3) { border-bottom-width: 11px; }
+  .dchip-i { font-size: 0.64rem; font-weight: 800; border: 1px solid currentColor; border-radius: 50%; width: 14px; height: 14px;
+    display: inline-flex; align-items: center; justify-content: center; opacity: 0.85; }
+  /* Difficulty sheet. */
+  #difficulty-sheet h3 { margin-bottom: 4px; }
+  .tier-T { color: var(--tier-t); } .tier-R { color: var(--tier-r); } .tier-S { color: var(--tier-s); }
+  .tier-fill-T { fill: var(--tier-t); } .tier-fill-R { fill: var(--tier-r); } .tier-fill-S { fill: var(--tier-s); }
+  .dsheet-peaks { display: flex; align-items: flex-end; justify-content: center; gap: 16px; padding: 10px 0 12px; }
+  .dsheet-peaks div { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 0.7rem; color: var(--muted); }
+  .dsheet-levels { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+  .dsheet-lvl { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; padding: 7px 10px; border-radius: 10px; background: rgba(255, 255, 255, 0.03); }
+  .dsheet-lvl b { min-width: 58px; }
+  .dsheet-lvl span { color: var(--muted); }
+  .dsheet-lvl.cur { outline: 1px solid currentColor; }
+  .dsheet-note { margin: 0 0 14px; }
 
   /* Daily board: everyone's flag on the mountain. One pole per spot, one
      pennant per person stacked in finishing order (top pennant won the
@@ -1106,6 +1176,12 @@
   .tut-arrow { color: var(--muted); font-size: 1.3rem; }
   .tut-arrow.tut-x { color: var(--warn); font-size: 1.5rem; }
   .tut-big { font-size: 1.5rem; font-weight: 700; letter-spacing: 0.08em; color: var(--accent); }
+  .tut-eyebrow { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); }
+  .tut-eyebrow[hidden] { display: none; }
+  .tut-theme { flex-basis: 100%; font-size: 1.1rem; font-weight: 900; letter-spacing: 0.1em; color: var(--gold); }
+  .tut-row { display: flex; gap: 8px; }
+  .tut-tile.gold { border-color: var(--gold); color: var(--gold); background: rgba(242, 193, 78, 0.14); box-shadow: 0 0 12px rgba(242, 193, 78, 0.35); }
+  .tut-visual .dchip { cursor: default; font-size: 0.9rem; padding: 5px 12px 5px 10px; }
 
   .diffrow { display: flex; gap: 8px; width: 100%; }
   .diffbtn {
@@ -1217,6 +1293,7 @@
     <!-- TUTORIAL (first run, or "How to play") -->
     <section id="screen-tutorial" hidden>
       <div class="tut-card">
+        <div class="tut-eyebrow" id="tut-eyebrow" hidden>New in Daily Climb</div>
         <div class="tut-visual" id="tut-visual"></div>
         <h2 class="tut-h" id="tut-h"></h2>
         <p class="lede" id="tut-p"></p>
@@ -1233,6 +1310,16 @@
       <!-- Profile: floats top-right (no row cost). Initial + streak tag. -->
       <button class="avatar-btn" id="btn-avatar" type="button" aria-label="Your profile"><span id="avatar-initial"></span><span class="avatar-streak" id="avatar-streak" hidden></span></button>
       <p class="lede home-tagline" id="home-tagline">Every solve adds a letter. Climb all the way to 8.</p>
+      <!-- Themed days: today's theme over a little drawing of today's three
+           peaks (heights = peak lengths), a flag per climb that turns gold
+           once its theme word is found. Replaces the tagline. -->
+      <div class="today-theme" id="today-theme" hidden>
+        <div class="tt-lab">Today's theme</div>
+        <div class="tt-big"><span class="tt-em" id="tt-emoji" aria-hidden="true"></span><span id="tt-name"></span></div>
+        <p class="tt-cap" id="tt-cap"></p>
+        <svg class="tt-mtn" id="tt-mtn" viewBox="0 0 300 140" role="img"></svg>
+        <button class="dchip" id="btn-difficulty" type="button"></button>
+      </div>
 
       <!-- Home hero: whichever of Daily Climb / Adventure Mode is the day's main
            call to action gets the full card treatment; the other one, already
@@ -1361,7 +1448,7 @@
         <div class="pf-card">
           <h3 class="pf-h">Your dailies <span class="pf-range" id="pf-range"></span></h3>
           <div class="pf-cal" id="pf-cal"></div>
-          <div class="pf-legend">fewer words <i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i> 18/18</div>
+          <div class="pf-legend">fewer words <i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i> every word</div>
           <p class="pf-dayinfo" id="pf-dayinfo">Tap a day to see how it went.</p>
         </div>
         <div class="pf-card">
@@ -1522,6 +1609,7 @@
     <!-- PLAY -->
     <section id="screen-play" hidden>
       <div class="roundline"><span id="roundline-rounds">Round <b id="round-n">1</b> of <b id="round-total">3</b></span><span id="roundline-practice" hidden>Practice</span><span id="roundline-climb" hidden></span></div>
+      <div class="themestrip" id="themestrip" hidden></div>
       <div class="timerbar" id="timerbar"><div class="timerbar-fill" id="bar"></div></div>
       <div class="secs" id="secline"><span id="secs">30</span>s left</div>
       <div class="guesspips" id="guesspips" hidden></div>
@@ -1642,6 +1730,7 @@
         <div class="chips" id="cre-words"></div>
         <span class="totalbox-count" id="cre-count"></span>
       </div>
+      <p class="theme-reveal" id="cre-theme" hidden></p>
       <p class="lede" id="cre-sub" hidden>A word that would have worked:</p>
       <p class="missed-word" id="cre-word" hidden></p>
       <p class="def" id="cre-def" hidden></p>
@@ -1715,6 +1804,16 @@
       <button class="ghost" id="btn-reminder-secondary" type="button"></button>
       <button class="primary" id="btn-reminder-primary" type="button"></button>
     </div>
+  </div>
+  <!-- What Trail / Ridge / Summit mean (tap the difficulty chip on a themed
+       day's home screen). Same sheet frame as Add to Home Screen. -->
+  <div class="install-sheet" id="difficulty-sheet" role="dialog" aria-modal="true" aria-labelledby="difficulty-title" hidden>
+    <h3 id="difficulty-title"></h3>
+    <p class="install-sub">Three climbs, each ending on a longer word. Today's peaks:</p>
+    <div class="dsheet-peaks" id="dsheet-peaks"></div>
+    <div class="dsheet-levels" id="dsheet-levels"></div>
+    <p class="install-sub dsheet-note">Difficulty is set by how tall the peaks are and how tricky each step is: rare words, few answers, no easy endings. It mixes up from day to day, so any day can be a Summit. Each theme word you find helps you on the leaderboard.</p>
+    <div class="install-actions"><button class="primary" id="btn-difficulty-done" type="button">Got it</button></div>
   </div>
   <!-- Claim a username (existing players; offered once a day after a finished
        daily). Same sheet frame as Add to Home Screen. -->
@@ -2182,6 +2281,8 @@
         hintUsed: !!r.hintUsed,
         roundWords: wrapRoundWords(r.roundWords),
         finishedAt: Date.now(),
+        // Themed days: theme words found (the first tiebreaker) and the day's most words.
+        ...(r.themeWords != null ? { themeWords: r.themeWords, max: r.max, theme: r.theme } : {}),
       });
     },
     async getDailyBoard(day) {
@@ -2216,6 +2317,7 @@
 <script src="freq.js"></script>
 <script src="words.js"></script>
 <script src="climbs.js"></script>
+<script src="daily-calendar.js"></script>
 <script>
 (function () {
   const RAW = window.THREE21_WORDS || [];
@@ -2462,7 +2564,21 @@
   // changes the day *key*, still under `dailies/{key}`, so no Firestore rule
   // change. "" = the plain calendar date.
   const DAILY_SALT = "-r6";
-  function dailyKeyOf(d) { return dayKeyOf(d) + DAILY_SALT; }
+  // Dev only: ?day=YYYY-MM-DD plays that date's daily as "today" (dev runs never
+  // write to Firestore); ?day=0 goes back to the real date. Per tab.
+  const DEV_DAY_KEY = "three21.devDay";
+  const DEV_RESULT_KEY = "three21.devResult"; // a dev run's theme words, for the dev home screen
+  (function () {
+    try {
+      const q = new URLSearchParams(location.search).get("day");
+      if (q === "0") sessionStorage.removeItem(DEV_DAY_KEY);
+      else if (/^\d{4}-\d{2}-\d{2}$/.test(q || "")) sessionStorage.setItem(DEV_DAY_KEY, q);
+    } catch (e) {}
+  })();
+  function devDay() {
+    try { return localStorage.getItem("three21.dev") === "1" ? sessionStorage.getItem(DEV_DAY_KEY) : null; } catch (e) { return null; }
+  }
+  function dailyKeyOf(d) { return (d ? dayKeyOf(d) : (devDay() || dayKeyOf())) + DAILY_SALT; }
   function dayBase(key) { const m = /^\d{4}-\d{2}-\d{2}/.exec(key || ""); return m ? m[0] : (key || ""); }
   function shiftDayKey(key, delta) {
     const base = dayBase(key), salt = key.slice(base.length);
@@ -2493,10 +2609,12 @@
   // ---- versus / group-mode state ----
   let mode = "solo";        // "solo" | "versus" | "daily" (3 climbs) | "climb" (1, practice) | "collection" (1, a chosen seed)
   let climbPuzzle = null;   // the current CLIMBS entry
-  let climbStage = 0;       // 1..6 rungs (letters = climbStage + 2)
+  let climbStage = 0;       // 1..climbLen() rungs (letters = climbStage + 2)
   let climbPrev = null;     // the word played on the rung below (for the inflection rule)
   let dailyClimbs = null;   // [puzzle, puzzle, puzzle] for today's daily, from the day seed
-  let dailyClimbIndices = null; // the same 3, as CLIMBS indices — so a beaten round can mark Adventure Mode
+  let dailyClimbIndices = null; // the same 3, as CLIMBS indices — so a beaten round can mark Adventure Mode (null for non-8-letter themed climbs)
+  let dailyTheme = null;        // themedDay() for today's daily, or null on an unthemed day
+  let themeFound = [];          // per climb: the theme word the player played, or null
   let dailyRivals = [];         // today's earlier finishers [{name, total}] — flags on your trail + "You beat X"
   let rivalsRound = null;       // which climb the rivals list was last fetched for (refetched once per climb)
   let collectionSeed = null;  // index into CLIMBS currently being played from the Collection screen
@@ -2944,6 +3062,7 @@
         newCount: pool.filter((t) => t.isNew).length,
         guessesLeft: guessesLeft, wrongGuesses: wrongGuesses, hintUsed: hintUsed,
         sessionStrikes: sessionStrikes, solveMs: solveMs, dailyElapsedMs: dailyElapsedNow(),
+        themeFound: themeFound,
       }));
     } catch (e) {}
   }
@@ -2954,7 +3073,7 @@
         mode: mode, matchCode: matchCode, matchSeed: matchSeed, dailyDay: dailyDay,
         difficulty: difficulty, format: format,
         sessionStrikes: sessionStrikes, solveMs: solveMs, dailyElapsedMs: dailyElapsedNow(),
-        round: nextRound, roundWords: roundWords, hintUsed: hintUsed,
+        round: nextRound, roundWords: roundWords, hintUsed: hintUsed, themeFound: themeFound,
       }));
     } catch (e) {}
   }
@@ -3006,8 +3125,8 @@
       let mine = null;
       if (dbReady()) { try { mine = await window.MatchDB.getDailyEntrant(dailyDay); } catch (e) {} }
       if (mine) { clearResume(); showDailyBoard(dailyDay, { live: true }); return; }
-      dailyClimbIndices = pickDailyClimbIndices(dailyDay);
-      dailyClimbs = dailyClimbIndices.map((idx) => CLIMBS[idx]);
+      loadDailyPuzzles(dailyDay);
+      themeFound = Array.isArray(s.themeFound) ? s.themeFound.slice() : [null, null, null];
       climbPuzzle = dailyClimbs[round - 1];
       dailyElapsedMs = s.dailyElapsedMs || 0;
       dailySessionActive = true;
@@ -3053,6 +3172,7 @@
       climbPrev = currentRoundWords[currentRoundWords.length - 1] || null;
       syncRoundChrome();
       renderAscentMini();
+      renderThemeStrip();
     }
     show("play");
     beginStage();
@@ -3124,10 +3244,10 @@
     $("#roundline-climb").hidden = !climb;
     if (climb) {
       $("#roundline-climb").textContent = mode === "collection"
-        ? "Seed #" + (collectionSeed + 1) + " · word " + climbStage + " of 6"
+        ? "Seed #" + (collectionSeed + 1) + " · word " + climbStage + " of " + climbLen()
         : climbRounds() > 1
-          ? "Climb " + round + " of " + climbRounds() + " · word " + climbStage
-          : "Climb · word " + climbStage + " of 6";
+          ? "Climb " + round + " of " + climbRounds() + " · word " + climbStage + (dailyTheme ? " of " + climbLen() : "")
+          : "Climb · word " + climbStage + " of " + climbLen();
     }
     // "Quit to menu" shows in practice/collection; the daily is one attempt, versus restarts.
     $("#btn-play-home").hidden = mode !== "solo" && mode !== "climb" && mode !== "collection";
@@ -3356,7 +3476,11 @@
   const TILE_GAP_RATIO = 1 / 6; // keep in sync with the CSS `gap: calc(var(--tile-w) * 0.1667)`
   function sizeTiles(n) {
     if (!n) return;
-    const avail = Math.min($("#tray").clientWidth || 0, $("#answer").clientWidth || 0) || 320;
+    // The answer row's padding isn't room for tiles (clientWidth includes it) —
+    // it only mattered once climbs reached 9-11 letters.
+    const ansEl = $("#answer"), ansCs = getComputedStyle(ansEl);
+    const ansW = Math.max(0, (ansEl.clientWidth || 0) - (parseFloat(ansCs.paddingLeft) || 0) - (parseFloat(ansCs.paddingRight) || 0));
+    const avail = Math.min($("#tray").clientWidth || 0, ansW) || 320;
     let tile = avail / (n + (n - 1) * TILE_GAP_RATIO);
     tile = Math.max(TILE_MIN, Math.min(TILE_MAX, Math.floor(tile)));
     document.documentElement.style.setProperty("--tile-w", tile + "px");
@@ -4194,9 +4318,15 @@
       visual: "pool",
     },
     {
-      h: "Climb to eight",
-      p: "Solve one and a new letter drops in. Rearrange everything into a longer word, and keep climbing, up to eight letters.",
+      h: "Climb to the peak",
+      p: "Solve one and a new letter drops in. Rearrange everything into a longer word and keep climbing. Each climb tops out between 7 and 11 letters.",
       visual: "grow",
+    },
+    {
+      h: "Find the theme word",
+      p: "Every day has a theme, and one word in each climb fits it. Find it and it glows gold. Spell a different word from the same letters and you keep climbing, but you miss the theme word.",
+      visual: "theme",
+      isNew: true,
     },
     {
       h: "No cheap steps",
@@ -4209,8 +4339,14 @@
       visual: "strikes",
     },
     {
+      h: "Trail, Ridge, Summit",
+      p: "Some days climb higher than others. Trail days top out around 8 letters, Ridge days reach 9, and Summit days go to 10 or 11. Tap the badge on the home screen to see today's.",
+      visual: "tiers",
+      isNew: true,
+    },
+    {
       h: "Once a day",
-      p: "Three climbs, the same for everyone, once a day. You're on a leaderboard with every other player, and score is how many words you get. Ties break on fewest strikes, then fastest time.",
+      p: "Three climbs, the same for everyone, once a day. Score is how many words you get. Ties go to whoever found more theme words, then fewest strikes, then fastest time.",
       visual: "daily",
     },
     {
@@ -4230,45 +4366,63 @@
       tile("c", "no") + tile("a", "no") + tile("t", "no") + tile("s", "no");
     if (kind === "strikes") return '<span class="guesspip spent"></span>' +
       '<span class="guesspip spent"></span><span class="guesspip"></span>';
+    if (kind === "theme") return '<span class="tut-theme">🍝 FOOD</span><span class="tut-row">' +
+      tile("s", "gold") + tile("a", "gold") + tile("u", "gold") + tile("c", "gold") + tile("e", "gold") + "</span>";
+    if (kind === "tiers") return ["T", "R", "S"].map((k) =>
+      '<span class="dchip ' + k + '"><span class="dchip-peaks" aria-hidden="true"><i></i><i></i><i></i></span>' + DAY_TIER[k] + "</span>").join("");
     if (kind === "daily") return '<span class="tut-big">3 climbs &middot; once a day</span>';
     if (kind === "adventure") return '<span class="tut-big">746 climbs &middot; no strikes &middot; no clock</span>';
     return "";
   }
   let tutStep = 0;
   let tutFrom = "home"; // "home" | "start" — where to return when done
+  let tutDeck = TUTORIAL; // the full tutorial, or just the new cards (What's new)
+  const WHATS_NEW_KEY = "three21.tut.themed"; // returning players saw the themed-climbs cards
   function showTutorial(opts) {
     tutStep = 0;
     tutFrom = (opts && opts.from) || "home";
+    tutDeck = opts && opts.whatsNew ? TUTORIAL.filter((c) => c.isNew) : TUTORIAL;
+    $("#tut-eyebrow").hidden = tutDeck === TUTORIAL;
     renderTut();
     show("tutorial");
   }
+  // Returning players (who've seen the tutorial before) get the new cards once,
+  // the first time they open the app on a themed day.
+  function maybeShowWhatsNew() {
+    if (!tutorialSeen || !themedDay(dailyKeyOf())) return false;
+    try { if (localStorage.getItem(WHATS_NEW_KEY) === "1") return false; } catch (e) { return false; }
+    showTutorial({ from: "home", whatsNew: true });
+    return true;
+  }
   function renderTut(dir) {
-    const s = TUTORIAL[tutStep];
+    const s = tutDeck[tutStep];
     $("#tut-visual").innerHTML = tutVisual(s.visual);
     $("#tut-h").textContent = s.h;
     $("#tut-p").textContent = s.p;
     const dots = $("#tut-dots");
     dots.innerHTML = "";
-    TUTORIAL.forEach((_, i) => {
+    tutDeck.forEach((_, i) => {
       const d = document.createElement("span");
       d.className = "tut-dot" + (i === tutStep ? " on" : "");
       dots.appendChild(d);
     });
-    const last = tutStep === TUTORIAL.length - 1;
-    $("#tut-next").textContent = last ? "Start playing" : "Next";
+    const last = tutStep === tutDeck.length - 1;
+    $("#tut-next").textContent = last ? (tutDeck === TUTORIAL ? "Start playing" : "Got it") : "Next";
     $("#tut-skip").hidden = last;
     if (dir) anim($(".tut-card"),
       [{ opacity: 0, transform: "translateX(" + (dir * 26) + "px)" }, { opacity: 1, transform: "none" }],
       { duration: 180, easing: "cubic-bezier(.2,.7,.3,1)" });
   }
   function tutNext() {
-    if (tutStep < TUTORIAL.length - 1) { tutStep++; renderTut(1); return; }
+    if (tutStep < tutDeck.length - 1) { tutStep++; renderTut(1); return; }
     finishTutorial();
   }
   function tutPrev() {
     if (tutStep > 0) { tutStep--; renderTut(-1); }
   }
   function finishTutorial() {
+    try { localStorage.setItem(WHATS_NEW_KEY, "1"); } catch (e) {}   // the full tutorial covers the new cards too
+    if (tutDeck !== TUTORIAL) { goHome(); return; }
     tutorialSeen = true;
     if (window.MatchDB && window.MatchDB.markTutorialSeen) window.MatchDB.markTutorialSeen();
     try { localStorage.setItem("three21.tut", "1"); } catch (e) {}
@@ -4323,6 +4477,7 @@
     climbPrev = null;
     dailyClimbs = null;
     dailyClimbIndices = null;
+    dailyTheme = null; themeFound = [];
     dailyRivals = []; rivalsRound = null;
     playerName = storedName || "";
     opponentName = "";
@@ -4398,9 +4553,11 @@
   }
 
   // Daily is always Easy · 3 Strikes, so the order is fixed: most words, then
-  // fewest wrong words, then fastest solve, then whoever finished first.
+  // (themed days) most theme words found, then fewest wrong words, then fastest
+  // solve, then whoever finished first. Keep in sync with tools/stats/finalize.mjs.
   function dailyCmp(a, b) {
     return ((b.total || 0) - (a.total || 0)) ||
+      ((b.themeWords || 0) - (a.themeWords || 0)) ||
       ((a.strikes || 0) - (b.strikes || 0)) ||
       ((a.solveMs || 0) - (b.solveMs || 0)) ||
       ((a.finishedAt || 0) - (b.finishedAt || 0));
@@ -4436,11 +4593,21 @@
     const st = e.strikes || 0;
     meta.textContent = (st === 0 ? "clean" : st + (st === 1 ? " wrong word" : " wrong words")) +
       " · " + fmtDuration(e.solveMs);
+    // Themed day: theme words found, the first tiebreaker after words.
+    let themeEl = null;
+    if (boardTheme) {
+      const tw = themeEl = document.createElement("div");
+      tw.className = "lb-theme" + ((e.themeWords || 0) === boardTheme.climbs.length ? " all" : "");
+      tw.textContent = boardTheme.theme.emoji + " " + (e.themeWords || 0) + "/" + boardTheme.climbs.length;
+      tw.title = "Theme words found";
+    }
     nmwrap.appendChild(meta);
     const sc = document.createElement("div");
     sc.className = "lb-score";
     sc.textContent = e.total || 0;
-    row.appendChild(r); row.appendChild(nmwrap); row.appendChild(sc);
+    row.appendChild(r); row.appendChild(nmwrap);
+    if (themeEl) row.appendChild(themeEl);
+    row.appendChild(sc);
     // Tap a finisher's row to expand their words, round by round.
     row.addEventListener("click", () => toggleLbDetail(row, e));
     return row;
@@ -4493,10 +4660,12 @@
       d.innerHTML = "<i></i><i></i><i></i>";
       return d;
     };
+    const tw = mode === "daily" && dailyTheme ? themeFound[round - 1] : null;
     words.forEach((w, i) => {
       const s = document.createElement("span");
       s.textContent = w;
       if (i === words.length - 1) s.className = "wordtrail-last";
+      if (w === tw) s.classList.add("wordtrail-theme");
       trail.appendChild(s);
       trail.appendChild(dots());
     });
@@ -4565,6 +4734,67 @@
     return pickDailyClimbIndices(day).map((idx) => CLIMBS[idx]);
   }
 
+  // ---- Themed dailies (daily-calendar.js, built by gen-calendar.pl) ----
+  // From the calendar's start date, each day is a theme + three climbs with
+  // rising peaks (7-11 letters), each hiding a theme word. Before the start
+  // (or past the end) the daily falls back to the triples above.
+  const CAL = window.DAILY_CALENDAR || null;
+  const CLIMB_BY_TOP = new Map(CLIMBS.map((p, i) => [p.c[p.c.length - 1], i]));
+  const DAY_TIER = { T: "Trail", R: "Ridge", S: "Summit" };
+  function addedLetters(c) { // the letter each rung adds: c[i+1] minus c[i]
+    const out = [];
+    for (let i = 0; i + 1 < c.length; i++) {
+      const left = c[i + 1].split("");
+      for (const ch of c[i]) left.splice(left.indexOf(ch), 1);
+      out.push(left[0]);
+    }
+    return out;
+  }
+  const themedCache = new Map();
+  function themedDay(key) {
+    if (!CAL || !key) return null;
+    const base = dayBase(key);
+    if (themedCache.has(base)) return themedCache.get(base);
+    const i = dayNumber(base) - dayNumber(CAL.start);
+    const d = i >= 0 ? CAL.days[i] : null;
+    const t = d ? {
+      index: i, id: d.t, theme: CAL.themes[d.t], tier: d.k, star: !!d.s,
+      climbs: d.c.map((c) => ({ c: c, a: addedLetters(c) })), words: d.w,
+    } : null;
+    themedCache.set(base, t);
+    return t;
+  }
+  // "a food word" / "an animal word"
+  function themePhrase(t) { return (/^[aeiou]/i.test(t.theme.word) ? "An " : "A ") + t.theme.word; }
+  // Most words a day can score: 18 on the old 3×6 days, the sum of the rungs on a themed one.
+  function dayMaxFor(key) {
+    const t = themedDay(key);
+    return t ? t.climbs.reduce((a, p) => a + p.c.length, 0) : 18;
+  }
+  function climbLen() { return climbPuzzle ? climbPuzzle.c.length : 6; }
+  function dailyMax() { return dailyClimbs ? dailyClimbs.reduce((a, p) => a + p.c.length, 0) : 18; }
+  // Set up today's three climbs (themed or not) for a daily run or a resume.
+  function loadDailyPuzzles(day) {
+    dailyTheme = themedDay(day);
+    if (dailyTheme) {
+      dailyClimbs = dailyTheme.climbs;
+      dailyClimbIndices = dailyClimbs.map((p) => {   // 8-letter climbs also live in Adventure Mode
+        const i = CLIMB_BY_TOP.get(p.c[p.c.length - 1]);
+        return i != null && CLIMBS[i].c.join() === p.c.join() ? i : null;
+      });
+    } else {
+      dailyClimbIndices = pickDailyClimbIndices(day);
+      dailyClimbs = dailyClimbIndices.map((idx) => CLIMBS[idx]);
+    }
+  }
+  // The theme word to reveal for climb i, and the word the player put on that rung.
+  function themeRevealFor(i, words) {
+    const t = dailyTheme;
+    const tw = t.words[i][0];
+    const rung = t.climbs[i].c.indexOf(tw);
+    return { word: tw, played: rung >= 0 ? (words[rung] || null) : null };
+  }
+
   function showClimbIntro() {
     mode = "climb";
     $("#btn-climb-start").disabled = !CLIMBS.length;
@@ -4587,6 +4817,7 @@
     pool = climbPuzzle.c[0].split("").map((ch) => ({ ch: ch, isNew: true }));
     syncRoundChrome();
     renderAscentMini();
+    renderThemeStrip();
     show("play");
     beginStage();
   }
@@ -4643,7 +4874,14 @@
     solved++;
     currentRoundWords.push(g);
     renderAscentMini();
-    if (mode === "daily") announcePasses(dailyWordsSoFar());
+    // Theme word: only that exact word counts (CAUSE doesn't find SAUCE).
+    const foundTheme = mode === "daily" && dailyTheme && !themeFound[round - 1] &&
+      dailyTheme.words[round - 1].indexOf(g) > -1;
+    if (foundTheme) {
+      themeFound[round - 1] = g;
+      renderThemeStrip();
+      ascentToast(dailyTheme.theme.emoji + " " + capFirst(dailyTheme.theme.word.replace(/ word$/, "")) + " word! " + g.toUpperCase(), true);
+    } else if (mode === "daily") announcePasses(dailyWordsSoFar());
     climbPrev = g;
     locked = true;
     checking = false;
@@ -4651,7 +4889,7 @@
     clearDropTarget();
     wrongGuesses = [];
     renderWrongWords();
-    if (climbStage >= 6) {
+    if (climbStage >= climbLen()) {
       msg("“" + g.toUpperCase() + "” — top of the climb!", "good");
       FX.play("climb"); buzz([10, 30, 10, 30, 20]);
       fxClass($("#answer"), "fx-good"); waveAnswer();
@@ -4698,7 +4936,9 @@
     // Secret trophy: cleared this climb with 2 of 3 strikes used.
     if (completed && guessesLeft === 1 && (mode === "climb" || mode === "daily")) awardTrophy("comeback");
     const isLastRound = round >= climbRounds();
-    if (isLastRound && completed) { climbSessionDone(); return; }
+    const themed = mode === "daily" && !!dailyTheme;
+    // A themed day always stops here after the last climb too, so its theme word gets revealed.
+    if (isLastRound && completed && !themed) { climbSessionDone(); return; }
 
     // Between-climb screen — also shown for a failed FINAL round (there's no
     // next climb to advance to, but the "word that would have worked" hint
@@ -4707,7 +4947,34 @@
     $("#cre-title").textContent = "Climb " + round + " of " + climbRounds();
     $("#cre-label").textContent = completed ? "Cleared" : "You cleared";
     fillChips($("#cre-words"), currentRoundWords);
-    $("#cre-count").textContent = completed ? "all 6 words" : got + " of 6 words";
+    if (themed && themeFound[round - 1]) {
+      const chip = [...$("#cre-words").children].find((c) => (c.dataset.word || c.textContent).toLowerCase() === themeFound[round - 1]);
+      if (chip) chip.classList.add("tw");
+    }
+    $("#cre-count").textContent = completed ? "all " + climbLen() + " words" : got + " of " + climbLen() + " words";
+    // Theme word: found, or which word it was (and what they played on that rung).
+    const tr = $("#cre-theme");
+    tr.hidden = !themed;
+    if (themed) {
+      const r = themeRevealFor(round - 1, currentRoundWords);
+      const em = dailyTheme.theme.emoji, kind = dailyTheme.theme.word;
+      tr.className = "theme-reveal " + (themeFound[round - 1] ? "got" : "miss");
+      tr.replaceChildren();
+      const b = document.createElement("b");
+      if (themeFound[round - 1]) {
+        b.textContent = themeFound[round - 1].toUpperCase();
+        tr.append(em + " " + capFirst(kind) + " found: ", b, " ✓");
+      } else if (r.played && r.played !== r.word) {
+        const you = document.createElement("span");
+        you.className = "you";
+        you.textContent = r.played.toUpperCase();
+        b.textContent = r.word.toUpperCase();
+        tr.append(em + " You played ", you, ". The " + kind + " was ", b, ".");
+      } else {
+        b.textContent = r.word.toUpperCase();
+        tr.append(em + " The " + kind + " was ", b, ".");
+      }
+    }
     const showEx = !completed;
     $("#cre-sub").hidden = !showEx;
     $("#cre-word").hidden = !showEx;
@@ -4722,8 +4989,35 @@
     show("climbroundend");
   }
 
+  // Themed daily: "🍝 FOOD ⚑PASTA ⚑SAUCE ⚑?" under the round line — a flag per
+  // climb, gold once its theme word is played, grey (with the word) if missed.
+  const TS_FLAG = '<svg viewBox="0 0 9 13" aria-hidden="true"><line x1="1" y1="1" x2="1" y2="12.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M1.5 1h7l-1.8 2.4 1.8 2.4h-7Z" fill="currentColor"/></svg>';
+  function renderThemeStrip() {
+    const el = $("#themestrip");
+    if (mode !== "daily" || !dailyTheme) { el.hidden = true; return; }
+    el.hidden = false;
+    el.replaceChildren();
+    const lab = document.createElement("span");
+    lab.className = "ts-lab";
+    lab.textContent = dailyTheme.theme.emoji + " " + dailyTheme.theme.name.toUpperCase();
+    el.appendChild(lab);
+    const labels = [];
+    for (let j = 0; j < dailyClimbs.length; j++) {
+      const f = document.createElement("span");
+      const got = themeFound[j];
+      const missed = !got && j < round - 1;
+      f.className = "ts-flag" + (got ? " got" + (j === round - 1 ? " fresh" : "") : missed ? " miss" : "");
+      f.innerHTML = TS_FLAG;
+      const w = got ? got : missed ? themeRevealFor(j, roundWords[j] || []).word : "?";
+      f.append(w.toUpperCase());
+      labels.push(got ? "found " + got : missed ? "missed" : "not found yet");
+      el.appendChild(f);
+    }
+    el.setAttribute("aria-label", "Today's theme: " + dailyTheme.theme.name + ". " + labels.join(", "));
+  }
+
   // Daily only: the climber's spot on the trail is every word solved so far
-  // today (earlier climbs + this one, out of 18), and the sun rises with it.
+  // today (earlier climbs + this one, out of dailyMax()), and the sun rises with it.
   // Lives on the live play screen (called from beginClimbRound + climbAccept),
   // not the between-rounds recap — the climb moves as you solve.
   function dailyWordsSoFar() {
@@ -4760,9 +5054,10 @@
     if (beat.length) ascentToast("You beat " + names(beat));
   }
   let ascentToastT = null;
-  function ascentToast(text) {
+  function ascentToast(text, theme) {
     const t = $("#ascent-toast");
-    t.innerHTML = '<svg viewBox="0 0 13 15" aria-hidden="true"><line x1="1.8" y1="1" x2="1.8" y2="14" stroke="currentColor" stroke-width="1.4"/><path d="M1.8 1.4h9.4l-2.2 2.8 2.2 2.8H1.8z" fill="var(--accent)"/></svg>';
+    t.classList.toggle("theme", !!theme);
+    t.innerHTML = theme ? "" : '<svg viewBox="0 0 13 15" aria-hidden="true"><line x1="1.8" y1="1" x2="1.8" y2="14" stroke="currentColor" stroke-width="1.4"/><path d="M1.8 1.4h9.4l-2.2 2.8 2.2 2.8H1.8z" fill="var(--accent)"/></svg>';
     const s = document.createElement("span");
     s.textContent = text;
     t.appendChild(s);
@@ -4778,8 +5073,7 @@
     el.hidden = false;
     loadDailyRivals();
 
-    const PER_ROUND = 6;
-    const totalMax = PER_ROUND * climbRounds();
+    const totalMax = dailyMax();
     const total = dailyWordsSoFar();
 
     const trail = $("#ascentTrailDone");
@@ -4852,11 +5146,11 @@
     const best = Math.max(climbBest(), totalRungs);
     climbWriteBest(best);
     const got = roundWords[0] || [];
-    const completed = got.length === 6;
+    const completed = got.length === climbLen();
     $("#climb-over-title").textContent = completed ? "Full climb!" : "Climb over";
     $("#climb-over-label").textContent = completed ? "Your ladder" : "You cleared";
     fillChips($("#climb-over-words"), got);
-    $("#climb-over-count").textContent = completed ? "all 6 words" : got.length + " of 6 words";
+    $("#climb-over-count").textContent = completed ? "all " + climbLen() + " words" : got.length + " of " + climbLen() + " words";
     $("#climb-best").textContent = best;
 
     const showEx = !completed;
@@ -4901,12 +5195,12 @@
 
   function submitCollectionResult() {
     const got = roundWords[0] || [];
-    const completed = got.length === 6;
+    const completed = got.length === climbLen();
     if (completed) { markSeedBeatenLocally(collectionSeed); checkTrophies(); }
     $("#co-title").textContent = completed ? "Climb beaten!" : "Climb over";
     $("#co-label").textContent = completed ? "Your ladder" : "You cleared";
     fillChips($("#co-words"), got);
-    $("#co-count").textContent = completed ? "all 6 words" : got.length + " of 6 words";
+    $("#co-count").textContent = completed ? "all " + climbLen() + " words" : got.length + " of " + climbLen() + " words";
 
     const showEx = !completed;
     $("#co-sub").hidden = !showEx;
@@ -4986,8 +5280,8 @@
     mode = "daily";
     matchCode = null;
     matchSeed = seedForDay(dailyDay);
-    dailyClimbIndices = pickDailyClimbIndices(dailyDay);
-    dailyClimbs = dailyClimbIndices.map((idx) => CLIMBS[idx]);
+    loadDailyPuzzles(dailyDay);
+    themeFound = [null, null, null];
     startClimbSession();
     dailyElapsedMs = 0;
     dailySessionActive = true;
@@ -5002,8 +5296,12 @@
     // Dev replay: don't touch Firestore — just show the real board read-only.
     if (isDev()) {
       clearResume();
+      if (dailyTheme) {   // lets the dev home show the after-playing theme state (this tab only)
+        try { sessionStorage.setItem(DEV_RESULT_KEY, JSON.stringify({ base: dayBase(dailyDay), tf: themeFound.slice(),
+          tp: dailyClimbs.map((_, i) => themeRevealFor(i, roundWords[i] || []).played) })); } catch (e) {}
+      }
       showDailyBoard(dailyDay, { live: true, justFinished: true });
-      if (totalRungs >= 12) setTimeout(() => confetti({ big: totalRungs >= 16 }), 350);
+      if (totalRungs >= dailyMax() * 2 / 3) setTimeout(() => confetti({ big: totalRungs >= dailyMax() * 0.88 }), 350);
       return;
     }
     window.MatchDB.track("daily_finish", { rungs: totalRungs, strikes: sessionStrikes });
@@ -5014,6 +5312,7 @@
         name: storedName || playerName || "Player",
         total: total, strikes: sessionStrikes, solveMs: solveMs, roundWords: roundWords,
         hintUsed: hintUsed,
+        ...(dailyTheme ? { themeWords: themeFound.filter(Boolean).length, max: dailyMax(), theme: dailyTheme.id } : {}),
       });
       await window.MatchDB.bumpStreak(dailyDay, prevDay);
       const p = await window.MatchDB.getPlayer();
@@ -5021,11 +5320,13 @@
       cacheProfile();
     } catch (e) {}
     // Profile + trophies: today counts right away (final place comes tomorrow).
-    setTodayResult({ t: total, s: sessionStrikes, ms: solveMs, h: hintUsed, at: Date.now() });
+    setTodayResult(Object.assign({ t: total, s: sessionStrikes, ms: solveMs, h: hintUsed, at: Date.now() },
+      dailyTheme ? { m: dailyMax(), th: themeFound.filter(Boolean).length, tf: themeFound.slice(),
+        tp: dailyClimbs.map((_, i) => themeRevealFor(i, roundWords[i] || []).played) } : {}));
     checkTrophies();
     clearResume();
     showDailyBoard(dailyDay, { live: true, justFinished: true });
-    if (totalRungs >= 12) setTimeout(() => confetti({ big: totalRungs >= 16 }), 350);
+    if (totalRungs >= dailyMax() * 2 / 3) setTimeout(() => confetti({ big: totalRungs >= dailyMax() * 0.88 }), 350);
   }
 
   function renderDailyBoard(entrants, dayKey, opts) {
@@ -5086,7 +5387,9 @@
   }
 
   // ---- Board mountain: a flag for every finisher at the word they reached ----
-  let boardFocus = null; // the spot (words solved, 0-18) whose flag + rows are lit up
+  let boardFocus = null; // the spot (words solved, 0-boardMax) whose flag + rows are lit up
+  let boardMax = 18;     // most words the shown day can score (dayMaxFor)
+  let boardTheme = null; // themedDay() of the shown day, or null
   const BOARD_VIEW = { x: 4, y: -16, w: 160, h: 80 }; // cropped to the trail (x 22-145) + pennant room, plus sky for tall poles
 
   function renderBoardMountain(done, myUid) {
@@ -5094,7 +5397,7 @@
     wrap.innerHTML = "";
     wrap.hidden = !done.length;
     if (!done.length) return;
-    const V = BOARD_VIEW, MAX = 18;
+    const V = BOARD_VIEW, MAX = boardMax;
     const svg = svgEl("svg", { viewBox: V.x + " " + V.y + " " + V.w + " " + V.h, role: "img",
       "aria-label": "Today's mountain with a flag for each player" });
     wrap.appendChild(svg);
@@ -5183,12 +5486,12 @@
     }
     // Callout above the pole: where it is + who's there.
     const { done: all, myUid: me } = boardLastDone;
-    const people = (all || []).filter((e) => Math.min(18, e.total || 0) === boardFocus);
+    const people = (all || []).filter((e) => Math.min(boardMax, e.total || 0) === boardFocus);
     const names = people.map((e) => (e.uid === me ? "you" : (e.name || "?")));
     const c = document.createElement("div");
     c.className = "board-callout";
     const head = document.createElement("b");
-    head.textContent = boardFocus >= 18 ? "SUMMIT · 18 OF 18" : "WORD " + boardFocus + " OF 18";
+    head.textContent = boardFocus >= boardMax ? "SUMMIT · " + boardMax + " OF " + boardMax : "WORD " + boardFocus + " OF " + boardMax;
     c.appendChild(head);
     c.appendChild(document.createTextNode(names.length > 4 ? names.slice(0, 4).join(", ") + " +" + (names.length - 4) + " more" : names.join(", ")));
     wrap.appendChild(c);
@@ -5214,8 +5517,12 @@
     const today = dailyKeyOf();
     const yst = shiftDayKey(today, -1);
     const isToday = dayKey === today;
+    boardTheme = themedDay(dayKey);
+    boardMax = dayMaxFor(dayKey);
     $("#daily-board-title").textContent = isToday ? "Today's climb" : dateLabel(dayKey);
-    $("#daily-board-sub").textContent = "3 climbs · score is words solved" + (isToday ? " · " + dailyResetText() : "");
+    $("#daily-board-sub").textContent = (boardTheme
+      ? boardTheme.theme.emoji + " " + boardTheme.theme.name + " · " + DAY_TIER[boardTheme.tier] + " · " + boardMax + " words"
+      : "3 climbs · score is words solved") + (isToday ? " · " + dailyResetText() : "");
 
     const pill = $("#daily-board-streak");
     if (pill) {
@@ -5264,6 +5571,117 @@
     $("#btn-adventure-play").hidden = adventureIsHero;
   }
 
+  // ---- Home: today's theme (themed days) ----
+  const TIER_INFO = [
+    ["T", "Trail", "Peaks around 7–8 letters · about 17 words"],
+    ["R", "Ridge", "A 9-letter peak or trickier climbs · 18–20 words"],
+    ["S", "Summit", "A 10- or 11-letter peak · 21–24 words"],
+  ];
+  // Today's three peaks, heights = peak lengths; each flag "?", or gold with
+  // the found word, or grey + struck with the missed one.
+  function drawThemeMountain(svg, t, flags) {
+    svg.replaceChildren();
+    const base = 118, h = (n) => 34 + (n - 7) * 20, xs = [58, 150, 242];
+    svgEl("rect", { x: 0, y: base, width: 300, height: 2, fill: "var(--line)" }, svg);
+    t.climbs.forEach((p, i) => {
+      const n = p.c[p.c.length - 1].length, x = xs[i], top = base - h(n), f = flags[i];
+      const fill = f.state === "got" ? "var(--gold)" : f.state === "miss" ? "#5a566a" : "var(--accent)";
+      svgEl("polygon", { points: (x - 54) + "," + base + " " + x + "," + top + " " + (x + 54) + "," + base, fill: "var(--accent)", "fill-opacity": 0.32 + i * 0.12 }, svg);
+      svgEl("line", { x1: x, y1: top, x2: x, y2: top - 22, stroke: fill, "stroke-width": 2.2, "stroke-linecap": "round" }, svg);
+      const label = f.state === "q" ? "?" : f.word.toUpperCase();
+      const w = f.state === "q" ? 18 : 12 + label.length * 7.6;
+      svgEl("rect", { x: x, y: top - 22, width: w, height: 14, rx: 3, fill: fill }, svg);
+      const tx = svgEl("text", { x: x + w / 2, y: top - 11.5, "text-anchor": "middle", "font-size": 10, "font-weight": 800, fill: "#1c1005" }, svg);
+      if (f.state === "miss") tx.setAttribute("text-decoration", "line-through");
+      tx.textContent = label;
+      svgEl("text", { x: x, y: base + 16, "text-anchor": "middle", "font-size": 10.5, fill: "var(--muted)" }, svg).textContent = n + " letters";
+    });
+    // Crop the sky to the tallest peak's flag, so a low day doesn't leave a gap.
+    const tallest = Math.max(...t.climbs.map((p) => p.c[p.c.length - 1].length));
+    const top = base - h(tallest) - 26;
+    svg.setAttribute("viewBox", "0 " + top + " 300 " + (140 - top));
+    svg.setAttribute("aria-label", "Today's three peaks: " + t.climbs.map((p) => p.c[p.c.length - 1].length).join(", ") + " letters");
+  }
+  function renderTodayTheme(playedToday, result) {
+    const t = themedDay(dailyKeyOf());
+    const box = $("#today-theme");
+    document.body.classList.toggle("theme-home", !!t);
+    $("#home-tagline").hidden = !!t;
+    box.hidden = !t;
+    if (!t) return;
+    box.classList.toggle("after", !!playedToday);   // smaller once played: Adventure Mode takes the big card
+    $("#tt-emoji").textContent = t.theme.emoji;
+    $("#tt-name").textContent = t.theme.name.toUpperCase();
+    // After playing (this device knows which theme words were found): flags + what was missed.
+    const r = playedToday && result && result.base === dayBase(dailyKeyOf()) && Array.isArray(result.tf) ? result : null;
+    const flags = t.climbs.map((p, i) => {
+      if (!r) return { state: "q" };
+      return r.tf[i] ? { state: "got", word: r.tf[i] } : { state: "miss", word: t.words[i][0] };
+    });
+    const cap = $("#tt-cap");
+    cap.replaceChildren();
+    if (r) {
+      const n = r.tf.filter(Boolean).length;
+      cap.append(n + " of " + t.climbs.length + " found");
+      const missed = t.climbs.map((_, i) => i).filter((i) => !r.tf[i]);
+      if (missed.length === 1) {
+        const i = missed[0], b = document.createElement("b");
+        b.textContent = t.words[i][0].toUpperCase();
+        cap.append(" · missed ", b);
+        const played = r.tp && r.tp[i];
+        if (played && played !== t.words[i][0]) cap.append(" (you played " + played.toUpperCase() + ")");
+      }
+    } else if (playedToday) {
+      cap.textContent = "Done for today";
+    } else {
+      cap.textContent = themePhrase(t) + " hides in each climb.";
+    }
+    drawThemeMountain($("#tt-mtn"), t, flags);
+    const chip = $("#btn-difficulty");
+    chip.className = "dchip " + t.tier;
+    chip.innerHTML = '<span class="dchip-peaks" aria-hidden="true"><i></i><i></i><i></i></span>';
+    chip.append(DAY_TIER[t.tier] + " day" + (t.star ? " ★" : ""));
+    const info = document.createElement("span");
+    info.className = "dchip-i"; info.setAttribute("aria-hidden", "true"); info.textContent = "i";
+    chip.appendChild(info);
+    chip.setAttribute("aria-label", "Difficulty: " + DAY_TIER[t.tier] + ". What does this mean?");
+  }
+  function showDifficultySheet() {
+    const t = themedDay(dailyKeyOf());
+    if (!t) return;
+    const title = $("#difficulty-title");
+    title.replaceChildren("Today is a ");
+    const tn = document.createElement("span");
+    tn.className = "tier-" + t.tier; tn.textContent = DAY_TIER[t.tier] + (t.star ? " ★" : "");
+    title.append(tn, " day");
+    const peaks = $("#dsheet-peaks");
+    peaks.replaceChildren();
+    t.climbs.forEach((p) => {
+      const n = p.c[p.c.length - 1].length, hgt = 12 + (n - 7) * 9;
+      const d = document.createElement("div");
+      const svg = svgEl("svg", { width: 30, height: hgt, viewBox: "0 0 30 " + hgt, "aria-hidden": "true" }, d);
+      svgEl("polygon", { points: "0," + hgt + " 15,0 30," + hgt, class: "tier-fill-" + t.tier }, svg);
+      d.append(n + " letters");
+      peaks.appendChild(d);
+    });
+    $("#dsheet-levels").replaceChildren(...TIER_INFO.map(([k, name, what]) => {
+      const row = document.createElement("div");
+      row.className = "dsheet-lvl tier-" + k + (k === t.tier ? " cur" : "");
+      const b = document.createElement("b"); b.textContent = name;
+      const s = document.createElement("span"); s.textContent = what;
+      row.append(b, s);
+      return row;
+    }));
+    $("#install-scrim").hidden = false;
+    $("#difficulty-sheet").hidden = false;
+  }
+  function hideDifficultySheet() {
+    $("#difficulty-sheet").hidden = true;
+    $("#install-scrim").hidden = true;
+  }
+  $("#btn-difficulty").addEventListener("click", showDifficultySheet);
+  $("#btn-difficulty-done").addEventListener("click", hideDifficultySheet);
+
   function renderDailyCard() {
     updateAvatar();
     renderAdventureProgress();
@@ -5275,6 +5693,9 @@
       btn.textContent = "Play (dev replay)";
       meta.textContent = "Dev mode — replay enabled. " + capFirst(dailyResetText()) + ".";
       setHomeHero(false); // dev replays never set myDailyLastDay — keep the daily as hero for testing
+      let devResult = null;
+      try { devResult = JSON.parse(sessionStorage.getItem(DEV_RESULT_KEY) || "null"); } catch (e) {}
+      renderTodayTheme(!!devResult && devResult.base === dayBase(dailyKeyOf()), devResult);
       return;
     }
     const today = dailyKeyOf();
@@ -5286,6 +5707,7 @@
     meta.textContent = capFirst(dailyResetText()) + ".";
     $("#daily-compact-meta").textContent = capFirst(dailyResetText()) + " — tap to see today's results.";
     setHomeHero(playedToday);
+    renderTodayTheme(playedToday, todayResult);
   }
 
   // Play goes straight into today's climb — no separate intro/confirm screen
@@ -6193,7 +6615,7 @@
   $("#btn-home-install").addEventListener("click", openInstall);
   $("#btn-install-done").addEventListener("click", hideInstallSheet);
   // The scrim + Escape close whichever sheet is open (install or reminder).
-  $("#install-scrim").addEventListener("click", () => { hideInstallSheet(); hideReminderSheet(); hideClaimSheet(); hideTrophySheet(); if (!$("#trophy-pop").hidden) { hideTrophyPop(); setTimeout(drainTrophyQueue, 250); } });
+  $("#install-scrim").addEventListener("click", () => { hideInstallSheet(); hideReminderSheet(); hideDifficultySheet(); hideClaimSheet(); hideTrophySheet(); if (!$("#trophy-pop").hidden) { hideTrophyPop(); setTimeout(drainTrophyQueue, 250); } });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") { hideInstallSheet(); hideReminderSheet(); hideClaimSheet(); hideTrophySheet(); if (!$("#trophy-pop").hidden) { hideTrophyPop(); setTimeout(drainTrophyQueue, 250); } } });
   $("#btn-install-copy").addEventListener("click", () => {
     const b = $("#btn-install-copy");
@@ -6377,6 +6799,12 @@
   // Lives here, inside the page, because the page is always fetched fresh
   // (sw.js caches other files cache-first, so a notes file could go stale).
   const PATCH_NOTES = [
+    { v: "0.4.0", date: "2026-09-29", title: "Themed climbs",
+      notes: [
+        ["new", "Every daily has a theme. A theme word hides in each of the three climbs. Find it and it glows gold."],
+        ["new", "Climbs now reach 7 to 11 letters, and each day is a Trail, Ridge or Summit. Tap the badge on the home screen to see what they mean."],
+        ["new", "Missed one? You'll see the theme word you missed after each climb. Theme words found now break ties on the leaderboard."],
+      ] },
     { v: "0.3.3", date: "2026-09-29", title: "Cleaner climbs",
       notes: [
         ["fix", "Swapped out 11 Adventure climbs that used words that didn't belong in the game."],
@@ -6532,7 +6960,7 @@
       how: (n) => "Play " + n + " days in a row" },
     { id: "summit", group: "Summits", glyph: "peak", name: "Perfect climbs", unit: "perfect climbs",
       tiers: [[1, "First Summit"], [10, "Summit Seeker"], [50, "Peak Bagger"], [100, "Mountain Legend"]],
-      how: (n) => n === 1 ? "Get all 18 words in a daily" : "Get all 18 words in " + n + " dailies" },
+      how: (n) => n === 1 ? "Get every word in a daily" : "Get every word in " + n + " dailies" },
     { id: "wins", group: "Wins & podiums", glyph: "crown", name: "Daily wins", unit: "wins",
       tiers: [[1, "First Win"], [5, "Front Runner"], [25, "Dynasty"], [100, "King of the Mountain"]],
       how: (n) => n === 1 ? "Finish 1st in a daily" : "Finish 1st in " + n + " dailies" },
@@ -6577,6 +7005,9 @@
     const today = dailyKeyOf();
     return myDailyStreak > 0 && (myDailyLastDay === today || myDailyLastDay === shiftDayKey(today, -1)) ? myDailyStreak : 0;
   }
+  // Most words that day could score (m on themed days; the old dailies were 3×6).
+  const entryMax = (e) => e.m || 18;
+  const isPerfect = (e) => (e.t || 0) >= entryMax(e);
   // Every finished daily, oldest first: finalized history + today's (not final yet).
   function dailyEntries() {
     const h = (myPlayer && myPlayer.history) || {};
@@ -6599,7 +7030,7 @@
       prev = e.base;
       bestRun = Math.max(bestRun, run);
       hit("streak", run, e.base);
-      if ((e.t || 0) >= 18) {
+      if (isPerfect(e)) {
         perfect++; hit("summit", perfect, e.base);
         if (e.ms > 0 && e.ms < 300000) put("speed", e.base);
         if (e.ms > 0 && e.ms < 180000) put("lightning", e.base);
@@ -6730,12 +7161,15 @@
       !todayResult && myDailyLastDay === today ? window.MatchDB.getDailyEntrant(today) : Promise.resolve(null),
     ]);
     if (p) myPlayer = p;
-    if (mine && !todayResult) setTodayResult({ t: mine.total, s: mine.strikes, ms: mine.solveMs, h: mine.hintUsed, at: mine.finishedAt });
+    if (mine && !todayResult) setTodayResult({ t: mine.total, s: mine.strikes, ms: mine.solveMs, h: mine.hintUsed, at: mine.finishedAt,
+      m: mine.max, th: mine.themeWords });
     if (!screens.profile.hidden) renderProfile();
     checkTrophies();
   }
   function setTodayResult(r) {
     todayResult = { base: dayBase(dailyKeyOf()), t: r.t || 0, s: r.s || 0, ms: r.ms || 0, h: !!r.h, at: r.at || Date.now() };
+    // Themed days: most words (m), theme words found (th), which ones (tf), what was played on each theme rung (tp).
+    if (r.m) Object.assign(todayResult, { m: r.m, th: r.th || 0, tf: r.tf || null, tp: r.tp || null });
     try { localStorage.setItem(TODAY_KEY, JSON.stringify(todayResult)); } catch (e) {}
   }
   const ordinalOf = (n) => ordinal(n);
@@ -6800,12 +7234,12 @@
       : "";
 
     // Stats
-    const perfect = entries.filter((e) => (e.t || 0) >= 18);
+    const perfect = entries.filter(isPerfect);
     const fastest = perfect.filter((e) => e.ms > 0).reduce((m, e) => Math.min(m, e.ms), Infinity);
     const avg = entries.length ? (entries.reduce((a, e) => a + (e.t || 0), 0) / entries.length).toFixed(1) : "–";
     const stats = [
       [entries.length, "days played"],
-      [perfect.length, "perfect climbs (18/18)"],
+      [perfect.length, "perfect climbs (every word)"],
       [fastest === Infinity ? "–" : fmtDuration(fastest), "fastest perfect climb"],
       [avg, "average words"],
       [entries.filter((e) => !e.h).length + " ★", "no-hint days"],
@@ -6839,7 +7273,7 @@
       const e = byBase[base];
       const c = document.createElement("button");
       c.type = "button";
-      c.className = "pf-cell" + (e ? " l" + ((e.t || 0) >= 18 ? 4 : e.t >= 14 ? 3 : e.t >= 10 ? 2 : 1) : "") + (i === days.length - 1 ? " today" : "");
+      c.className = "pf-cell" + (e ? " l" + (isPerfect(e) ? 4 : e.t / entryMax(e) >= 0.75 ? 3 : e.t / entryMax(e) >= 0.55 ? 2 : 1) : "") + (i === days.length - 1 ? " today" : "");
       c.setAttribute("aria-label", baseLabel(base));
       c.addEventListener("click", () => {
         cal.querySelectorAll(".sel").forEach((x) => x.classList.remove("sel"));
@@ -6848,7 +7282,7 @@
         const d = document.createElement("b"); d.textContent = baseLabel(base);
         info.appendChild(d);
         if (!e) { info.append(" · didn't play"); return; }
-        info.append(" · " + (e.t || 0) + "/18 words · " +
+        info.append(" · " + (e.t || 0) + "/" + entryMax(e) + " words · " +
           (e.r ? "finished " + ordinalOf(e.r) + " of " + e.n : "final place after today") +
           (e.ms ? " · " + fmtDuration(e.ms) : "") + (e.h ? "" : " · ★ no hint"));
       });
@@ -6861,7 +7295,7 @@
     entries.slice(-5).reverse().forEach((e) => {
       const row = document.createElement("div"); row.className = "pf-row";
       const d = document.createElement("span"); d.className = "d"; d.textContent = baseLabel(e.base);
-      const sc = document.createElement("span"); sc.className = "sc"; sc.innerHTML = "<b></b><small>/18</small>"; sc.querySelector("b").textContent = e.t || 0;
+      const sc = document.createElement("span"); sc.className = "sc"; sc.innerHTML = "<b></b><small></small>"; sc.querySelector("b").textContent = e.t || 0; sc.querySelector("small").textContent = "/" + entryMax(e);
       const rk = document.createElement("span"); rk.className = "rk" + (e.r && e.r <= 3 ? " m" + e.r : "");
       rk.textContent = e.r ? ordinalOf(e.r) + " of " + e.n : "today";
       const t = document.createElement("span"); t.className = "t"; t.textContent = e.ms ? fmtDuration(e.ms) : "";
@@ -7025,6 +7459,7 @@
       renderResumeButton();
       renderDailyCard();
       show("home");
+      if (!code) maybeShowWhatsNew();
     } else if (dbReady()) {
       show("loading");
       loadingSince = Date.now();

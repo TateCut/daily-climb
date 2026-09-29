@@ -25,7 +25,7 @@ binmode STDOUT, ':encoding(UTF-8)';
 # holding a climb-blocklist.txt word is skipped (climbs.js predates the list).
 
 my $DIR   = 'D:/Claude Code/portfolio/games/3-2-1';
-my $START = $ENV{START} || '2026-10-19';
+my $START = $ENV{START} || '2026-09-29';
 my $DAYS  = $ENV{DAYS}  || 730;
 my $SEED  = $ENV{SEED}  || 1;
 my $OUT   = "$DIR/daily-calendar.js";
@@ -187,7 +187,9 @@ sub holidayFor { my ($date) = @_; my ($y, $m, $d) = split /-/, $date;
     return undef; }
 
 # tier schedule state
-my ($trailRun, $lastSummit, $lastStar, $starGap) = (0, -99, -99, 38 + int(rnd() * 10));
+# The first days ease players in: Trail first, no Summit in the first week,
+# and the first ★ day lands about a month in.
+my ($trailRun, $lastSummit, $lastStar, $starGap) = (0, -99, -8 - int(rnd() * 6), 36 + int(rnd() * 8));
 my %tierCount = (T => 0, R => 0, S => 0);
 my %TARGET = (T => 0.6, R => 0.3, S => 0.1);
 
@@ -200,7 +202,8 @@ DAY: for my $i (0 .. $DAYS - 1) {
         my $n = $i + 1;
         my %deficit = map { $_ => $TARGET{$_} * $n - $tierCount{$_} + rnd() * 0.9 } qw(T R S);
         $deficit{T} = -99 if $trailRun >= 3;
-        $deficit{S} = -99 if $i - $lastSummit < 2;
+        $deficit{S} = -99 if $i - $lastSummit < 2 || $i < 7;
+        $deficit{R} = -99 if $i == 0;
         @want = sort { $deficit{$b} <=> $deficit{$a} } grep { $deficit{$_} > -99 } qw(T R S);
     }
     # fall back through the other tiers if the wanted one can't be built today
@@ -233,7 +236,7 @@ DAY: for my $i (0 .. $DAYS - 1) {
                     $themeDays{$t}++; $themeLast{$t} = $i; $tierCount{$k}++;
                     $trailRun = $k eq 'T' ? $trailRun + 1 : 0;
                     $lastSummit = $i if $k eq 'S';
-                    if ($tier eq 'STAR') { $lastStar = $i; $starGap = 38 + int(rnd() * 10); }
+                    if ($tier eq 'STAR') { $lastStar = $i; $starGap = 36 + int(rnd() * 8); }
                     push @days, { d => $date, t => $t, k => $k, star => ($tier eq 'STAR' ? 1 : 0), p => $p, cyc => $cycle,
                                   c => [ map { $_->[0] } @$got ], tw => [ map { $_->[1] } @$got ] };
                     next DAY;
