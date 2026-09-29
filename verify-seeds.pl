@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# Verify every seed in climbs.js still has a fully valid intended ladder under
+# Verify every seed in climbs.js and daily-pool.js (any length) still has a fully valid intended ladder under
 # the CURRENT runtime rules. Re-run this after any change to climbs.js, the
 # bundled dictionary, or the word-acceptance/inflection rules in index.html.
 #   1. every c[i] is in the bundled ENABLE word list (words.js) - so it's
@@ -36,10 +36,13 @@ print "loaded " . scalar(keys %word_set) . " dictionary words\n";
 my %anagrams;
 push @{ $anagrams{ join("", sort split //, $_) } }, $_ for keys %word_set;
 
-# ---- load climbs.js ----
-open(my $cfh, "<:raw", "$root/climbs.js") or die "climbs.js: $!";
-my $climbs_raw = <$cfh>;
-close $cfh;
+# ---- load climbs.js (Adventure + 8-letter daily peaks) and daily-pool.js (7/9/10/11) ----
+my $climbs_raw = "";
+for my $f ("climbs.js", "daily-pool.js") {
+    open(my $cfh, "<:raw", "$root/$f") or die "$f: $!";
+    $climbs_raw .= <$cfh>;
+    close $cfh;
+}
 
 my @seeds;
 while ($climbs_raw =~ /\{c:\[([^\]]+)\],a:\[([^\]]+)\]\}/g) {
@@ -72,8 +75,8 @@ for my $seed (@seeds) {
     my @a = @{ $seed->{a} };
     my @problems;
 
-    if (@c != 6) { push @problems, "c has " . scalar(@c) . " entries, expected 6"; }
-    if (@a != 5) { push @problems, "a has " . scalar(@a) . " entries, expected 5"; }
+    if (@c < 5 || @c > 9) { push @problems, "c has " . scalar(@c) . " entries, expected 5-9 (peaks of 7-11 letters)"; }
+    if (@a != @c - 1) { push @problems, "a has " . scalar(@a) . " entries, expected " . (@c - 1); }
 
     for my $i (0 .. $#c) {
         my $expect_len = 3 + $i;
@@ -85,7 +88,7 @@ for my $seed (@seeds) {
         }
     }
 
-    for my $i (0 .. 4) {
+    for my $i (0 .. $#c - 1) {
         next unless defined $c[$i] && defined $c[$i+1] && defined $a[$i];
         my $expect = sorted_letters($c[$i] . $a[$i]);
         my $got    = sorted_letters($c[$i+1]);

@@ -2,7 +2,7 @@
 // land immediately; static assets (dictionary, icons) are cache-first for a
 // fast, offline-capable launch. Firebase / Datamuse / gstatic always hit the
 // network.
-const CACHE = "wadder-shell-v5"; // bump to re-fetch cached assets (v5: climbs.js 765->746 seeds; Daily Ascent colors in manifest + icons)
+const CACHE = "wadder-shell-v6"; // bump to re-fetch cached assets (v6: 5 climbs no longer start at EMS)
 const ASSETS = [
   "./words.js",
   "./freq.js",
