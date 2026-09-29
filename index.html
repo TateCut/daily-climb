@@ -3095,10 +3095,24 @@
     clearInterval(dailyTickId);
     dailyTickId = null;
   }
+  // Time away doesn't count, on the visible timer OR the leaderboard time
+  // (solveMs, summed per solved word from stageShownAt): when the game comes
+  // back, slide the current word's start forward by however long it was hidden.
+  let hiddenAt = 0;
   document.addEventListener("visibilitychange", () => {
-    if (document.hidden) { pauseDailyTimer(); }
-    else if (dailySessionActive) { startDailyTimer(); }
+    if (document.hidden) {
+      pauseDailyTimer();
+      hiddenAt = Date.now();
+      return;
+    }
+    if (hiddenAt && stageShownAt) stageShownAt += Date.now() - hiddenAt;
+    hiddenAt = 0;
+    if (dailySessionActive) startDailyTimer();
   });
+  // One word's share of the leaderboard time. Capped as a backstop in case a
+  // phone ever suspends the game without saying it went away.
+  const MAX_WORD_MS = 15 * 60 * 1000;
+  const wordSolveMs = () => Math.max(0, Math.min(Date.now() - stageShownAt, MAX_WORD_MS));
 
   function syncRoundChrome() {
     const climb = isClimb();
@@ -3603,7 +3617,7 @@
 
   function acceptWord(g) {
     carryMs = guessMode() ? 0 : Math.max(0, endAt - Date.now()); // bank the leftover time
-    if (stageShownAt) solveMs += Date.now() - stageShownAt; // active solving time, for the tiebreak
+    if (stageShownAt) solveMs += wordSolveMs(); // active solving time, for the tiebreak
     solved++;
     currentRoundWords.push(g);
     locked = true;
@@ -4625,7 +4639,7 @@
   }
 
   function climbAccept(g) {
-    if (stageShownAt) solveMs += Date.now() - stageShownAt;
+    if (stageShownAt) solveMs += wordSolveMs();
     solved++;
     currentRoundWords.push(g);
     renderAscentMini();
@@ -6363,6 +6377,10 @@
   // Lives here, inside the page, because the page is always fetched fresh
   // (sw.js caches other files cache-first, so a notes file could go stale).
   const PATCH_NOTES = [
+    { v: "0.3.1", date: "2026-09-29", title: "Fair times",
+      notes: [
+        ["fix", "Your leaderboard time no longer counts time you spend away from the game."],
+      ] },
     { v: "0.3.0", date: "2026-09-28", title: "Profiles & trophies",
       notes: [
         ["new", "Your profile: streaks, podium finishes, fastest climb, a calendar of every daily and more. Tap your avatar or your name."],
