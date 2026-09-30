@@ -1273,29 +1273,47 @@
     display: flex; flex-direction: column; align-items: center;
     gap: 14px; width: 100%; min-height: 250px;
   }
-  .tut-visual { min-height: 92px; display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+  .tut-visual { position: relative; width: 250px; max-width: 100%; height: 186px; flex-shrink: 0; transition: opacity 0.4s; }
+  .tut-visual.fade { opacity: 0; }
   .tut-h { margin: 0; font-size: 1.35rem; }
   .tut-dots { display: flex; gap: 7px; }
   .tut-dot { width: 7px; height: 7px; border-radius: 999px; background: var(--line); }
   .tut-dot.on { background: var(--accent); }
-  .tut-tile {
-    width: 36px; height: 42px; display: flex; align-items: center; justify-content: center;
-    background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
-    font-weight: 700; font-size: 1.15rem; text-transform: uppercase;
+  /* Tutorial scenes: letters shuffle and snap into words while a climber walks up the mountain. */
+  .ta-mtn { position: absolute; left: 0; top: 0; }
+  .ta-climber { transition: transform 0.7s cubic-bezier(.3,.7,.3,1); }
+  .ta-tile {
+    position: absolute; left: 0; top: 0; z-index: 2;
+    width: 32px; height: 38px; display: flex; align-items: center; justify-content: center;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+    font-weight: 700; font-size: 17px; text-transform: uppercase;
+    transition: transform 0.38s cubic-bezier(.2,.8,.25,1.1), border-color 0.25s, color 0.25s, background 0.25s, box-shadow 0.25s;
   }
-  .tut-tile.accent { border-color: var(--accent); color: var(--accent); }
-  .tut-visual.tight { gap: 5px; flex-wrap: nowrap; }
-  .tut-visual.tight .tut-tile { width: 30px; height: 36px; font-size: 1rem; }
-  .tut-tile.no { border-color: var(--warn); color: var(--warn); opacity: 0.5; }
-  .tut-slot { width: 36px; height: 42px; border: 1px dashed var(--line); border-radius: 8px; }
-  .tut-arrow { color: var(--muted); font-size: 1.3rem; }
-  .tut-arrow.tut-x { color: var(--warn); font-size: 1.5rem; }
-  .tut-big { font-size: 1.5rem; font-weight: 700; letter-spacing: 0.08em; color: var(--accent); }
+  .ta-tile.new { border-color: var(--accent); color: var(--accent); }
+  .ta-tile.good { border-color: var(--good); box-shadow: 0 0 0 3px rgba(111, 208, 140, 0.22); }
+  .ta-tile.gold { border-color: var(--gold); color: var(--gold); background: rgba(242, 193, 78, 0.14); box-shadow: 0 0 12px rgba(242, 193, 78, 0.4); }
+  .ta-tile.bad { border-color: var(--warn); color: var(--warn); }
+  .ta-tile.drop { animation: ta-drop 0.42s cubic-bezier(.2,.8,.25,1.4); }
+  .ta-tile.shake { animation: ta-shake 0.38s ease; }
+  .ta-tile.hop { animation: ta-hop 0.38s ease; }
+  @keyframes ta-drop { 0% { translate: 0 -20px; scale: 0.55; opacity: 0; } 60% { translate: 0 2px; scale: 1.06; opacity: 1; } 100% { translate: 0 0; scale: 1; } }
+  @keyframes ta-shake { 20% { translate: -6px 0; } 40% { translate: 5px 0; } 60% { translate: -4px 0; } 80% { translate: 3px 0; } }
+  @keyframes ta-hop { 50% { translate: 0 -12px; } }
+  .ta-cap { position: absolute; left: 0; right: 0; top: 160px; text-align: center; font-size: 13px; font-weight: 700; min-height: 18px; }
+  .ta-ttag { position: absolute; left: 0; top: 0; font-size: 11px; font-weight: 900; letter-spacing: 0.1em; color: var(--gold); }
+  .ta-pips { position: absolute; left: 0; top: 2px; justify-content: flex-start; gap: 6px; }
+  .ta-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+  .ta-chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .ta-minis { display: flex; gap: 10px; }
+  .ta-big { font-size: 1.3rem; font-weight: 700; letter-spacing: 0.06em; color: var(--accent); text-align: center; }
+  .ta-pop { animation: ta-popin 0.45s cubic-bezier(.2,.8,.25,1.4) both; }
+  @keyframes ta-popin { 0% { scale: 0.4; opacity: 0; } 100% { scale: 1; opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) {
+    .ta-tile, .ta-climber, .tut-visual { transition: none; }
+    .ta-tile.drop, .ta-tile.shake, .ta-tile.hop, .ta-pop { animation: none; }
+  }
   .tut-eyebrow { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); }
   .tut-eyebrow[hidden] { display: none; }
-  .tut-theme { flex-basis: 100%; font-size: 1.1rem; font-weight: 900; letter-spacing: 0.1em; color: var(--gold); }
-  .tut-row { display: flex; gap: 8px; }
-  .tut-tile.gold { border-color: var(--gold); color: var(--gold); background: rgba(242, 193, 78, 0.14); box-shadow: 0 0 12px rgba(242, 193, 78, 0.35); }
   .tut-visual .dchip { cursor: default; font-size: 0.9rem; padding: 5px 12px 5px 10px; }
 
   .diffrow { display: flex; gap: 8px; width: 100%; }
@@ -4593,6 +4611,16 @@
     let text = "";
     try { text = await navigator.clipboard.readText(); } catch (e) {}
     const m = /#move=([a-f0-9]{32,64})/.exec(text || "");
+    const pastedCode = !m && /\b[a-z]{3,}-[a-z]{3,}-\d{4}\b/i.exec(text || "");
+    if (pastedCode) {   // they copied their recovery code instead: just the username left to type
+      showRestoreScreen();
+      $("#restore-code").value = pastedCode[0].toUpperCase();
+      const rn = $("#restore-note");
+      rn.className = "ustatus ok";
+      rn.textContent = "Your recovery code is filled in. Enter your username to finish.";
+      $("#restore-name").focus();
+      return;
+    }
     if (!m) {
       note.className = "ustatus bad";
       note.textContent = "No sign-in link found. In Safari, open thedailyclimb.com and tap Add app, then come back and try again. Or tap \u201cI already have a profile\u201d and use the recovery code from your Profile in Safari.";
@@ -4813,30 +4841,159 @@
       p: "Three climbs, the same for everyone, once a day. Score is how many words you get. Ties go to whoever found more theme words, then fewest strikes, then fastest time.",
       visual: "daily",
     },
-    {
-      h: "Adventure Mode",
-      p: "Adventure Mode has all 746 climbs waiting whenever you want them. No strikes, no clock, no daily limit. Chip away at them anytime and watch your progress grow.",
-      visual: "adventure",
-    },
   ];
-  function tutVisual(kind) {
-    const tile = (ch, cls) => '<span class="tut-tile' + (cls ? " " + cls : "") + '">' + ch + "</span>";
-    const arrow = '<span class="tut-arrow">&rarr;</span>';
-    if (kind === "pool") return tile("e") + tile("t") + tile("a") + tile("r");
-    if (kind === "grow") return tile("r") + tile("a") + tile("t") + tile("e") + arrow +
-      tile("s", "accent") + tile("t") + tile("a") + tile("r") + tile("e");
-    if (kind === "nope") return tile("c") + tile("a") + tile("r") + tile("e") +
-      '<span class="tut-arrow tut-x">&times;</span>' +
-      tile("c", "no") + tile("a", "no") + tile("r", "no") + tile("e", "no") + tile("s", "no");
-    if (kind === "strikes") return '<span class="guesspip spent"></span>' +
-      '<span class="guesspip spent"></span><span class="guesspip"></span>';
-    if (kind === "theme") return '<span class="tut-theme">🍝 FOOD</span><span class="tut-row">' +
-      tile("s", "gold") + tile("a", "gold") + tile("u", "gold") + tile("c", "gold") + tile("e", "gold") + "</span>";
-    if (kind === "tiers") return ["T", "R", "S"].map((k) =>
-      '<span class="dchip ' + k + '"><span class="dchip-peaks" aria-hidden="true"><i></i><i></i><i></i></span>' + DAY_TIER[k] + "</span>").join("");
-    if (kind === "daily") return '<span class="tut-big">3 climbs &middot; once a day</span>';
-    if (kind === "adventure") return '<span class="tut-big">746 climbs &middot; no strikes &middot; no clock</span>';
-    return "";
+  // Tutorial scenes: each card's letters shuffle and snap into words on their
+  // own while a climber walks up a little mountain. The example climb has a
+  // food theme: CASE -> SAUCE (theme word) -> CLAUSE. A scene loops until the
+  // card changes or the tutorial closes.
+  const TA_W = 250, TA_T = 32, TA_G = 6, TA_Y = 112;
+  const TA_RUNG = [[20, 86], [82, 66], [142, 44], [204, 18]];
+  const TA_STOP = {};
+  let taTok = { dead: true };
+  const taX = (n, i) => (TA_W - (n * TA_T + (n - 1) * TA_G)) / 2 + i * (TA_T + TA_G);
+  const taWait = (ms, tok) => new Promise((res, rej) =>
+    setTimeout(() => (tok.dead || screens.tutorial.hidden ? rej(TA_STOP) : res()), ms));
+  function taRetrigger(el, c) { el.classList.remove(c); void el.offsetWidth; el.classList.add(c); }
+  function taStage(el) {
+    el.innerHTML = '<svg class="ta-mtn" viewBox="0 0 250 96" width="250" height="96" aria-hidden="true">' +
+      '<polygon points="0,96 30,74 58,80 100,52 126,60 170,30 204,12 236,40 250,34 250,96" fill="var(--mtn-far)"/>' +
+      '<polyline points="' + TA_RUNG.map((p) => p.join(",")).join(" ") + '" fill="none" stroke="var(--muted)" stroke-width="2" stroke-dasharray="1 6" stroke-linecap="round" opacity=".8"/>' +
+      '<g class="ta-flag" opacity="0"><line x1="204" y1="18" x2="204" y2="0" stroke="var(--text)" stroke-width="1.5"/><polygon points="204,0 218,4 204,9" fill="var(--gold)"/></g>' +
+      '<circle class="ta-climber" r="6" cx="0" cy="0" fill="var(--accent)" stroke="var(--text)" stroke-width="2.5"/></svg>' +
+      '<div class="ta-ttag"></div><div class="ta-pips guesspips"></div><div class="ta-cap"></div>';
+    return { el: el, all: [], row: [], climber: el.querySelector(".ta-climber"), flag: el.querySelector(".ta-flag"),
+      cap: el.querySelector(".ta-cap"), ttag: el.querySelector(".ta-ttag"), pips: el.querySelector(".ta-pips") };
+  }
+  function taTile(r, ch, cls) {
+    const d = document.createElement("div");
+    d.className = "ta-tile" + (cls ? " " + cls : "");
+    d.textContent = ch;
+    r.el.appendChild(d);
+    const t = { el: d, ch: ch };
+    r.all.push(t);
+    return t;
+  }
+  function taPos(t, x, instant) {
+    if (instant) t.el.style.transition = "none";
+    t.el.style.transform = "translate(" + x + "px," + TA_Y + "px)";
+    if (instant) { void t.el.offsetWidth; t.el.style.transition = ""; }
+  }
+  function taUnclass(ts) { ts.forEach((t) => t.el.classList.remove("good", "gold", "bad", "new", "shake", "hop", "drop")); }
+  function taPick(word, pool) { const used = []; for (const ch of word) used.push(pool.find((t) => t.ch === ch && !used.includes(t))); return used; }
+  function taClimb(r, i, instant) {
+    if (instant) r.climber.style.transition = "none";
+    r.climber.style.transform = "translate(" + TA_RUNG[i][0] + "px," + TA_RUNG[i][1] + "px)";
+    if (instant) { void r.el.offsetWidth; r.climber.style.transition = ""; }
+  }
+  function taCap(r, color, text) { r.cap.style.color = color ? "var(--" + color + ")" : ""; r.cap.textContent = text; }
+  function taReset(r, rung) {
+    r.all.forEach((t) => t.el.remove());
+    r.all = []; r.row = [];
+    r.flag.setAttribute("opacity", "0");
+    taCap(r, "", ""); r.ttag.textContent = ""; r.pips.innerHTML = "";
+    taClimb(r, rung, true);
+  }
+  // A row of tiles. opts.newAt marks the letter that just dropped in; opts.solved lays out a finished word.
+  function taLay(r, order, opts) {
+    opts = opts || {};
+    r.row = [...order].map((ch, i) => {
+      const t = taTile(r, ch, opts.solved || (i === opts.newAt ? "new drop" : "drop"));
+      if (!opts.solved) t.el.style.animationDelay = (i * 60) + "ms";
+      taPos(t, taX(order.length, i), true);
+      return t;
+    });
+  }
+  function taArrange(r, ts, hop) {
+    r.row = ts;
+    ts.forEach((t, i) => { taPos(t, taX(ts.length, i)); if (hop) taRetrigger(t.el, "hop"); });
+  }
+  function taShuffled(ts) { let s; do { s = ts.slice().sort(() => Math.random() - 0.5); } while (s.every((t, i) => t === ts[i])); return s; }
+  // A new letter drops into `order`; the others slide over to make room.
+  async function taAdd(r, order, tok) {
+    taUnclass(r.all);
+    taCap(r, "muted", "+1 letter");
+    const next = [];
+    let made = false;
+    [...order].forEach((ch) => {
+      let t = r.row.find((t) => t.ch === ch && !next.includes(t));
+      if (!t && !made) { t = taTile(r, ch, "new drop"); made = true; }
+      next.push(t);
+    });
+    next.forEach((t, i) => taPos(t, taX(next.length, i), t.el.classList.contains("drop")));
+    r.row = next;
+    await taWait(900, tok);
+  }
+  async function taSolve(r, word, tok, shuffles) {
+    for (let i = 0; i < (shuffles == null ? 1 : shuffles); i++) { taArrange(r, taShuffled(r.row), true); await taWait(520, tok); }
+    taArrange(r, taPick(word, r.row));
+    await taWait(420, tok);
+  }
+  function taMark(r, kind, text) {
+    taUnclass(r.row);
+    r.row.forEach((t) => {
+      if (kind === "warn") { t.el.classList.add("bad"); taRetrigger(t.el, "shake"); }
+      else if (kind !== "muted") t.el.classList.add(kind);
+    });
+    taCap(r, kind, text);
+  }
+  async function taFade(r, tok) { r.el.classList.add("fade"); await taWait(420, tok); r.el.classList.remove("fade"); }
+  const TA_SCENES = {
+    async pool(r, tok) { for (;;) {
+      taReset(r, 0); taLay(r, "SECA"); await taWait(900, tok);
+      await taSolve(r, "CASE", tok, 2); taMark(r, "good", "CASE"); taClimb(r, 1); await taWait(1800, tok);
+      await taFade(r, tok);
+    } },
+    async grow(r, tok) { for (;;) {
+      taReset(r, 1); taLay(r, "CASE", { solved: "good" }); taCap(r, "good", "CASE"); await taWait(1000, tok);
+      await taAdd(r, "ESUCA", tok); await taSolve(r, "CAUSE", tok); taMark(r, "good", "CAUSE"); taClimb(r, 2); await taWait(1100, tok);
+      await taAdd(r, "SLEUAC", tok); await taSolve(r, "CLAUSE", tok); taMark(r, "good", "CLAUSE"); taClimb(r, 3); await taWait(500, tok);
+      r.flag.setAttribute("opacity", "1"); taCap(r, "gold", "Top of the climb"); await taWait(1600, tok);
+      await taFade(r, tok);
+    } },
+    async theme(r, tok) { for (;;) {
+      taReset(r, 1); r.ttag.textContent = "🍝 FOOD"; taLay(r, "ESUCA", { newAt: 2 }); await taWait(1000, tok);
+      await taSolve(r, "CAUSE", tok); taMark(r, "muted", "CAUSE works, but it isn't food"); await taWait(1700, tok);
+      await taSolve(r, "SAUCE", tok); taMark(r, "gold", "SAUCE · theme word 🍝"); taClimb(r, 2); await taWait(2000, tok);
+      await taFade(r, tok);
+    } },
+    async nope(r, tok) { for (;;) {
+      taReset(r, 2); taLay(r, "SAUCE", { solved: "gold" }); taCap(r, "gold", "SAUCE"); await taWait(1100, tok);
+      await taAdd(r, "SAUCES", tok); taMark(r, "warn", "That's just SAUCE + S"); await taWait(1700, tok);
+      await taSolve(r, "CAUSES", tok); taMark(r, "good", "CAUSES"); taClimb(r, 3); await taWait(1800, tok);
+      await taFade(r, tok);
+    } },
+    async strikes(r, tok) { for (;;) {
+      taReset(r, 1);
+      r.pips.innerHTML = '<span class="guesspip"></span><span class="guesspip"></span><span class="guesspip"></span>';
+      const pips = r.pips.children;
+      taLay(r, "ESUCA", { newAt: 2 }); await taWait(1000, tok);
+      await taSolve(r, "SUCAE", tok); taMark(r, "warn", "Not a word · 2 strikes left"); pips[2].classList.add("spent"); await taWait(1400, tok);
+      await taSolve(r, "ACUSE", tok); taMark(r, "warn", "Not a word · 1 strike left"); pips[1].classList.add("spent"); await taWait(1400, tok);
+      await taSolve(r, "CAUSE", tok); taMark(r, "good", "CAUSE"); taClimb(r, 2); await taWait(1800, tok);
+      await taFade(r, tok);
+    } },
+  };
+  function playTutScene(kind) {
+    taTok.dead = true;
+    const el = $("#tut-visual");
+    el.classList.remove("fade");
+    if (kind === "tiers") {
+      el.innerHTML = '<div class="ta-center"><div class="ta-chips">' + ["T", "R", "S"].map((k, i) =>
+        '<span class="dchip ' + k + ' ta-pop" style="animation-delay:' + (i * 180) + 'ms"><span class="dchip-peaks" aria-hidden="true"><i></i><i></i><i></i></span>' +
+        DAY_TIER[k] + "</span>").join("") + "</div></div>";
+      return;
+    }
+    if (kind === "daily") {
+      el.innerHTML = '<div class="ta-center"><div class="ta-minis">' + [0, 1, 2].map((i) =>
+        '<svg class="ta-pop" style="animation-delay:' + (i * 160) + 'ms" width="54" height="40" viewBox="0 0 54 40" aria-hidden="true">' +
+        '<polygon points="0,40 18,14 26,22 36,4 54,40" fill="var(--mtn-far)"/><circle cx="36" cy="6" r="4" fill="var(--accent)" stroke="var(--text)" stroke-width="1.5"/></svg>').join("") +
+        '</div><div class="ta-big ta-pop" style="animation-delay:520ms">3 climbs &middot; once a day</div></div>';
+      return;
+    }
+    const scene = TA_SCENES[kind];
+    if (!scene) { el.innerHTML = ""; return; }
+    const tok = taTok = { dead: false };
+    scene(taStage(el), tok).catch((e) => { if (e !== TA_STOP) console.error(e); });
   }
   let tutStep = 0;
   let tutFrom = "home"; // "home" | "start" — where to return when done
@@ -4860,8 +5017,7 @@
   }
   function renderTut(dir) {
     const s = tutDeck[tutStep];
-    $("#tut-visual").innerHTML = tutVisual(s.visual);
-    $("#tut-visual").classList.toggle("tight", s.visual === "grow" || s.visual === "nope"); // 4 → 5 tiles on one line
+    playTutScene(s.visual);
     $("#tut-h").textContent = s.h;
     $("#tut-p").textContent = s.p;
     const dots = $("#tut-dots");
@@ -7124,15 +7280,18 @@
   // signed-in player opens these steps, copy a one-time sign-in link; the app's
   // first screen offers "Finish signing in", which pastes it (pickupMove).
   let installHandoff = false; // this sheet copied a sign-in link
+  let handoffLink = "";       // the sign-in link that sheet copied
   function prepareAppHandoff() {
     installHandoff = false;
+    handoffLink = "";
     if (!IS_IOS || IN_APP || isStandalone() || !myUsername || !dbReady() || !window.MatchDB) return;
     const known = knownSecret();
     if (!known || !navigator.clipboard || !navigator.clipboard.writeText) return;
     if (!window.MatchDB.isSignedInAs || !window.MatchDB.isSignedInAs(myUsername.toLowerCase())) return;
     const token = newMoveToken();
+    handoffLink = location.origin + location.pathname + "#move=" + token;
     // Copy first, inside the tap (Safari only allows it there); save the handoff right after.
-    navigator.clipboard.writeText(location.origin + location.pathname + "#move=" + token).then(() => {
+    navigator.clipboard.writeText(handoffLink).then(() => {
       window.MatchDB.createTransfer(token, normalizeCode(known)).catch(() => {});
     }).catch(() => {});
     installHandoff = true;
@@ -7147,12 +7306,14 @@
     $("#ih-ok").hidden = !installHandoff;
     $("#ih-name").textContent = myUsername;
     $("#ih-code").textContent = code;
-    $("#btn-ih-copy").textContent = "Copy code";
+    $("#btn-ih-copy").textContent = handoffLink ? "Copy link again" : "Copy code";
   }
+  // Re-copies the sign-in link if something else got copied over it (the app
+  // looks for the link); without a link, the code.
   $("#btn-ih-copy").addEventListener("click", () => {
-    const code = knownSecret();
-    if (!code || !navigator.clipboard) return;
-    navigator.clipboard.writeText(code).then(() => { $("#btn-ih-copy").textContent = "Copied"; }).catch(() => {});
+    const text = handoffLink || knownSecret();
+    if (!text || !navigator.clipboard) return;
+    navigator.clipboard.writeText(text).then(() => { $("#btn-ih-copy").textContent = "Copied"; }).catch(() => {});
   });
   function openInstall() {
     prepareAppHandoff();
@@ -7384,6 +7545,11 @@
   // Lives here, inside the page, because the page is always fetched fresh
   // (sw.js caches other files cache-first, so a notes file could go stale).
   const PATCH_NOTES = [
+    { v: "0.8.0", date: "2026-09-30", title: "See it in action",
+      notes: [
+        ["imp", "How to play now shows the game moving. Each card plays a short scene: letters shuffle into words, new letters drop in, the theme word glows gold, and cheap steps get turned away."],
+        ["imp", "The tutorial is a card shorter. Adventure Mode is waiting on the home screen whenever you want it."],
+      ] },
     { v: "0.7.1", date: "2026-09-30", title: "Smoother moves",
       notes: [
         ["fix", "On the old address, if your username is already taken because you claimed it on another phone or browser, you now get a link to restore it on thedailyclimb.com instead of a dead end."],
