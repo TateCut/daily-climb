@@ -713,6 +713,14 @@
   .moved-msg b { color: var(--text); }
   .moved-foot { margin: 0; max-width: 32ch; }
   .ustatus-link { font-size: inherit; padding: 0; color: var(--accent); }
+  .paste-signin { width: 100%; padding: 12px; font-size: 0.95rem; border-color: var(--accent); }
+  .paste-signin[hidden] { display: none; }
+  .ucodebig { margin: 0; font-size: 1.25rem; font-weight: 800; letter-spacing: 0.08em; color: var(--gold); }
+  .pf-signin-txt { margin: 0 0 8px; font-size: 0.8rem; color: var(--muted); line-height: 1.4; }
+  .pf-code { display: flex; align-items: center; gap: 8px; }
+  .pf-code[hidden] { display: none; }
+  .pf-code b { flex: 1; font-size: 1rem; letter-spacing: 0.08em; color: var(--gold); }
+  .pf-code button { padding: 6px 12px; font-size: 0.82rem; }
   /* Difficulty sheet. */
   #difficulty-sheet h3 { margin-bottom: 4px; }
   .tier-T { color: var(--tier-t); } .tier-R { color: var(--tier-r); } .tier-S { color: var(--tier-s); }
@@ -1349,12 +1357,15 @@
           <p class="ustatus" id="name-note" aria-live="polite"></p>
         </div>
         <button class="primary" id="name-save" type="button">Continue</button>
+        <button class="ghost paste-signin" id="btn-paste-signin" type="button" hidden>Signed in on Safari? Finish signing in</button>
+        <p class="ustatus" id="paste-note" aria-live="polite" hidden></p>
         <button class="linkbtn" id="btn-have-profile" type="button">I already have a profile</button>
       </div>
       <div class="uname-done" id="uname-done" hidden>
         <div class="ucheck" aria-hidden="true">✓</div>
         <h2 class="uname-done-title" id="uname-done-title"></h2>
-        <p class="lede">Your streak and progress are saved to your username. If you ever lose the app, email your username to <span class="uemail">tate.cutcliffe@gmail.com</span> for your recovery code.</p>
+        <p class="lede">Your streak and progress are saved to your username. To sign in on another phone, or in the Home Screen app, use this recovery code (it's also in your Profile):</p>
+        <p class="ucodebig" id="uname-done-code"></p>
         <button class="primary" id="uname-done-go" type="button">Play</button>
       </div>
     </section>
@@ -1537,6 +1548,15 @@
         <div class="pf-card">
           <h3 class="pf-h">Recent climbs</h3>
           <div class="pf-recent" id="pf-recent"></div>
+        </div>
+        <div class="pf-card" id="pf-signin" hidden>
+          <h3 class="pf-h">Sign in on another device</h3>
+          <p class="pf-signin-txt" id="pf-signin-txt"></p>
+          <div class="pf-code" id="pf-code-row" hidden>
+            <b id="pf-code"></b>
+            <button class="ghost" id="btn-pf-code-show" type="button">Show</button>
+            <button class="ghost" id="btn-pf-code-copy" type="button">Copy</button>
+          </div>
         </div>
       </div>
     </section>
@@ -2260,7 +2280,8 @@
       await signInWithEmailAndPassword(auth, t.email, t.secret);
       uid = auth.currentUser ? auth.currentUser.uid : uid;
       try { await deleteDoc(doc(db, "transfers", token)); } catch (e) {}
-      return this.getPlayer();
+      const p = await this.getPlayer();
+      return p ? Object.assign({}, p, { _secret: t.secret }) : { _secret: t.secret };
     },
 
     // ---- Profile + trophies ----
@@ -4249,6 +4270,27 @@
     else { a.type = "button"; a.textContent = "Is it yours? Restore it"; a.addEventListener("click", () => showRestoreScreen(name)); }
     note.append(" ", a);
   }
+  // This device remembers the recovery code whenever it learns it (claiming,
+  // restoring, arriving by move link), so the player can see it in their
+  // profile and the Home Screen app can be signed in without asking Tate.
+  const SECRET_KEY = "three21.secret";
+  function prettyCode(plain) { // "MAPLERIDGE2139" -> "MAPLE-RIDGE-2139"
+    const p = normalizeCode(plain);
+    for (const a of CODE_WORDS) {
+      if (!p.startsWith(a)) continue;
+      for (const b of CODE_WORDS) if (p.slice(a.length).startsWith(b) && /^\d{4}$/.test(p.slice(a.length + b.length))) return a + "-" + b + "-" + p.slice(a.length + b.length);
+    }
+    return p;
+  }
+  function rememberSecret(username, code) {
+    try { localStorage.setItem(SECRET_KEY, JSON.stringify({ u: String(username).toLowerCase(), c: prettyCode(code) })); } catch (e) {}
+  }
+  function knownSecret() { // this player's code, if this device knows it
+    try {
+      const s = JSON.parse(localStorage.getItem(SECRET_KEY) || "null");
+      return s && myUsername && s.u === myUsername.toLowerCase() ? s.c : null;
+    } catch (e) { return null; }
+  }
   // Claim `username` for this player. Shows progress/errors in `note`;
   // resolves "claimed" | "fallback" (profiles not set up: saved as a plain
   // name) | null (failed — message already shown).
@@ -4278,6 +4320,7 @@
       done(); return null;
     }
     lastClaimCode = code;
+    rememberSecret(username, code.display);
     myUsername = username;
     storedName = username;
     playerName = username;
@@ -4301,6 +4344,8 @@
     $("#uname-pick").hidden = false;
     $("#uname-done").hidden = true;
     $("#btn-have-profile").hidden = !claimable || !!myUsername;
+    $("#btn-paste-signin").hidden = !(isStandalone() && !myUsername && dbReady() && navigator.clipboard && navigator.clipboard.readText);
+    $("#paste-note").hidden = true;
     $("#name-input").maxLength = claimable ? 16 : 24;
     $("#name-input").placeholder = claimable ? "e.g. summit_sam" : "Your name";
     $("#name-input").value = storedName || "";
@@ -4329,6 +4374,7 @@
     if (result === "fallback") { afterNameSaved(); return; }
     if (result !== "claimed") return;
     $("#uname-done-title").textContent = nameScreenFirstEver ? "Welcome, " + val + "!" : "Saved as " + val;
+    $("#uname-done-code").textContent = lastClaimCode ? lastClaimCode.display : "";
     $("#uname-pick").hidden = true;
     $("#uname-done").hidden = false;
     $("#uname-done-go").focus();
@@ -4378,6 +4424,7 @@
       return;
     }
     adoptRestoredProfile(player || {}, name);
+    rememberSecret((player && player.username) || name, code);
     btn.disabled = false;
     btn.textContent = "Restore my profile";
   }
@@ -4422,6 +4469,20 @@
     $("#restore-done-go").focus();
   }
   $("#btn-have-profile").addEventListener("click", () => showRestoreScreen());
+  $("#btn-paste-signin").addEventListener("click", async () => {
+    const note = $("#paste-note");
+    let text = "";
+    try { text = await navigator.clipboard.readText(); } catch (e) {}
+    const m = /#move=([a-f0-9]{32,64})/.exec(text || "");
+    if (!m) {
+      note.className = "ustatus bad";
+      note.textContent = "No sign-in link found. In Safari, open thedailyclimb.com, tap Add app, then come back and try again. Or tap \u201cI already have a profile\u201d.";
+      note.hidden = false;
+      return;
+    }
+    show("loading");
+    await pickupMove(m[1]);
+  });
 
   // ---- Moving to thedailyclimb.com ----
   // The old GitHub address shows "We've moved" instead of the game, with a
@@ -4478,9 +4539,14 @@
     const btn = $("#btn-moved-bring");
     btn.disabled = true;
     btn.textContent = "Moving…";
+    const known = knownSecret();
+    if (known) {   // this device already knows the code: no reset needed
+      try { await moveWithSecret(normalizeCode(known)); return; } catch (e) {}
+    }
     const code = makeRecoveryCode();
     try {
       await window.MatchDB.resetMySecret(myUsername.toLowerCase(), code.display, code.plain);
+      rememberSecret(myUsername, code.display);
       await moveWithSecret(code.plain);
     } catch (e) {
       trackEv("move_link_failed", { reason: (e && e.code) || "unknown" });
@@ -4524,7 +4590,10 @@
       return;
     }
     trackEv("move_pickup_ok");
+    const secret = player && player._secret;
+    if (player) delete player._secret;
     adoptRestoredProfile(player || {}, (player && player.username) || "");
+    if (secret && myUsername) rememberSecret(myUsername, secret);
   }
 
   $("#restore-go").addEventListener("click", restoreGo);
@@ -6932,7 +7001,25 @@
       arrow: { edge: "up", x: 94 } };
   }
 
+  // iPhone keeps the Home Screen app's sign-in separate from Safari's. When a
+  // signed-in player opens these steps, copy a one-time sign-in link; the app's
+  // first screen offers "Finish signing in", which pastes it (pickupMove).
+  let installHandoff = false; // this sheet copied a sign-in link
+  function prepareAppHandoff() {
+    installHandoff = false;
+    if (!IS_IOS || IN_APP || isStandalone() || !myUsername || !dbReady() || !window.MatchDB) return;
+    const known = knownSecret();
+    if (!known || !navigator.clipboard || !navigator.clipboard.writeText) return;
+    const token = newMoveToken();
+    // Copy first, inside the tap (Safari only allows it there); save the handoff right after.
+    navigator.clipboard.writeText(location.origin + location.pathname + "#move=" + token).then(() => {
+      window.MatchDB.createTransfer(token, normalizeCode(known)).catch(() => {});
+    }).catch(() => {});
+    installHandoff = true;
+    trackEv("app_handoff_prepared");
+  }
   function openInstall() {
+    prepareAppHandoff();
     const kind = IN_APP ? "in_app" : IS_IOS ? "ios" : deferredInstall ? "prompt" : "android_steps";
     trackEv("install_tap", { kind: kind });
     // Chrome can install directly — use its real dialog.
@@ -6947,7 +7034,8 @@
     const g = installGuide();
     $("#install-title").textContent = g.title;
     $("#install-sub").textContent = g.sub;
-    $("#install-steps").innerHTML = g.steps.map((s, i) => '<li><span class="n">' + (i + 1) + "</span><span>" + s + "</span></li>").join("");
+    const steps = installHandoff && !g.copy ? g.steps.concat("Open the new app and tap <b>Finish signing in</b>. Your profile comes with you.") : g.steps;
+    $("#install-steps").innerHTML = steps.map((s, i) => '<li><span class="n">' + (i + 1) + "</span><span>" + s + "</span></li>").join("");
     $("#btn-install-copy").hidden = !g.copy;
     $("#btn-install-copy").textContent = "Copy link";
     const sheet = $("#install-sheet"), arrow = $("#install-arrow");
@@ -7556,7 +7644,34 @@
     try { localStorage.setItem(TODAY_KEY, JSON.stringify(todayResult)); } catch (e) {}
   }
   const ordinalOf = (n) => ordinal(n);
+  function renderSignInCard() {
+    const card = $("#pf-signin");
+    card.hidden = !myUsername;
+    if (!myUsername) return;
+    const code = knownSecret();
+    $("#pf-code-row").hidden = !code;
+    $("#pf-signin-txt").textContent = code
+      ? "On a new phone, or in the Home Screen app, tap \u201cI already have a profile\u201d and enter " + myUsername + " with this recovery code."
+      : "On a new phone, or in the Home Screen app, tap \u201cI already have a profile\u201d. Need your recovery code? Email tate.cutcliffe@gmail.com.";
+    const b = $("#pf-code");
+    b.dataset.code = code || "";
+    b.textContent = code ? code.replace(/[A-Z0-9]/g, "•") : "";
+    $("#btn-pf-code-show").textContent = "Show";
+  }
+  $("#btn-pf-code-show").addEventListener("click", () => {
+    const b = $("#pf-code"), showing = b.textContent === b.dataset.code;
+    b.textContent = showing ? b.dataset.code.replace(/[A-Z0-9]/g, "•") : b.dataset.code;
+    $("#btn-pf-code-show").textContent = showing ? "Show" : "Hide";
+  });
+  $("#btn-pf-code-copy").addEventListener("click", () => {
+    const code = $("#pf-code").dataset.code;
+    if (!code) return;
+    const btn = $("#btn-pf-code-copy");
+    const done = () => { btn.textContent = "Copied"; setTimeout(() => { btn.textContent = "Copy"; }, 1600); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(done).catch(() => {});
+  });
   function renderProfile() {
+    renderSignInCard();
     const ev = evaluateTrophies();
     const entries = ev.entries;
     const name = myUsername || storedName || "Climber";
