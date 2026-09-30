@@ -13,7 +13,7 @@
 use strict;
 use warnings;
 
-my $root = "D:/Claude Code/portfolio/games/3-2-1";
+my $root = "D:/Claude Code/daily-climb";
 
 open(my $cfh, "<:raw", "$root/climbs.js") or die $!;
 local $/;

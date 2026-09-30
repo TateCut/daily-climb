@@ -13,7 +13,7 @@ use warnings;
 #     taken out before the climbs are built, so a climb can route around one)
 # This file is a build input for the calendar builder; the game doesn't load it.
 
-my $DIR = 'D:/Claude Code/portfolio/games/3-2-1';
+my $DIR = 'D:/Claude Code/daily-climb';
 my $OUT = "$DIR/daily-pool.js";
 my @PEAKS = (7, 9, 10, 11);
 my $MAXLEN = 11;

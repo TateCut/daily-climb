@@ -685,6 +685,7 @@
   .roundbtn.sound-toggle[aria-pressed="true"] .rb-ic { border-color: var(--accent); color: var(--accent); }
   #btn-home-install.nudge .rb-ic { animation: install-nudge 2.4s ease-in-out 1.2s 2; }
   .home-foot { margin-top: 12px; }
+  .home-copy { font-size: 0.7rem; color: var(--muted); }
   /* Every screen's way back: a "‹ Home" pill top left, the title centred
      (long titles wrap), an optional extra on the right (the board's streak).
      Screens that go back one step say where: "‹ Profile", "‹ Adventure". */
@@ -701,6 +702,17 @@
   /* Screens with a back pill start at the top (not centred), so the pill always
      sits in the same corner as the home screen's Calendar button. */
   body:has(main > section:not([hidden]) > .scr-head) { align-items: flex-start; padding-top: calc(env(safe-area-inset-top, 0px) + 12px); }
+  /* "We've moved" (the old address). */
+  .moved-title { margin: 0; font-size: 1.6rem; }
+  .moved-box { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .moved-box[hidden] { display: none; }
+  .moved-box .ufield { width: 100%; text-align: left; }
+  .moved-go-btn { display: block; width: 100%; text-decoration: none; text-align: center; padding: 15px 26px; font-size: 1.1rem; border-radius: 12px; box-sizing: border-box; }
+  .moved-msg { margin: 0; font-size: 0.86rem; line-height: 1.45; color: var(--warn); }
+  .moved-msg[hidden] { display: none; }
+  .moved-msg b { color: var(--text); }
+  .moved-foot { margin: 0; max-width: 32ch; }
+  .ustatus-link { font-size: inherit; padding: 0; color: var(--accent); }
   /* Difficulty sheet. */
   #difficulty-sheet h3 { margin-bottom: 4px; }
   .tier-T { color: var(--tier-t); } .tier-R { color: var(--tier-r); } .tier-S { color: var(--tier-s); }
@@ -1472,6 +1484,7 @@
            this player hasn't seen). -->
       <div class="home-foot">
         <button class="vchip" id="btn-patch-notes" type="button"><span class="vchip-dot" aria-hidden="true"></span><span id="vchip-label"></span></button>
+        <span class="home-copy">&copy; 2026 Tate Cutcliffe</span>
       </div>
     </section>
 
@@ -1539,6 +1552,29 @@
       <div class="scr-head"><button class="backpill" id="btn-patch-home" type="button"><span class="bp-ch" aria-hidden="true">&lsaquo;</span>Home</button><h2 class="scr-ttl">Patch notes</h2><span></span></div>
       <p class="note patch-sub">What's changed in Daily Climb</p>
       <div class="patch-list" id="patch-list"></div>
+    </section>
+
+    <!-- MOVED: shown instead of the game at the old GitHub address. Bring my
+         profile makes a one-time move link to thedailyclimb.com. -->
+    <section id="screen-moved" hidden>
+      <h2 class="moved-title">We've moved!</h2>
+      <p class="lede">Daily Climb now lives at <b>thedailyclimb.com</b>.</p>
+      <div class="moved-box" id="moved-bring" hidden>
+        <p class="note">Bring your streak, trophies and history with you in one tap.</p>
+        <button class="primary" id="btn-moved-bring" type="button">Bring my profile</button>
+      </div>
+      <div class="moved-box" id="moved-claim" hidden>
+        <p class="note">Pick a username to bring your streak, trophies and history with you.</p>
+        <div class="ufield">
+          <label for="moved-input">Username</label>
+          <input class="nameinput" id="moved-input" type="text" maxlength="16" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="e.g. summit_sam">
+          <p class="ustatus" id="moved-note" aria-live="polite"></p>
+        </div>
+        <button class="primary" id="btn-moved-claim" type="button" disabled>Bring my profile</button>
+      </div>
+      <p class="moved-msg" id="moved-msg" hidden></p>
+      <a class="linkbtn" id="moved-go" href="https://thedailyclimb.com/">Skip, just take me there</a>
+      <p class="note moved-foot">On your phone? Add the new address to your Home Screen, and turn reminders back on there.</p>
     </section>
 
     <!-- THEME CALENDAR: every themed day. Coming days show only their theme
@@ -1965,7 +2001,7 @@
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
   import {
     getAuth, signInAnonymously, onAuthStateChanged,
-    linkWithCredential, EmailAuthProvider, signInWithEmailAndPassword,
+    linkWithCredential, EmailAuthProvider, signInWithEmailAndPassword, updatePassword,
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
   import {
     getAnalytics, logEvent,
@@ -2189,6 +2225,41 @@
       if (!auth) throw Object.assign(new Error("no auth"), { code: "no-auth" });
       await signInWithEmailAndPassword(auth, usernameEmail(username.toLowerCase()), codePlain);
       uid = auth.currentUser ? auth.currentUser.uid : uid;
+      return this.getPlayer();
+    },
+
+    // ---- Moving to thedailyclimb.com: the one-tap move link ----
+    // The old address makes a one-time handoff (a secret that signs in as this
+    // account), the new address picks it up by its unguessable id, signs in and
+    // deletes it. Firestore rules: only the owner creates it, anyone holding the
+    // id can read it once, nobody can list them.
+    myEmail() { return (auth && auth.currentUser && auth.currentUser.email) || null; },
+    // Username accounts: set a fresh secret (a new recovery code) so it can travel
+    // in the handoff, and keep Tate's recovery lookup in step. Firebase may refuse
+    // with auth/requires-recent-login if this device signed in long ago.
+    async resetMySecret(key, codeDisplay, codePlain) {
+      const user = auth && auth.currentUser;
+      if (!user) throw Object.assign(new Error("no auth"), { code: "no-auth" });
+      await updatePassword(user, codePlain);
+      try { await updateDoc(doc(db, "recovery", key), { code: codeDisplay, updated: serverTimestamp() }); } catch (e) {}
+    },
+    async createTransfer(token, secret) {
+      const user = auth && auth.currentUser;
+      if (!user || !user.email) throw Object.assign(new Error("no auth"), { code: "no-auth" });
+      await setDoc(doc(db, "transfers", token), {
+        uid: user.uid, email: user.email, secret: secret,
+        expires: Date.now() + 30 * 60 * 1000, created: serverTimestamp(),
+      });
+    },
+    async pickupTransfer(token) {
+      if (!auth) throw Object.assign(new Error("no auth"), { code: "no-auth" });
+      const s = await getDoc(doc(db, "transfers", token));
+      if (!s.exists()) throw Object.assign(new Error("gone"), { code: "gone" });
+      const t = s.data();
+      if (!t.expires || t.expires < Date.now()) throw Object.assign(new Error("expired"), { code: "expired" });
+      await signInWithEmailAndPassword(auth, t.email, t.secret);
+      uid = auth.currentUser ? auth.currentUser.uid : uid;
+      try { await deleteDoc(doc(db, "transfers", token)); } catch (e) {}
       return this.getPlayer();
     },
 
@@ -3077,6 +3148,7 @@
     dailyboard: $("#screen-daily-board"),
     patchnotes: $("#screen-patch-notes"),
     calendar: $("#screen-calendar"),
+    moved: $("#screen-moved"),
     restore: $("#screen-restore"),
     profile: $("#screen-profile"),
     trophies: $("#screen-trophies"),
@@ -4153,7 +4225,15 @@
         try {
           const taken = await window.MatchDB.isUsernameTaken(v);
           if (mine !== seq) return;
-          if (taken) set("bad", "✗ Taken, try another", false);
+          if (taken) {
+            set("bad", "✗ Taken, try another", false);
+            if (!MOVED) {   // it may be theirs, from the old address or another phone
+              const mine = document.createElement("button");
+              mine.type = "button"; mine.className = "linkbtn ustatus-link"; mine.textContent = "Is it yours? Restore it";
+              mine.addEventListener("click", () => showRestoreScreen(v));
+              note.append(" ", mine);
+            }
+          }
           else set("ok", "✓ Available", true);
         } catch (e) {
           if (mine !== seq) return;
@@ -4168,6 +4248,7 @@
   // Claim `username` for this player. Shows progress/errors in `note`;
   // resolves "claimed" | "fallback" (profiles not set up: saved as a plain
   // name) | null (failed — message already shown).
+  let lastClaimCode = null; // the recovery code of the claim just made (the move link carries it)
   async function claimUsernameFlow(username, note, button, busyLabel) {
     const idle = button.textContent;
     button.disabled = true;
@@ -4192,6 +4273,7 @@
         : "Couldn't save that. Check your connection and try again.";
       done(); return null;
     }
+    lastClaimCode = code;
     myUsername = username;
     storedName = username;
     playerName = username;
@@ -4254,14 +4336,14 @@
   $("#uname-done-go").addEventListener("click", afterNameSaved);
 
   // Restore: username + recovery code → sign in as that profile.
-  function showRestoreScreen() {
+  function showRestoreScreen(prefill) {
     $("#restore-form").hidden = false;
     $("#restore-done").hidden = true;
-    $("#restore-name").value = "";
+    $("#restore-name").value = typeof prefill === "string" ? prefill : "";
     $("#restore-code").value = "";
     $("#restore-note").textContent = "";
     show("restore");
-    $("#restore-name").focus();
+    $(typeof prefill === "string" && prefill ? "#restore-code" : "#restore-name").focus();
   }
   async function restoreGo() {
     const name = $("#restore-name").value.trim();
@@ -4291,10 +4373,16 @@
       trackEv("profile_restore_failed", { reason: c || "unknown" });
       return;
     }
+    adoptRestoredProfile(player || {}, name);
+    btn.disabled = false;
+    btn.textContent = "Restore my profile";
+  }
+  // Adopt a signed-in profile wholesale and show "Welcome back" (restore + move link).
+  function adoptRestoredProfile(player, name) {
     // Adopt the restored profile wholesale (this device's old anonymous
     // progress, run in progress and reminder registration belonged to a
     // different player).
-    const p = player || {};
+    const p = player;
     myUsername = p.username || name;
     storedName = myUsername;
     playerName = myUsername;
@@ -4326,11 +4414,112 @@
     });
     $("#restore-form").hidden = true;
     $("#restore-done").hidden = false;
-    btn.disabled = false;
-    btn.textContent = "Restore my profile";
+    show("restore");
     $("#restore-done-go").focus();
   }
-  $("#btn-have-profile").addEventListener("click", showRestoreScreen);
+  $("#btn-have-profile").addEventListener("click", () => showRestoreScreen());
+
+  // ---- Moving to thedailyclimb.com ----
+  // The old GitHub address shows "We've moved" instead of the game, with a
+  // one-tap move link that carries the profile over (MatchDB.createTransfer →
+  // the new site's pickupTransfer). Dev: ?moved=1 previews it on any address.
+  const NEW_HOME = "https://thedailyclimb.com/";
+  const MOVED = location.hostname === "tatecut.github.io" || devMovedPreview();
+  function devMovedPreview() {
+    try {
+      const q = new URLSearchParams(location.search).get("moved");
+      if (q === "0") sessionStorage.removeItem("three21.movedPreview");
+      else if (q === "1") sessionStorage.setItem("three21.movedPreview", "1");
+      return localStorage.getItem("three21.dev") === "1" && sessionStorage.getItem("three21.movedPreview") === "1";
+    } catch (e) { return false; }
+  }
+  const checkMovedField = wireUsernameCheck($("#moved-input"), $("#moved-note"), $("#btn-moved-claim"));
+  function showMoved() {
+    const ready = dbReady() && !!window.MatchDB && !!window.MatchDB.hasAuth;
+    const claimed = ready && !!myUsername && !!window.MatchDB.myEmail();
+    const hasProgress = !!(storedName || myDailyStreak || myBeatenSeeds.length || (myPlayer && (myPlayer.history || myPlayer.trophies)));
+    $("#moved-bring").hidden = !claimed;
+    $("#moved-claim").hidden = !(ready && !claimed && hasProgress && profilesReady);
+    $("#moved-msg").hidden = true;
+    const go = $("#moved-go");
+    const offer = !$("#moved-bring").hidden || !$("#moved-claim").hidden;
+    go.className = offer ? "linkbtn" : "primary moved-go-btn";
+    go.textContent = offer ? "Skip, just take me there" : "Go to thedailyclimb.com";
+    if (!$("#moved-claim").hidden && !$("#moved-input").value) { $("#moved-input").value = storedName || ""; checkMovedField(); }
+    show("moved");
+  }
+  function movedMessage(text) {
+    const m = $("#moved-msg");
+    m.replaceChildren();
+    text.split(/(tate\.cutcliffe@gmail\.com)/).forEach((part) => {
+      if (part === "tate.cutcliffe@gmail.com") { const b = document.createElement("b"); b.textContent = part; m.appendChild(b); }
+      else m.append(part);
+    });
+    m.hidden = false;
+  }
+  function newMoveToken() {
+    const b = new Uint8Array(24);
+    crypto.getRandomValues(b);
+    return Array.from(b, (x) => x.toString(16).padStart(2, "0")).join(""); // 48 hex characters
+  }
+  async function moveWithSecret(secret) {
+    const token = newMoveToken();
+    await window.MatchDB.createTransfer(token, secret);
+    trackEv("move_link_created");
+    location.href = NEW_HOME + "#move=" + token;
+  }
+  const MOVE_FALLBACK = "We couldn't move it automatically. On thedailyclimb.com, tap “I already have a profile” and enter your username and recovery code. Need your code? Email tate.cutcliffe@gmail.com.";
+  // Players with a username: a fresh secret travels in the move link.
+  async function movedBring() {
+    const btn = $("#btn-moved-bring");
+    btn.disabled = true;
+    btn.textContent = "Moving…";
+    const code = makeRecoveryCode();
+    try {
+      await window.MatchDB.resetMySecret(myUsername.toLowerCase(), code.display, code.plain);
+      await moveWithSecret(code.plain);
+    } catch (e) {
+      trackEv("move_link_failed", { reason: (e && e.code) || "unknown" });
+      btn.disabled = false;
+      btn.textContent = "Bring my profile";
+      movedMessage(e && e.code === "auth/network-request-failed" ? "Couldn't connect. Check your connection and try again." : MOVE_FALLBACK);
+    }
+  }
+  // Players without one: claim a username here, then its brand-new code travels.
+  async function movedClaim() {
+    const val = $("#moved-input").value.trim();
+    const result = await claimUsernameFlow(val, $("#moved-note"), $("#btn-moved-claim"), "Moving…");
+    if (result === "fallback") { location.href = NEW_HOME; return; } // usernames switched off: just go
+    if (result !== "claimed" || !lastClaimCode) return;
+    try { await moveWithSecret(lastClaimCode.plain); }
+    catch (e) {
+      trackEv("move_link_failed", { reason: (e && e.code) || "unknown" });
+      movedMessage("Your username is saved, but the move didn't go through. On thedailyclimb.com, tap “I already have a profile”. Need your code? Email tate.cutcliffe@gmail.com.");
+    }
+  }
+  $("#btn-moved-bring").addEventListener("click", movedBring);
+  $("#btn-moved-claim").addEventListener("click", movedClaim);
+  $("#moved-input").addEventListener("keydown", (e) => { if (e.key === "Enter" && !$("#btn-moved-claim").disabled) { e.preventDefault(); movedClaim(); } });
+
+  // The new site: arriving from a move link (#move=<token>) signs straight in.
+  async function pickupMove(token) {
+    let player = null;
+    try {
+      player = await window.MatchDB.pickupTransfer(token);
+    } catch (e) {
+      trackEv("move_pickup_failed", { reason: (e && e.code) || "unknown" });
+      showRestoreScreen();
+      const note = $("#restore-note");
+      note.className = "ustatus bad";
+      note.textContent = e && (e.code === "gone" || e.code === "expired")
+        ? "That move link has expired or was already used. Enter your username and recovery code instead."
+        : "Couldn't bring your profile over. Enter your username and recovery code instead.";
+      return;
+    }
+    trackEv("move_pickup_ok");
+    adoptRestoredProfile(player || {}, (player && player.username) || "");
+  }
+
   $("#restore-go").addEventListener("click", restoreGo);
   $("#restore-code").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); restoreGo(); } });
   $("#restore-back").addEventListener("click", showNameScreen);
@@ -4545,6 +4734,7 @@
   }
 
   function goHome() {
+    if (MOVED) { showMoved(); return; } // the old address: "We've moved"
     pauseDailyTimer();
     dailySessionActive = false;
     teardownMatchWatches();
@@ -7616,6 +7806,10 @@
     } catch (e) {}
     if (isDev()) console.log("[daily-climb] dev mode ON — the Daily Climb is replayable. ?dev=0 to disable.");
 
+    // Arriving from a move link (#move=<token>): sign in as the moved profile.
+    const moveMatch = MOVED ? null : /^#move=([a-f0-9]{32,64})$/.exec(location.hash || "");
+    if (moveMatch) history.replaceState(null, "", location.pathname);
+
     // Versus / invite links are off for now: ignore any ?m= and clean the URL.
     if (location.search) history.replaceState(null, "", location.pathname);
     const code = null;
@@ -7632,7 +7826,11 @@
       if (screens.loading.hidden) { go(); return; }
       setTimeout(go, Math.max(0, MIN_LOADING_MS - (Date.now() - loadingSince)));
     }
-    if (storedName) {
+    if (MOVED) {
+      showMoved(); // Bring my profile lights up once sign-in resolves (below)
+    } else if (moveMatch && dbReady()) {
+      show("loading");
+    } else if (storedName) {
       prefillNames(storedName);
       document.querySelectorAll(".tomenu").forEach((el) => { el.hidden = false; });
       renderResumeButton();
@@ -7667,6 +7865,8 @@
         if (player && player.username) { myUsername = player.username; storedName = player.username; }
         if (player) myPlayer = player;
         cacheProfile();
+        if (moveMatch) { await pickupMove(moveMatch[1]); return; }
+        if (MOVED) { showMoved(); return; }
         if (!storedName) {
           if (!screens.loading.hidden || !screens.landing.hidden || !screens.vsjoin.hidden) {
             leaveLoading(showNameScreen); // genuine first run — but don't yank someone mid-flow

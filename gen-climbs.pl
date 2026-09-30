@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-my $DIR = 'D:/Claude Code/portfolio/games/3-2-1';
+my $DIR = 'D:/Claude Code/daily-climb';
 my $OUT = "$DIR/climbs.js";
 
 sub load {

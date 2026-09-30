@@ -27,7 +27,7 @@ binmode STDOUT, ':encoding(UTF-8)';
 # Climbs: 8-letter peaks from climbs.js, others from daily-pool.js; any climb
 # holding a climb-blocklist.txt word is skipped (climbs.js predates the list).
 
-my $DIR   = 'D:/Claude Code/portfolio/games/3-2-1';
+my $DIR   = 'D:/Claude Code/daily-climb';
 my $START = $ENV{START} || '2026-09-29';
 my $DAYS  = $ENV{DAYS}  || 730;
 my $SEED  = $ENV{SEED}  || 1;

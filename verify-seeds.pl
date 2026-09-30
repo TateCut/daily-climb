@@ -20,7 +20,7 @@
 use strict;
 use warnings;
 
-my $root = "D:/Claude Code/portfolio/games/3-2-1";
+my $root = "D:/Claude Code/daily-climb";
 
 # ---- load the bundled dictionary (WORD_SET equivalent: len >= 3) ----
 open(my $wfh, "<:raw", "$root/words.js") or die "words.js: $!";

@@ -96,7 +96,7 @@ function New-Icon {
     Write-Host "wrote $OutPath"
 }
 
-$dir = "D:\Claude Code\portfolio\games\3-2-1"
+$dir = "D:\Claude Code\daily-climb"
 New-Icon -Size 192 -MarkFrac 0.70 -OutPath "$dir\icon-192.png"
 New-Icon -Size 512 -MarkFrac 0.70 -OutPath "$dir\icon-512.png"
 New-Icon -Size 512 -MarkFrac 0.56 -OutPath "$dir\icon-maskable-512.png" -Maskable
