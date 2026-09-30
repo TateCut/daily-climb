@@ -721,6 +721,15 @@
   .pf-code[hidden] { display: none; }
   .pf-code b { flex: 1; font-size: 1rem; letter-spacing: 0.08em; color: var(--gold); }
   .pf-code button { padding: 6px 12px; font-size: 0.82rem; }
+  .install-handoff { margin: 0 0 14px; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(242, 193, 78, 0.45); background: rgba(242, 193, 78, 0.08); }
+  .install-handoff[hidden] { display: none; }
+  .install-handoff p { margin: 0 0 6px; font-size: 0.8rem; line-height: 1.4; color: var(--muted); }
+  .install-handoff .ih-ok { color: var(--good); font-weight: 700; }
+  .install-handoff .ih-ok[hidden] { display: none; }
+  .ih-code { display: flex; align-items: center; gap: 8px; }
+  .ih-code span { font-size: 0.8rem; color: var(--muted); }
+  .ih-code b { flex: 1; color: var(--gold); letter-spacing: 0.06em; font-size: 0.95rem; }
+  .ih-code button { padding: 6px 10px; font-size: 0.78rem; }
   /* Difficulty sheet. */
   #difficulty-sheet h3 { margin-bottom: 4px; }
   .tier-T { color: var(--tier-t); } .tier-R { color: var(--tier-r); } .tier-S { color: var(--tier-s); }
@@ -1916,6 +1925,11 @@
       </div>
     </div>
     <ol class="install-steps" id="install-steps"></ol>
+    <div class="install-handoff" id="install-handoff" hidden>
+      <p class="ih-ok" id="ih-ok">✓ Your sign-in is copied for the new app.</p>
+      <p class="ih-txt">After adding, open the app and tap <b>Finish signing in</b>. Or tap <b>I already have a profile</b> and use:</p>
+      <div class="ih-code"><span id="ih-name"></span><b id="ih-code"></b><button class="ghost" id="btn-ih-copy" type="button">Copy code</button></div>
+    </div>
     <div class="install-actions">
       <button class="ghost" id="btn-install-copy" type="button" hidden>Copy link</button>
       <button class="primary" id="btn-install-done" type="button">Got it</button>
@@ -2257,6 +2271,13 @@
     // Username accounts: set a fresh secret (a new recovery code) so it can travel
     // in the handoff, and keep Tate's recovery lookup in step. Firebase may refuse
     // with auth/requires-recent-login if this device signed in long ago.
+    async getMyRecoveryCode(key) {
+      if (!uid) return null;
+      try {
+        const s = await getDoc(doc(db, "recovery", key));
+        return s.exists() && s.data().uid === uid ? (s.data().code || null) : null;
+      } catch (e) { return null; } // until the owner-read rule is published
+    },
     async resetMySecret(key, codeDisplay, codePlain) {
       const user = auth && auth.currentUser;
       if (!user) throw Object.assign(new Error("no auth"), { code: "no-auth" });
@@ -4274,6 +4295,13 @@
   // restoring, arriving by move link), so the player can see it in their
   // profile and the Home Screen app can be signed in without asking Tate.
   const SECRET_KEY = "three21.secret";
+  async function learnMyCode() {
+    if (!myUsername || knownSecret() || !dbReady() || !window.MatchDB || !window.MatchDB.getMyRecoveryCode) return;
+    const code = await window.MatchDB.getMyRecoveryCode(myUsername.toLowerCase());
+    if (!code) return;
+    rememberSecret(myUsername, code);
+    if (!screens.profile.hidden) renderSignInCard();
+  }
   function prettyCode(plain) { // "MAPLERIDGE2139" -> "MAPLE-RIDGE-2139"
     const p = normalizeCode(plain);
     for (const a of CODE_WORDS) {
@@ -4476,7 +4504,7 @@
     const m = /#move=([a-f0-9]{32,64})/.exec(text || "");
     if (!m) {
       note.className = "ustatus bad";
-      note.textContent = "No sign-in link found. In Safari, open thedailyclimb.com, tap Add app, then come back and try again. Or tap \u201cI already have a profile\u201d.";
+      note.textContent = "No sign-in link found. In Safari, open thedailyclimb.com and tap Add app, then come back and try again. Or tap \u201cI already have a profile\u201d and use the recovery code from your Profile in Safari.";
       note.hidden = false;
       return;
     }
@@ -7018,6 +7046,22 @@
     installHandoff = true;
     trackEv("app_handoff_prepared");
   }
+  // The sheet's handoff box: shown to signed-in iPhone players in Safari.
+  function renderInstallHandoff(allowed) {
+    const box = $("#install-handoff");
+    const code = knownSecret();
+    box.hidden = !(allowed && IS_IOS && !IN_APP && !isStandalone() && myUsername && code);
+    if (box.hidden) return;
+    $("#ih-ok").hidden = !installHandoff;
+    $("#ih-name").textContent = myUsername;
+    $("#ih-code").textContent = code;
+    $("#btn-ih-copy").textContent = "Copy code";
+  }
+  $("#btn-ih-copy").addEventListener("click", () => {
+    const code = knownSecret();
+    if (!code || !navigator.clipboard) return;
+    navigator.clipboard.writeText(code).then(() => { $("#btn-ih-copy").textContent = "Copied"; }).catch(() => {});
+  });
   function openInstall() {
     prepareAppHandoff();
     const kind = IN_APP ? "in_app" : IS_IOS ? "ios" : deferredInstall ? "prompt" : "android_steps";
@@ -7034,7 +7078,8 @@
     const g = installGuide();
     $("#install-title").textContent = g.title;
     $("#install-sub").textContent = g.sub;
-    const steps = installHandoff && !g.copy ? g.steps.concat("Open the new app and tap <b>Finish signing in</b>. Your profile comes with you.") : g.steps;
+    const steps = g.steps;
+    renderInstallHandoff(!g.copy);
     $("#install-steps").innerHTML = steps.map((s, i) => '<li><span class="n">' + (i + 1) + "</span><span>" + s + "</span></li>").join("");
     $("#btn-install-copy").hidden = !g.copy;
     $("#btn-install-copy").textContent = "Copy link";
@@ -7648,6 +7693,7 @@
     const card = $("#pf-signin");
     card.hidden = !myUsername;
     if (!myUsername) return;
+    if (!knownSecret()) learnMyCode(); // fills the card in when it arrives
     const code = knownSecret();
     $("#pf-code-row").hidden = !code;
     $("#pf-signin-txt").textContent = code
@@ -8014,6 +8060,7 @@
         if (!code && (!screens.loading.hidden || !screens.landing.hidden)) leaveLoading(goHome);
         else if (!code && !screens.home.hidden) renderDailyCard(); // refresh the optimistic home
         checkTrophies(); // e.g. yesterday's final place just landed
+        learnMyCode();   // so Profile and Add app always have it
       });
     }
 
