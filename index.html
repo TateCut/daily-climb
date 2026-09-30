@@ -717,8 +717,6 @@
   .paste-signin[hidden] { display: none; }
   .ucodebig { margin: 0; font-size: 1.25rem; font-weight: 800; letter-spacing: 0.08em; color: var(--gold); }
   .pf-signin-txt { margin: 0 0 8px; font-size: 0.8rem; color: var(--muted); line-height: 1.4; }
-  .pf-code-why { margin: 0; font-size: 0.68rem; color: var(--muted); opacity: 0.8; }
-  .pf-code-why:empty { display: none; }
   .pf-resign { width: 100%; margin: 0 0 8px; padding: 10px; }
   .pf-resign[hidden] { display: none; }
   .pf-code { display: flex; align-items: center; gap: 8px; }
@@ -1566,7 +1564,6 @@
           <h3 class="pf-h">Sign in on another device</h3>
           <p class="pf-signin-txt" id="pf-signin-txt"></p>
           <button class="primary pf-resign" id="btn-pf-resign" type="button" hidden>Sign in again</button>
-          <p class="pf-code-why" id="pf-code-why"></p>
           <div class="pf-code" id="pf-code-row" hidden>
             <b id="pf-code"></b>
             <button class="ghost" id="btn-pf-code-show" type="button">Show</button>
@@ -2336,7 +2333,7 @@
     // Username accounts: set a fresh secret (a new recovery code) so it can travel
     // in the handoff, and keep Tate's recovery lookup in step. Firebase may refuse
     // with auth/requires-recent-login if this device signed in long ago.
-    // → { code } or { why } (why the code couldn't be read, shown in the profile card).
+    // → { code } or { why } (why the code couldn't be read).
     async getMyRecoveryCode(key) {
       const who = auth && auth.currentUser;
       if (!uid || !who) return { why: "not signed in yet" };
@@ -4387,13 +4384,9 @@
       trackEv("account_resume_failed", { reason: (e && e.code) || "unknown" });
     }
   }
-  // Build tag: shown in the profile card's code line, so we can tell which version a phone runs.
-  const BUILD = "2026-09-30d";
-  let codeLookup = "";   // why the last lookup came back empty ("" = not tried / found)
   async function learnMyCode() {
     if (!myUsername || knownSecret() || !dbReady() || !window.MatchDB || !window.MatchDB.getMyRecoveryCode) return;
     const r = await window.MatchDB.getMyRecoveryCode(myUsername.toLowerCase());
-    codeLookup = r && r.code ? "" : ((r && r.why) || "unknown");
     if (r && r.code) rememberSecret(myUsername, r.code);
     if (!screens.profile.hidden) renderSignInCard(true);
   }
@@ -7798,7 +7791,6 @@
     $("#pf-signin-txt").textContent = code
       ? "On a new phone, or in the Home Screen app, tap \u201cI already have a profile\u201d and enter " + myUsername + " with this recovery code."
       : "On a new phone, or in the Home Screen app, tap \u201cI already have a profile\u201d. Need your recovery code? Email tate.cutcliffe@gmail.com.";
-    $("#pf-code-why").textContent = code ? "" : "Code lookup: " + (codeLookup || "loading\u2026") + " \u00b7 build " + BUILD;
     // Dropped off the account (older builds did this on reload): one restore fixes it for good.
     const off = !code && dbReady() && window.MatchDB.isSignedInAs && !window.MatchDB.isSignedInAs(myUsername.toLowerCase());
     $("#btn-pf-resign").hidden = !off;
