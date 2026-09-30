@@ -53,9 +53,8 @@
   body {
     margin: 0;
     min-height: 100vh;
+    min-height: 100dvh; /* the height actually showing, whatever the browser's bars */
     display: flex;
-    align-items: center;
-    justify-content: center;
     padding: 40px 16px;
     background: linear-gradient(var(--sky-top), var(--sky-mid) 60%, var(--sky-glow)) fixed;
     color: var(--text);
@@ -63,7 +62,12 @@
   }
   main {
     width: min(94vw, 460px);
+    margin: auto; /* centred when it fits; top-aligned (never cut off) when it doesn't */
     text-align: center;
+  }
+  /* Short screens (Safari with its address bar on top, small phones): less padding. */
+  @media (max-height: 700px) {
+    body { padding-top: 18px; padding-bottom: 18px; }
   }
   main > section {
     display: flex;
@@ -709,7 +713,8 @@
   .backpill .bp-ch { font-size: 1.25rem; line-height: 1; margin-top: -2px; color: var(--accent); }
   /* Screens with a back pill start at the top (not centred), so the pill always
      sits in the same corner as the home screen's Calendar button. */
-  body:has(main > section:not([hidden]) > .scr-head) { align-items: flex-start; padding-top: calc(env(safe-area-inset-top, 0px) + 12px); }
+  body:has(main > section:not([hidden]) > .scr-head) { padding-top: calc(env(safe-area-inset-top, 0px) + 12px); }
+  body:has(main > section:not([hidden]) > .scr-head) main { margin-top: 0; }
   /* "We've moved" (the old address). */
   .moved-title { margin: 0; font-size: 1.6rem; }
   .moved-box { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; }
@@ -771,6 +776,7 @@
   .board-callout b { display: block; color: var(--accent); font-size: 0.62rem; letter-spacing: 0.1em; }
   /* The mountain takes ~150px, so the list gives some back to stay scroll-free. */
   #screen-daily-board .lb-list { max-height: max(120px, min(48vh, calc(100vh - 534px))); } /* room for the reminder button */
+  #screen-daily-board .lb-list { max-height: max(120px, min(48dvh, calc(100dvh - 534px))); }
   #daily-board-list .lb-row.spot { border-color: var(--text); }
   #daily-board-list .lb-row.me.spot { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   @media (prefers-reduced-motion: reduce) { .board-mtn .bflag { transition: none; } }
@@ -917,7 +923,7 @@
   .namebtn { font: inherit; color: var(--text); font-weight: 700; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
   .pf-scroll {
     width: 100%; display: flex; flex-direction: column; gap: 12px; text-align: left;
-    max-height: calc(100vh - 130px); overflow-y: auto; overscroll-behavior: contain; padding: 2px 2px 8px;
+    max-height: calc(100vh - 130px); max-height: calc(100dvh - 130px); overflow-y: auto; overscroll-behavior: contain; padding: 2px 2px 8px;
   }
   .pf-scroll > * { flex: none; }
   .pf-who { display: flex; align-items: center; gap: 12px; }
@@ -1062,8 +1068,9 @@
   .em-cell.on { border-color: var(--accent); background: rgba(232, 135, 30, 0.2); box-shadow: 0 0 0 2px rgba(232, 135, 30, 0.35); }
   .em-secret { margin: 0; font-size: 2rem; letter-spacing: 0.15em; }
   /* Short phones (no page scroll): a smaller grid and tighter spacing. */
-  @media (max-height: 740px) {
-    #screen-emoji .uname-pick, #screen-signin .uname-pick { gap: 9px; }
+  @media (max-height: 800px) {
+    #screen-emoji .uname-pick, #screen-signin .uname-pick, #restore-form { gap: 9px; }
+    #restore-form > .lede { display: none; }
     .em-grid { max-width: 264px; gap: 5px; }
     .em-cell { font-size: 1.15rem; }
     .em-slot { width: 44px; height: 44px; font-size: 1.4rem; }
@@ -1397,6 +1404,26 @@
   }
 
   [hidden] { display: none !important; }
+  /* Short screens (Safari with its address bar on top, small phones): tighter,
+     so every screen still fits (the game never scrolls). */
+  @media (max-height: 640px) {
+    .brandmark { height: 44px; margin-bottom: 8px; }
+    h1 { font-size: 1.75rem; margin-bottom: 12px; }
+    main > section { gap: 12px; }
+    .tt-big { font-size: 2.1rem; }
+    .tt-em { font-size: 1.5rem; }
+    .tt-mtn { max-height: 108px; }
+    .home-play button.primary { padding: 12px 26px; font-size: 1.1rem; }
+    .rb-ic { width: 40px; height: 40px; }
+    .home-foot { margin-top: 6px; }
+    .home-gap { min-height: 6px; }
+    .board-mtn svg { max-height: 124px; }
+    .em-grid { max-width: none; grid-template-columns: repeat(10, 1fr); gap: 4px; }
+    .em-cell { font-size: 1.05rem; border-radius: 8px; }
+    .em-slot { width: 42px; height: 42px; font-size: 1.35rem; }
+    #screen-emoji .uname-pick, #screen-signin .uname-pick, #restore-form { gap: 9px; }
+    #restore-form > .lede, .rsteps ol, .rwhere-path { display: none; }
+  }
 </style>
 </head>
 <body>
