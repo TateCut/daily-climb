@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<script>
+// The Home Screen app gets full-screen sizing (see html.standalone in the styles).
+try { if (navigator.standalone || matchMedia("(display-mode: standalone)").matches) document.documentElement.classList.add("standalone"); } catch (e) {}
+</script>
 <title>Daily Climb</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0c1324">
@@ -1424,6 +1428,12 @@
     #screen-emoji .uname-pick, #screen-signin .uname-pick, #restore-form { gap: 9px; }
     #restore-form > .lede, .rsteps ol, .rwhere-path { display: none; }
   }
+  /* The Home Screen app has no browser bars, and there iPhone's 100dvh leaves
+     out the clock and home-bar areas (a dark strip at the bottom). Size to the
+     whole screen, as before. */
+  html.standalone body { min-height: 100vh; }
+  html.standalone #screen-daily-board .lb-list { max-height: max(120px, min(48vh, calc(100vh - 534px))); }
+  html.standalone .pf-scroll { max-height: calc(100vh - 130px); }
 </style>
 </head>
 <body>
