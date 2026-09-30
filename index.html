@@ -1383,8 +1383,6 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     .ta-tile, .ta-climber, .tut-visual { transition: none; }
     .ta-tile.drop, .ta-tile.shake, .ta-tile.hop, .ta-pop { animation: none; }
   }
-  .tut-eyebrow { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); }
-  .tut-eyebrow[hidden] { display: none; }
   .tut-visual .dchip { cursor: default; font-size: 0.9rem; padding: 5px 12px 5px 10px; }
 
   .diffrow { display: flex; gap: 8px; width: 100%; }
@@ -1594,7 +1592,6 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     <!-- TUTORIAL (first run, or "How to play") -->
     <section id="screen-tutorial" hidden>
       <div class="tut-card">
-        <div class="tut-eyebrow" id="tut-eyebrow" hidden>New in Daily Climb</div>
         <div class="tut-visual" id="tut-visual"></div>
         <h2 class="tut-h" id="tut-h"></h2>
         <p class="lede" id="tut-p"></p>
@@ -5287,7 +5284,6 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
       h: "Find the theme word",
       p: "Every day has a theme, and one word in each climb fits it. Find it and it glows gold. Spell a different word from the same letters and you keep climbing, but you miss the theme word.",
       visual: "theme",
-      isNew: true,
     },
     {
       h: "No cheap steps",
@@ -5303,7 +5299,6 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
       h: "Trail, Ridge, Summit",
       p: "Some days climb higher than others. Trail days top out around 8 letters, Ridge days reach 9, and Summit days go to 10 or 11. Tap the badge on the home screen to see today's.",
       visual: "tiers",
-      isNew: true,
     },
     {
       h: "Once a day",
@@ -5466,23 +5461,12 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   }
   let tutStep = 0;
   let tutFrom = "home"; // "home" | "start" — where to return when done
-  let tutDeck = TUTORIAL; // the full tutorial, or just the new cards (What's new)
-  const WHATS_NEW_KEY = "three21.tut.themed"; // returning players saw the themed-climbs cards
+  const tutDeck = TUTORIAL;
   function showTutorial(opts) {
     tutStep = 0;
     tutFrom = (opts && opts.from) || "home";
-    tutDeck = opts && opts.whatsNew ? TUTORIAL.filter((c) => c.isNew) : TUTORIAL;
-    $("#tut-eyebrow").hidden = tutDeck === TUTORIAL;
     renderTut();
     show("tutorial");
-  }
-  // Returning players (who've seen the tutorial before) get the new cards once,
-  // the first time they open the app on a themed day.
-  function maybeShowWhatsNew() {
-    if (!tutorialSeen || !themedDay(dailyKeyOf())) return false;
-    try { if (localStorage.getItem(WHATS_NEW_KEY) === "1") return false; } catch (e) { return false; }
-    showTutorial({ from: "home", whatsNew: true });
-    return true;
   }
   function renderTut(dir) {
     const s = tutDeck[tutStep];
@@ -5497,7 +5481,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
       dots.appendChild(d);
     });
     const last = tutStep === tutDeck.length - 1;
-    $("#tut-next").textContent = last ? (tutDeck === TUTORIAL ? "Start playing" : "Got it") : "Next";
+    $("#tut-next").textContent = last ? "Start playing" : "Next";
     $("#tut-skip").hidden = last;
     if (dir) anim($(".tut-card"),
       [{ opacity: 0, transform: "translateX(" + (dir * 26) + "px)" }, { opacity: 1, transform: "none" }],
@@ -5511,8 +5495,6 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     if (tutStep > 0) { tutStep--; renderTut(-1); }
   }
   function finishTutorial() {
-    try { localStorage.setItem(WHATS_NEW_KEY, "1"); } catch (e) {}   // the full tutorial covers the new cards too
-    if (tutDeck !== TUTORIAL) { goHome(); return; }
     tutorialSeen = true;
     if (window.MatchDB && window.MatchDB.markTutorialSeen) window.MatchDB.markTutorialSeen();
     try { localStorage.setItem("three21.tut", "1"); } catch (e) {}
@@ -8735,7 +8717,6 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
       renderResumeButton();
       renderDailyCard();
       show("home");
-      if (!code) maybeShowWhatsNew();
     } else if (dbReady()) {
       show("loading");
       loadingSince = Date.now();
