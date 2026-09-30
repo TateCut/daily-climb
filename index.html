@@ -98,6 +98,10 @@
   body:has(#screen-climb-over:not([hidden])) h1,
   body:has(#screen-climb-roundend:not([hidden])) .brandmark,
   body:has(#screen-climb-roundend:not([hidden])) h1,
+  body:has(#screen-home:not([hidden])) .brandmark,
+  body:has(#screen-home:not([hidden])) h1,
+  body:has(#screen-invite:not([hidden])) .brandmark,
+  body:has(#screen-invite:not([hidden])) h1,
   body:has(#screen-calendar:not([hidden])) .brandmark,
   body:has(#screen-calendar:not([hidden])) h1,
   body:has(#screen-patch-notes:not([hidden])) .brandmark,
@@ -536,10 +540,6 @@
   @media (prefers-reduced-motion: reduce) {
     #ascentClimber, #ascentTrailDone, #ascentSun, #ascentSunGlow { transition: none; }
   }
-  /* Rivals on your trail: faint flags where today's earlier finishers ended
-     up. Once you're past one it fades behind you. See renderAscentMini(). */
-  #ascentRivals g { transition: opacity .4s; }
-  #ascentRivals g.passed { opacity: .18; }
   .ascent-mini { position: relative; }
   /* "You beat Priya" — drops into the sky on the right of the mountain when
      you pass someone. The trail (and so the climber) never leaves the left
@@ -559,7 +559,7 @@
   .ascent-toast.show { opacity: 1; transform: none; }
   .ascent-toast span { overflow: hidden; text-overflow: ellipsis; }
   .ascent-toast svg { width: 13px; height: 15px; flex: none; }
-  @media (prefers-reduced-motion: reduce) { #ascentRivals g, .ascent-toast { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .ascent-toast { transition: none; } }
   .ascent-toast.theme { border-color: var(--gold); color: var(--gold); font-weight: 750; max-width: calc(72% - 8px);
     box-shadow: 0 0 16px rgba(242, 193, 78, 0.3), 0 10px 26px rgba(0, 0, 0, 0.45); }
 
@@ -586,23 +586,6 @@
   /* Leaderboard: theme words found. */
   .lb-theme { font-size: 0.74rem; font-weight: 700; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
   .lb-theme.all { color: var(--gold); }
-  /* Home: the logo and name shrink to one row to make room for the theme. */
-  body.theme-home:has(#screen-home:not([hidden])) .brandmark { display: inline-block; height: 30px; margin: 0 8px 10px 0; vertical-align: middle; }
-  body.theme-home:has(#screen-home:not([hidden])) h1 { display: inline-block; font-size: 1.45rem; margin: 0 0 10px; vertical-align: middle; }
-  .today-theme { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-  .today-theme[hidden] { display: none; }
-  .tt-lab { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); }
-  /* The word itself sits dead centre; the emoji hangs off its left edge. */
-  .tt-big { position: relative; font-size: 2.3rem; font-weight: 900; letter-spacing: 0.08em; padding-left: 0.08em; line-height: 1;
-    color: var(--gold); text-shadow: 0 0 22px rgba(242, 193, 78, 0.35); }
-  .tt-em { position: absolute; right: 100%; top: 50%; transform: translateY(-50%); margin-right: 10px; font-size: 1.7rem; letter-spacing: 0; text-shadow: none; }
-  .tt-cap { margin: 0; font-size: 0.9rem; color: var(--muted); }
-  .tt-cap b { color: var(--text); }
-  .tt-mtn { display: block; width: 230px; max-width: 100%; height: auto; margin-top: 2px; }
-  .today-theme.after .tt-mtn { width: 150px; }
-  .today-theme.after .tt-cap { font-size: 0.82rem; }
-  .today-theme.after .tt-big { font-size: 1.9rem; }
-  .today-theme.after .tt-em { font-size: 1.4rem; }
   .dchip { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 3px 9px 3px 8px; font: inherit;
     font-size: 0.78rem; font-weight: 750; border: 1px solid; background: transparent; cursor: pointer; white-space: nowrap; }
   .dchip.T { color: var(--tier-t); border-color: rgba(111, 208, 140, 0.55); }
@@ -614,9 +597,6 @@
   .dchip-peaks i:nth-child(3) { border-bottom-width: 11px; }
   .dchip-i { font-size: 0.64rem; font-weight: 800; border: 1px solid currentColor; border-radius: 50%; width: 14px; height: 14px;
     display: inline-flex; align-items: center; justify-content: center; opacity: 0.85; }
-  .tt-chips { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-  .dchip.calchip { color: var(--text); border-color: var(--line); }
-  .dchip.calchip svg { width: 13px; height: 13px; }
   .dchip.static { cursor: default; }
   /* Theme calendar screen. */
   .cal-month { width: 100%; }
@@ -649,6 +629,78 @@
   .cal-note b { color: var(--gold); letter-spacing: 0.03em; }
   .cal-note.you { color: var(--text); }
   .cal-go { margin-top: 4px; min-height: 44px; font-size: 0.95rem; padding: 0 20px; }
+  /* ---- Home (v0.6): banner · today's theme over big peaks · Play · round extras ---- */
+  /* The home screen fills the phone top to bottom: the banner sits at the top,
+     the round buttons at the bottom, and .home-gap spacers share what's left. */
+  body:has(#screen-home:not([hidden])) {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+  }
+  #screen-home {
+    min-height: calc(100vh - 26px);
+    min-height: calc(100dvh - 26px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    gap: 0;
+  }
+  .home-gap { flex: 1 1 0; min-height: 10px; }
+  .home-banner { width: 100%; display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; }
+  .home-banner .avatar-btn { position: relative; top: auto; right: auto; justify-self: end; }
+  .icon-btn {
+    width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface);
+    color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+  }
+  .icon-btn svg { width: 19px; height: 19px; }
+  .home-title { margin: 0; font-size: 2.2rem; font-weight: 900; letter-spacing: -0.025em; line-height: 1; white-space: nowrap; }
+  .home-title span { background: linear-gradient(90deg, var(--accent), var(--gold)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .home-tagline { margin: 0; }
+  .today-theme { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .today-theme[hidden] { display: none; }
+  /* Theme word floats in the sky over peaks that run edge to edge. */
+  .tt-hero { position: relative; width: calc(100% + 32px); margin: 0 -16px; display: flex; flex-direction: column; align-items: center; }
+  .tt-glow { position: absolute; left: 50%; top: -8px; width: 220px; height: 150px; transform: translateX(-50%); border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(255, 178, 102, 0.28), rgba(255, 178, 102, 0)); pointer-events: none; }
+  .tt-lab { position: relative; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); }
+  /* The word itself sits dead centre; the emoji hangs off its left edge. */
+  .tt-big { position: relative; margin-top: 6px; font-size: 2.6rem; font-weight: 900; letter-spacing: 0.08em; padding-left: 0.08em; line-height: 1;
+    color: var(--gold); text-shadow: 0 0 22px rgba(242, 193, 78, 0.35); }
+  .tt-em { position: absolute; right: 100%; top: 50%; transform: translateY(-50%); margin-right: 10px; font-size: 1.9rem; letter-spacing: 0; text-shadow: none; }
+  .tt-mtn { display: block; width: 100%; max-width: 420px; height: auto; max-height: 150px; margin-top: -6px; } /* tall (10-11 letter) days scale down instead of crowding */
+  .today-theme.after .tt-mtn { width: 86%; }
+  .tt-cap { margin: 0; font-size: 0.86rem; color: var(--muted); }
+  .tt-cap[hidden] { display: none; }
+  .tt-cap b { color: var(--text); }
+  /* After today's climb, Adventure Mode leads: highlighted, with a "Play". */
+  .shelfrow.lead { border-color: var(--accent); }
+  .shelfrow.lead .shelfrow-chev { color: var(--accent); font-weight: 800; font-size: 0.9rem; }
+  .shelfrow.lead .shelfrow-chev::before { content: "Play "; }
+  #dailycard-hero:not([hidden]) ~ #btn-adventure-play { margin-top: 12px; }
+  #btn-adventure-play + #btn-daily-compact { margin-top: 10px; }
+  /* Round extras. */
+  .home-icons { display: flex; gap: 18px; justify-content: center; }
+  .roundbtn { display: flex; flex-direction: column; align-items: center; gap: 5px; background: none; border: 0; padding: 0; font: inherit; color: var(--muted); cursor: pointer; }
+  .roundbtn[hidden] { display: none; }
+  .rb-ic { width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--text);
+    display: flex; align-items: center; justify-content: center; }
+  .rb-ic svg { width: 19px; height: 19px; }
+  .rb-lab { font-size: 0.68rem; white-space: nowrap; }
+  .roundbtn.sound-toggle[aria-pressed="true"] .rb-ic { border-color: var(--accent); color: var(--accent); }
+  #btn-home-install.nudge .rb-ic { animation: install-nudge 2.4s ease-in-out 1.2s 2; }
+  .home-foot { margin-top: 12px; }
+  /* Every screen's way back: a "‹ Home" pill top left, the title centred
+     (long titles wrap), an optional extra on the right (the board's streak).
+     Screens that go back one step say where: "‹ Profile", "‹ Adventure". */
+  .scr-head { width: 100%; display: grid; grid-template-columns: 1fr minmax(0, auto) 1fr; align-items: center; gap: 8px; }
+  .scr-head > :first-child { justify-self: start; }
+  .scr-head > :last-child { justify-self: end; }
+  .scr-ttl { grid-column: 2; margin: 0; font-size: 1.3rem; line-height: 1.2; text-wrap: balance; }
+  .backpill {
+    display: inline-flex; align-items: center; gap: 4px; height: 36px; padding: 0 14px 0 10px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--text);
+    font: inherit; font-size: 0.9rem; font-weight: 650; white-space: nowrap; cursor: pointer;
+  }
+  .backpill .bp-ch { font-size: 1.25rem; line-height: 1; margin-top: -2px; color: var(--accent); }
+  /* Screens with a back pill start at the top (not centred), so the pill always
+     sits in the same corner as the home screen's Calendar button. */
+  body:has(main > section:not([hidden]) > .scr-head) { align-items: flex-start; padding-top: calc(env(safe-area-inset-top, 0px) + 12px); }
   /* Difficulty sheet. */
   #difficulty-sheet h3 { margin-bottom: 4px; }
   .tier-T { color: var(--tier-t); } .tier-R { color: var(--tier-r); } .tier-S { color: var(--tier-s); }
@@ -788,13 +840,8 @@
     border-radius: 14px;
     background: var(--surface);
   }
-  .dailycard-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  #adventure-hero .dailycard-head { justify-content: center; }
-  .adventure-hero-icon { flex: none; width: 24px; height: 24px; color: var(--accent); }
-  #adventure-hero .dailycard-title { font-size: 0.8rem; }
   /* A touch tighter than .dailycard — the compass row made it taller, and this
      layout (post-daily, with the compact "Today's climb" row) must still fit 667px. */
-  #adventure-hero { gap: 6px; padding-block: 14px; }
   .home-play { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; }
   .home-play button.primary { width: 100%; padding: 15px 26px; font-size: 1.2rem; border-radius: 12px; }
   .dailycard-title {
@@ -834,9 +881,6 @@
   }
   .avatar-streak[hidden] { display: none; }
   .namebtn { font: inherit; color: var(--text); font-weight: 700; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
-  .pf-top { width: 100%; display: flex; align-items: center; justify-content: space-between; }
-  .pf-back, .pf-spacer { width: 76px; text-align: left; }
-  .pf-ttl { font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
   .pf-scroll {
     width: 100%; display: flex; flex-direction: column; gap: 12px; text-align: left;
     max-height: calc(100vh - 130px); overflow-y: auto; overscroll-behavior: contain; padding: 2px 2px 8px;
@@ -1016,6 +1060,7 @@
   .patch-tag.new { background: rgba(232, 135, 30, 0.18); color: var(--accent); }
   .patch-tag.imp { background: rgba(127, 179, 255, 0.16); color: #7fb3ff; }
   .patch-tag.fix { background: rgba(111, 208, 140, 0.16); color: var(--good); }
+  .patch-tag.rem { background: rgba(156, 150, 171, 0.16); color: var(--muted); }
   @media (prefers-reduced-motion: reduce) { .vchip.unread .vchip-dot { animation: none; } .patch-chev { transition: none; } }
 
   /* Add to Home Screen — shares Invite's row; each button sizes to its label. */
@@ -1346,32 +1391,30 @@
 
     <!-- HOME (once signed in with a name) -->
     <section id="screen-home" hidden>
-      <!-- Profile: floats top-right (no row cost). Initial + streak tag. -->
-      <button class="avatar-btn" id="btn-avatar" type="button" aria-label="Your profile"><span id="avatar-initial"></span><span class="avatar-streak" id="avatar-streak" hidden></span></button>
-      <p class="lede home-tagline" id="home-tagline">Every solve adds a letter. Climb all the way to 8.</p>
-      <!-- Themed days: today's theme over a little drawing of today's three
-           peaks (heights = peak lengths), a flag per climb that turns gold
-           once its theme word is found. Replaces the tagline. -->
-      <div class="today-theme" id="today-theme" hidden>
-        <div class="tt-lab">Today's theme</div>
-        <div class="tt-big"><span class="tt-em" id="tt-emoji" aria-hidden="true"></span><span id="tt-name"></span></div>
-        <p class="tt-cap" id="tt-cap"></p>
-        <svg class="tt-mtn" id="tt-mtn" viewBox="0 0 300 140" role="img"></svg>
-        <div class="tt-chips">
-          <button class="dchip" id="btn-difficulty" type="button"></button>
-          <button class="dchip calchip" id="btn-calendar" type="button"><svg viewBox="0 0 14 14" aria-hidden="true"><rect x="1.5" y="2.5" width="11" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M1.5 6h11M4.5 1v3M9.5 1v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>Calendar</button>
-        </div>
+      <!-- Top banner: theme calendar · the name · your profile (initial + streak). -->
+      <div class="home-banner">
+        <button class="icon-btn" id="btn-calendar" type="button" aria-label="Theme calendar"><svg viewBox="0 0 14 14" aria-hidden="true"><rect x="1.5" y="2.5" width="11" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M1.5 6h11M4.5 1v3M9.5 1v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+        <p class="home-title">Daily <span>Climb</span></p>
+        <button class="avatar-btn" id="btn-avatar" type="button" aria-label="Your profile"><span id="avatar-initial"></span><span class="avatar-streak" id="avatar-streak" hidden></span></button>
       </div>
+      <div class="home-gap"></div>
+      <p class="lede home-tagline" id="home-tagline">Every solve adds a letter. Climb all the way to 8.</p>
+      <!-- Themed days: today's theme floating over today's three peaks (heights
+           = peak lengths), a flag per climb that turns gold once its theme word
+           is found. Replaces the tagline. -->
+      <div class="today-theme" id="today-theme" hidden>
+        <div class="tt-hero">
+          <div class="tt-glow" aria-hidden="true"></div>
+          <div class="tt-lab">Today's theme</div>
+          <div class="tt-big"><span class="tt-em" id="tt-emoji" aria-hidden="true"></span><span id="tt-name"></span></div>
+          <svg class="tt-mtn" id="tt-mtn" viewBox="0 0 300 140" role="img"></svg>
+        </div>
+        <p class="tt-cap" id="tt-cap" hidden></p>
+        <button class="dchip" id="btn-difficulty" type="button"></button>
+      </div>
+      <div class="home-gap"></div>
 
-      <!-- Home hero: whichever of Daily Climb / Adventure Mode is the day's main
-           call to action gets the full card treatment; the other one, already
-           done for today or just secondary, sits below as a compact row. Both
-           pairs always exist — renderDailyCard() toggles which is shown, see
-           setHomeHero(). Source order matters: it's what decides visual order
-           between the two SHOWN elements, since hidden ones take no space. -->
-      <!-- Adventure Mode's compass: one definition, used here and in the
-           shelf row below. It marks this card as Adventure Mode, not today's
-           climb (which is done by the time this card is showing). -->
+      <!-- Adventure Mode's compass: one definition, used by its row below. -->
       <svg width="0" height="0" style="position:absolute" aria-hidden="true">
         <symbol id="compass-mark" viewBox="0 0 24 24">
           <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.6"/>
@@ -1386,16 +1429,9 @@
           <circle cx="12" cy="12" r="1.3" fill="var(--surface)"/>
         </symbol>
       </svg>
-      <div class="dailycard" id="adventure-hero" hidden>
-        <div class="dailycard-head">
-          <svg class="adventure-hero-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#compass-mark"/></svg>
-          <span class="dailycard-title">Adventure Mode</span>
-        </div>
-        <button class="primary" id="btn-adventure-hero-play" type="button">Play</button>
-        <p class="note" id="adventure-hero-meta"></p>
-      </div>
-      <!-- The game IS the daily climb, so today's climb needs no box or label —
-           just the one big Play button (its text flips to Resume / standings). -->
+      <!-- Before today's climb: the big Play, then Adventure Mode as a row.
+           After it: Adventure Mode leads (highlighted), then today's result
+           row. setHomeHero() swaps them. -->
       <div class="home-play" id="dailycard-hero">
         <button class="primary" id="btn-daily-play" type="button">Play</button>
         <p class="note" id="daily-meta" hidden></p>
@@ -1423,32 +1459,25 @@
         </span>
         <span class="shelfrow-chev" aria-hidden="true">&rsaquo;</span>
       </button>
-      <div class="homelinks">
-        <button class="ghost" id="btn-home-solo" type="button">Practice</button>
-        <button class="ghost" id="btn-home-howto" type="button">How to play</button>
-        <button class="ghost sound-toggle" id="btn-sound" type="button" aria-label="Sound" aria-pressed="false">&#128264;</button>
+      <div class="home-gap"></div>
+      <!-- The extras: round buttons with small labels. Add app hides once the
+           game is installed (renderInstallButton). -->
+      <div class="home-icons">
+        <button class="roundbtn" id="btn-home-howto" type="button"><span class="rb-ic" aria-hidden="true"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M6.2 6.2a1.9 1.9 0 1 1 2.6 1.8c-.6.3-.8.6-.8 1.3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="11.6" r=".9" fill="currentColor"/></svg></span><span class="rb-lab">How to play</span></button>
+        <button class="roundbtn" id="btn-home-invite" type="button"><span class="rb-ic" aria-hidden="true"><svg viewBox="0 0 16 16"><circle cx="6" cy="5.5" r="2.6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M1.5 13.5a4.5 4.5 0 0 1 9 0M12.5 5v5M10 7.5h5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span><span class="rb-lab">Invite</span></button>
+        <button class="roundbtn" id="btn-home-install" type="button" hidden><span class="rb-ic" aria-hidden="true"><svg viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 5v6M5 8h6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span><span class="rb-lab">Add app</span></button>
+        <button class="roundbtn sound-toggle" id="btn-sound" type="button" aria-label="Sound" aria-pressed="false"><span class="rb-ic" aria-hidden="true"></span><span class="rb-lab">Sound</span></button>
       </div>
-      <!-- Invite shares its row with "Add to Home Screen" (the home screen has
-           no room for another row). Once the game is installed the install
-           button is hidden and Invite fills the row. See renderInstallButton(). -->
-      <div class="homelinks install-row">
-        <button class="ghost" id="btn-home-invite" type="button">Invite friends to play</button>
-        <button class="ghost" id="btn-home-install" type="button" hidden>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
-          Add to Home Screen
-        </button>
-      </div>
-      <!-- Footer: who's playing + the version chip (opens the patch notes;
-           an amber dot means there's an update this player hasn't seen). -->
+      <!-- The version chip opens the patch notes (an amber dot = an update
+           this player hasn't seen). -->
       <div class="home-foot">
-        <p class="note whoami" id="home-whoami" hidden></p>
         <button class="vchip" id="btn-patch-notes" type="button"><span class="vchip-dot" aria-hidden="true"></span><span id="vchip-label"></span></button>
       </div>
     </section>
 
     <!-- INVITE: share the game link -->
     <section id="screen-invite" hidden>
-      <h2 style="margin:0;font-size:1.3rem;">Invite friends</h2>
+      <div class="scr-head"><button class="backpill" id="btn-invite-home" type="button"><span class="bp-ch" aria-hidden="true">&lsaquo;</span>Home</button><h2 class="scr-ttl">Invite friends</h2><span></span></div>
       <p class="lede">Send this link. Everyone who opens it plays today's climb, then you can compare scores on the leaderboard.</p>
       <div class="linkrow">
         <input class="nameinput" id="invite-link" type="text" readonly>
@@ -1456,13 +1485,12 @@
       </div>
       <p class="note" id="invite-note"></p>
       <button class="primary" id="btn-invite-share" type="button" hidden>Share&hellip;</button>
-      <button class="linkbtn" id="btn-invite-home" type="button">&larr; Home</button>
     </section>
 
     <!-- PROFILE — streaks, trophies, podium, stats, calendar, recent climbs
          (filled by renderProfile from players/{uid}.history etc.) -->
     <section id="screen-profile" hidden>
-      <div class="pf-top"><button class="linkbtn pf-back" id="btn-profile-home" type="button">&larr; Home</button><span class="pf-ttl">Profile</span><span class="pf-spacer"></span></div>
+      <div class="scr-head"><button class="backpill" id="btn-profile-home" type="button"><span class="bp-ch" aria-hidden="true">&lsaquo;</span>Home</button><h2 class="scr-ttl">Profile</h2><span></span></div>
       <div class="pf-scroll" id="profile-scroll">
         <div class="pf-who">
           <div class="pf-av" id="pf-av"></div>
@@ -1502,23 +1530,22 @@
 
     <!-- TROPHY CASE — every trophy family's tiers, one-offs, secrets -->
     <section id="screen-trophies" hidden>
-      <div class="pf-top"><button class="linkbtn pf-back" id="btn-trophies-back" type="button">&larr; Profile</button><span class="pf-ttl">Trophy case</span><span class="pf-spacer"></span></div>
+      <div class="scr-head"><button class="backpill" id="btn-trophies-back" type="button"><span class="bp-ch" aria-hidden="true">&lsaquo;</span>Profile</button><h2 class="scr-ttl">Trophy case</h2><span></span></div>
       <div class="pf-scroll" id="trophy-scroll"></div>
     </section>
 
     <!-- PATCH NOTES — every release, newest first (filled from PATCH_NOTES) -->
     <section id="screen-patch-notes" hidden>
-      <h2 style="margin:0;font-size:1.3rem;">Patch notes</h2>
+      <div class="scr-head"><button class="backpill" id="btn-patch-home" type="button"><span class="bp-ch" aria-hidden="true">&lsaquo;</span>Home</button><h2 class="scr-ttl">Patch notes</h2><span></span></div>
       <p class="note patch-sub">What's changed in Daily Climb</p>
       <div class="patch-list" id="patch-list"></div>
-      <button class="linkbtn" id="btn-patch-home" type="button">&larr; Home</button>
     </section>
 
     <!-- THEME CALENDAR: every themed day. Coming days show only their theme
          and difficulty; past days reveal their theme words, your result and
          a link to that day's leaderboard. -->
     <section id="screen-calendar" hidden>
-      <h2 style="margin:0;font-size:1.3rem;">Theme calendar</h2>
+      <div class="scr-head"><button class="backpill" id="btn-cal-home" type="button"><span class="bp-ch" aria-hidden="true">&lsaquo;</span>Home</button><h2 class="scr-ttl">Theme calendar</h2><span></span></div>
       <div class="cal-month">
         <div class="cal-mhead">
           <button class="cal-nav" id="cal-prev" type="button" aria-label="Previous month">&lsaquo;</button>
@@ -1528,15 +1555,11 @@
         <div class="cal-grid" id="cal-grid"></div>
       </div>
       <div class="cal-detail" id="cal-detail" aria-live="polite"></div>
-      <button class="linkbtn" id="btn-cal-home" type="button">&larr; Home</button>
     </section>
 
     <!-- DAILY CLIMB: leaderboard -->
     <section id="screen-daily-board" hidden>
-      <div class="dailycard-head">
-        <h2 id="daily-board-title" style="margin:0;font-size:1.3rem;">Daily Climb</h2>
-        <span class="dailycard-streak" id="daily-board-streak" hidden></span>
-      </div>
+      <div class="scr-head"><button class="backpill" id="btn-daily-board-home" type="button"><span class="bp-ch" aria-hidden="true">&lsaquo;</span>Home</button><h2 class="scr-ttl" id="daily-board-title">Daily Climb</h2><span class="dailycard-streak" id="daily-board-streak" hidden></span></div>
       <p class="note" id="daily-board-sub"></p>
       <div class="board-mtn" id="daily-board-mtn" hidden></div>
       <div class="lb-list" id="daily-board-list"></div>
@@ -1544,7 +1567,6 @@
       <button class="reminder-cta" id="btn-reminder" type="button" hidden></button>
       <div class="homelinks">
         <button class="ghost" id="btn-daily-board-flip" type="button" hidden></button>
-        <button class="ghost" id="btn-daily-board-home" type="button">&larr; Home</button>
       </div>
     </section>
 
@@ -1703,7 +1725,6 @@
               fill="none" stroke="var(--muted)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="1 6" opacity=".6"/>
             <path id="ascentTrailDone" d="M22,61 C36,51 33,39 52,34 C73,28 69,17 92,15 C113,12 122,20 145,13"
               fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round"/>
-            <g id="ascentRivals"></g>
             <circle id="ascentClimber" cx="22" cy="61" r="4" fill="var(--sun-core)" stroke="var(--accent)" stroke-width="1.5"/>
           </svg>
         </div>
@@ -1796,18 +1817,17 @@
       <button class="primary" id="btn-cre-next" type="button">Next climb</button>
     </section>
 
-    <!-- COLLECTION: every seed, pick one you haven't beaten -->
+    <!-- ADVENTURE MODE: every climb, pick one you haven't beaten -->
     <section id="screen-collection" hidden>
-      <h2 style="margin:0;font-size:1.3rem;">Collection</h2>
+      <div class="scr-head"><button class="backpill" id="btn-collection-home" type="button"><span class="bp-ch" aria-hidden="true">&lsaquo;</span>Home</button><h2 class="scr-ttl">Adventure Mode</h2><span></span></div>
       <p class="lede" id="collection-progress"></p>
       <div class="collection-grid" id="collection-grid"></div>
       <p class="note">Tap any climb to play it &mdash; beaten ones are filled in. The goal: beat them all.</p>
-      <button class="linkbtn" id="btn-collection-home" type="button">&larr; Home</button>
     </section>
 
     <!-- COLLECTION: after one attempt at a chosen seed -->
     <section id="screen-collection-over" hidden>
-      <h2 id="co-title" style="margin:0;font-size:1.3rem;">Climb over</h2>
+      <div class="scr-head"><button class="backpill" id="btn-co-back" type="button"><span class="bp-ch" aria-hidden="true">&lsaquo;</span>Adventure</button><h2 class="scr-ttl" id="co-title">Climb over</h2><span></span></div>
       <div class="totalbox" id="co-box">
         <span class="totalbox-label" id="co-label">You cleared</span>
         <div class="chips" id="co-words"></div>
@@ -1817,7 +1837,6 @@
       <p class="missed-word" id="co-word" hidden></p>
       <p class="def" id="co-def" hidden></p>
       <button class="primary" id="btn-co-retry" type="button">Try again</button>
-      <button class="linkbtn" id="btn-co-back" type="button">&larr; Collection</button>
     </section>
   </main>
 
@@ -2674,7 +2693,7 @@
   let dailyClimbIndices = null; // the same 3, as CLIMBS indices — so a beaten round can mark Adventure Mode (null for non-8-letter themed climbs)
   let dailyTheme = null;        // themedDay() for today's daily, or null on an unthemed day
   let themeFound = [];          // per climb: the theme word the player played, or null
-  let dailyRivals = [];         // today's earlier finishers [{name, total}] — flags on your trail + "You beat X"
+  let dailyRivals = [];         // today's earlier finishers [{name, total}] — for the "You beat X" pop-up
   let rivalsRound = null;       // which climb the rivals list was last fetched for (refetched once per climb)
   let collectionSeed = null;  // index into CLIMBS currently being played from the Collection screen
   let myBeatenSeeds = [];     // players/{uid}.beatenSeeds — CLIMBS indices this player has cleared
@@ -5090,7 +5109,7 @@
     return priorTotal + currentRoundWords.length;
   }
 
-  // Today's earlier finishers, fetched once per climb so people who finish
+  // Today's earlier finishers (for the "You beat X" pop-up), fetched once per climb so people who finish
   // while you're playing show up from your next climb on. Read-only, so dev
   // replay can use it too. Excludes you (a finished run can't be replayed
   // outside dev mode anyway).
@@ -5103,7 +5122,6 @@
       const myUid = window.MatchDB.uid;
       dailyRivals = entrants.filter((e) => e.uid !== myUid)
         .map((e) => ({ name: (e.name || "Someone").trim() || "Someone", total: e.total || 0 }));
-      renderAscentMini();
     });
   }
 
@@ -5158,23 +5176,6 @@
     $("#ascentSunGlow").setAttribute("cy", sunY);
     $("#ascentSun").setAttribute("opacity", 0.55 + climberFrac * 0.45);
     $("#ascentSunGlow").setAttribute("opacity", 0.35 + climberFrac * 0.55);
-
-    // Rivals' flags: one faint pole per spot, a small pennant per person
-    // there (up to 3). Drawn under the climber so you walk in front of them.
-    const g = $("#ascentRivals");
-    g.innerHTML = "";
-    const spots = new Map();
-    dailyRivals.forEach((r) => spots.set(r.total, (spots.get(r.total) || 0) + 1));
-    spots.forEach((n, t) => {
-      const q = pointAt(t / totalMax);
-      const f = svgEl("g", { class: total > t ? "passed" : "", opacity: 0.7 }, g);
-      const H = 9 + Math.min(n - 1, 2) * 3;
-      svgEl("line", { x1: q.x, y1: q.y, x2: q.x, y2: q.y - H, stroke: "var(--muted)", "stroke-width": 0.7 }, f);
-      for (let i = 0; i < Math.min(n, 3); i++) {
-        const y = q.y - H + i * 3;
-        svgEl("path", { d: "M" + q.x + "," + y + " h5 l-1.2,1.4 l1.2,1.4 h-5 Z", fill: "var(--muted)" }, f);
-      }
-    });
   }
 
   function svgEl(tag, attrs, parent) {
@@ -5277,14 +5278,6 @@
     // Beaten it — retrying the same seed isn't the point, picking the next one
     // is. Only offer "Try again" when the climb wasn't actually finished.
     $("#btn-co-retry").hidden = completed;
-    const back = $("#btn-co-back");
-    if (completed) {
-      back.className = "primary";
-      back.textContent = "Back to Collection";
-    } else {
-      back.className = "linkbtn";
-      back.textContent = "← Collection";
-    }
 
     clearResume();
     show("collectionover");
@@ -5618,19 +5611,17 @@
     const text = n > 0 ? (n + " / " + (CLIMBS.length || 746) + " beaten") : "Can you beat all 746 climbs?";
     const el = $("#adventure-progress");
     if (el) el.textContent = text;
-    const heroEl = $("#adventure-hero-meta");
-    if (heroEl) heroEl.textContent = text;
   }
 
-  // Which of Daily Climb / Adventure Mode gets the big hero-card treatment vs.
-  // the compact shelf row below it. Once today's daily is done, Adventure Mode
-  // becomes the hero — the point of the daily results is to glance at them,
-  // not to be the thing pulling the player's attention on the way back home.
+  // Before today's daily: the big Play, then Adventure Mode as a row. Once it's
+  // done, Adventure Mode leads (highlighted, with a "Play") above today's
+  // result row — the results are for glancing at, not the next thing to do.
   function setHomeHero(adventureIsHero) {
-    $("#adventure-hero").hidden = !adventureIsHero;
+    const adv = $("#btn-adventure-play"), done = $("#btn-daily-compact");
     $("#dailycard-hero").hidden = adventureIsHero;
-    $("#btn-daily-compact").hidden = !adventureIsHero;
-    $("#btn-adventure-play").hidden = adventureIsHero;
+    done.hidden = !adventureIsHero;
+    adv.classList.toggle("lead", adventureIsHero);   // highlighted, with a "Play"
+    if (adventureIsHero) done.before(adv); else done.after(adv);
   }
 
   // ---- Home: today's theme (themed days) ----
@@ -5644,11 +5635,15 @@
   function drawThemeMountain(svg, t, flags) {
     svg.replaceChildren();
     const base = 118, h = (n) => 34 + (n - 7) * 20, xs = [58, 150, 242];
-    svgEl("rect", { x: 0, y: base, width: 300, height: 2, fill: "var(--line)" }, svg);
+    // sunrise shading: bright at the peaks, fading into the ground
+    const grad = svgEl("linearGradient", { id: "ttMtnFill", x1: 0, y1: 0, x2: 0, y2: 1 }, svgEl("defs", {}, svg));
+    svgEl("stop", { offset: 0, "stop-color": "#f2a64a" }, grad);
+    svgEl("stop", { offset: 1, "stop-color": "#e8871e", "stop-opacity": 0.25 }, grad);
+    svgEl("rect", { x: 0, y: base, width: 300, height: 1.5, fill: "var(--line)" }, svg);
     t.climbs.forEach((p, i) => {
       const n = p.c[p.c.length - 1].length, x = xs[i], top = base - h(n), f = flags[i];
       const fill = f.state === "got" ? "var(--gold)" : f.state === "miss" ? "#5a566a" : "var(--accent)";
-      svgEl("polygon", { points: (x - 54) + "," + base + " " + x + "," + top + " " + (x + 54) + "," + base, fill: "var(--accent)", "fill-opacity": 0.32 + i * 0.12 }, svg);
+      svgEl("polygon", { points: (x - 54) + "," + base + " " + x + "," + top + " " + (x + 54) + "," + base, fill: "url(#ttMtnFill)", "fill-opacity": 0.32 + i * 0.12 }, svg);
       svgEl("line", { x1: x, y1: top, x2: x, y2: top - 22, stroke: fill, "stroke-width": 2.2, "stroke-linecap": "round" }, svg);
       const label = f.state === "q" ? "?" : f.word.toUpperCase();
       const w = f.state === "q" ? 18 : 12 + label.length * 7.6;
@@ -5667,11 +5662,10 @@
   function renderTodayTheme(playedToday, result) {
     const t = themedDay(dailyKeyOf());
     const box = $("#today-theme");
-    document.body.classList.toggle("theme-home", !!t);
     $("#home-tagline").hidden = !!t;
     box.hidden = !t;
     if (!t) return;
-    box.classList.toggle("after", !!playedToday);   // smaller once played: Adventure Mode takes the big card
+    box.classList.toggle("after", !!playedToday);   // peaks a little smaller once played
     $("#tt-emoji").textContent = t.theme.emoji;
     $("#tt-name").textContent = t.theme.name.toUpperCase();
     // After playing (this device knows which theme words were found): flags + what was missed.
@@ -5682,6 +5676,7 @@
     });
     const cap = $("#tt-cap");
     cap.replaceChildren();
+    cap.hidden = !r;   // only after playing: how the theme words went
     if (r) {
       const n = r.tf.filter(Boolean).length;
       cap.append(n + " of " + t.climbs.length + " found");
@@ -5693,10 +5688,6 @@
         const played = r.tp && r.tp[i];
         if (played && played !== t.words[i][0]) cap.append(" (you played " + played.toUpperCase() + ")");
       }
-    } else if (playedToday) {
-      cap.textContent = "Done for today";
-    } else {
-      cap.textContent = themePhrase(t) + " hides in each climb.";
     }
     drawThemeMountain($("#tt-mtn"), t, flags);
     const chip = $("#btn-difficulty");
@@ -6435,7 +6426,6 @@
   // ---- home / versus wiring ----
   // Versus ("New game") is hidden for now. "Practice" is a single standalone
   // climb — the same thing as one round of the daily.
-  $("#btn-home-solo").addEventListener("click", showClimbIntro);
   $("#btn-climb-start").addEventListener("click", startClimb);
   $("#btn-climb-intro-back").addEventListener("click", goHome);
   $("#btn-climb-again").addEventListener("click", startClimb);
@@ -6443,7 +6433,6 @@
   $("#btn-cre-next").addEventListener("click", climbRoundEndContinue);
 
   $("#btn-adventure-play").addEventListener("click", showCollection);
-  $("#btn-adventure-hero-play").addEventListener("click", showCollection);
   $("#btn-collection-home").addEventListener("click", goHome);
   $("#collection-grid").addEventListener("click", (e) => {
     const t = e.target.closest(".collection-tile");
@@ -6668,7 +6657,6 @@
     const btn = $("#btn-home-install");
     const offer = canOfferInstall();
     btn.hidden = !offer;
-    $("#btn-home-invite").textContent = offer ? "Invite friends" : "Invite friends to play";
     if (offer) {
       let nudged = false;
       try { nudged = localStorage.getItem(INSTALL_NUDGE_KEY) === "1"; localStorage.setItem(INSTALL_NUDGE_KEY, "1"); } catch (e) {}
@@ -6974,6 +6962,14 @@
   // Lives here, inside the page, because the page is always fetched fresh
   // (sw.js caches other files cache-first, so a notes file could go stale).
   const PATCH_NOTES = [
+    { v: "0.6.0", date: "2026-09-30", title: "A calmer home",
+      notes: [
+        ["imp", "A roomier home screen. Calendar and your profile sit up top, today's theme and mountains take center stage, and the extras are now round buttons at the bottom."],
+        ["imp", "Getting back is the same everywhere. Every screen has a \"‹ Home\" button in the top-left corner, right where the calendar button sits on the home screen."],
+        ["imp", "The little mountain during a climb no longer shows other players' flags. You'll still see \"You beat…\" when you pass someone."],
+        ["imp", "\"Collection\" is now called Adventure Mode everywhere, to match the home screen."],
+        ["rem", "Practice mode. Adventure Mode has every climb whenever you want one."],
+      ] },
     { v: "0.5.0", date: "2026-09-29", title: "Fresh starts",
       notes: [
         ["new", "A theme calendar. Tap Calendar on the home screen to see what's coming up and look back at past days, their theme words and your results."],
@@ -7015,7 +7011,7 @@
   ];
   const APP_VERSION = PATCH_NOTES[0].v;
   const PATCH_SEEN_KEY = "three21.patchSeen"; // last version this player opened the notes for
-  const PATCH_TAG = { new: "New", imp: "Improved", fix: "Fixed" };
+  const PATCH_TAG = { new: "New", imp: "Improved", fix: "Fixed", rem: "Removed" };
   function patchSeen() {
     try { return localStorage.getItem(PATCH_SEEN_KEY); } catch (e) { return null; }
   }
@@ -7587,10 +7583,12 @@
   $("#btn-reminder-primary").addEventListener("click", reminderPrimary);
   $("#btn-reminder-secondary").addEventListener("click", reminderSecondary);
 
+  const SOUND_ON_SVG = '<svg viewBox="0 0 16 16"><path d="M2.5 6h2.5l3.5-3v10L5 10H2.5Z" fill="currentColor"/><path d="M11 5.5a3.5 3.5 0 0 1 0 5M12.8 3.8a6 6 0 0 1 0 8.4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
+  const SOUND_OFF_SVG = '<svg viewBox="0 0 16 16"><path d="M2.5 6h2.5l3.5-3v10L5 10H2.5Z" fill="currentColor"/><path d="M11 6l4 4M15 6l-4 4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
   function syncSoundBtn() {
     const b = $("#btn-sound");
     if (!b) return;
-    b.innerHTML = FX.isOn() ? "&#128266;" : "&#128263;"; // 🔊 / 🔇
+    b.querySelector(".rb-ic").innerHTML = FX.isOn() ? SOUND_ON_SVG : SOUND_OFF_SVG;
     b.setAttribute("aria-pressed", String(FX.isOn()));
   }
   $("#btn-sound").addEventListener("click", () => {
