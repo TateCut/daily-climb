@@ -717,6 +717,10 @@
   .paste-signin[hidden] { display: none; }
   .ucodebig { margin: 0; font-size: 1.25rem; font-weight: 800; letter-spacing: 0.08em; color: var(--gold); }
   .pf-signin-txt { margin: 0 0 8px; font-size: 0.8rem; color: var(--muted); line-height: 1.4; }
+  .pf-code-why { margin: 0; font-size: 0.68rem; color: var(--muted); opacity: 0.8; }
+  .pf-code-why:empty { display: none; }
+  .pf-resign { width: 100%; margin: 0 0 8px; padding: 10px; }
+  .pf-resign[hidden] { display: none; }
   .pf-code { display: flex; align-items: center; gap: 8px; }
   .pf-code[hidden] { display: none; }
   .pf-code b { flex: 1; font-size: 1rem; letter-spacing: 0.08em; color: var(--gold); }
@@ -1561,6 +1565,8 @@
         <div class="pf-card" id="pf-signin" hidden>
           <h3 class="pf-h">Sign in on another device</h3>
           <p class="pf-signin-txt" id="pf-signin-txt"></p>
+          <button class="primary pf-resign" id="btn-pf-resign" type="button" hidden>Sign in again</button>
+          <p class="pf-code-why" id="pf-code-why"></p>
           <div class="pf-code" id="pf-code-row" hidden>
             <b id="pf-code"></b>
             <button class="ghost" id="btn-pf-code-show" type="button">Show</button>
@@ -2075,12 +2081,53 @@
   // stays null and the game falls back to name-per-match with no history.
   let uid = null;
   const readyWaiters = [];
+  // Only when nobody is signed in: signInAnonymously replaces a username
+  // sign-in with a brand-new anonymous account.
   if (auth) {
-    signInAnonymously(auth).catch(() => {});
     onAuthStateChanged(auth, (user) => {
       uid = user ? user.uid : null;
-      if (uid) readyWaiters.splice(0).forEach((fn) => { try { fn(uid); } catch (e) {} });
+      if (!user) { signInAnonymously(auth).catch(() => {}); return; }
+      readyWaiters.splice(0).forEach((fn) => { try { fn(uid); } catch (e) {} });
     });
+  }
+
+  // "2026-09-27-r6" -> "2026-09-28-r6" (same shape as the game's day keys).
+  function nextDayKey(key) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})(.*)$/.exec(key || "");
+    if (!m) return null;
+    const d = new Date(+m[1], +m[2] - 1, +m[3] + 1, 12);
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0") + m[4];
+  }
+  // Fold a stand-in anonymous account's progress (`s`) into the account
+  // signed in now: seeds, history, trophies, streak, reminder.
+  async function absorbStandIn(s) {
+    if (!uid || !s) return;
+    const ref = doc(db, "players", uid);
+    const snap = await getDoc(ref);
+    const p = snap.exists() ? snap.data() : {};
+    const out = { updatedAt: Date.now() };
+    const seeds = Array.from(new Set([].concat(p.beatenSeeds || [], s.beatenSeeds || [])));
+    if (seeds.length) out.beatenSeeds = seeds;
+    if (s.tutorialSeen) out.tutorialSeen = true;
+    if (s.history) out.history = Object.assign({}, s.history, p.history || {});
+    if (s.trophies) out.trophies = Object.assign({}, s.trophies, p.trophies || {});
+    if (s.dailyLastDay && (!p.dailyLastDay || s.dailyLastDay > p.dailyLastDay)) {
+      let streak = s.dailyStreak || 0;
+      if (p.dailyLastDay && p.dailyStreak && streak) { // the stand-in's run began the day after the account's ended
+        let k = p.dailyLastDay;
+        for (let i = 0; i < streak && k; i++) k = nextDayKey(k);
+        if (k === s.dailyLastDay) streak += p.dailyStreak;
+      }
+      out.dailyStreak = streak;
+      out.dailyLastDay = s.dailyLastDay;
+    }
+    out.bestStreak = Math.max(p.bestStreak || 0, s.bestStreak || 0, out.dailyStreak || 0);
+    if (s.reminder && s.reminder.on) {
+      out.reminder = Object.assign({}, p.reminder || {}, s.reminder, {
+        tokens: Array.from(new Set([].concat((p.reminder && p.reminder.tokens) || [], s.reminder.tokens || []))),
+      });
+    }
+    await setDoc(ref, out, { merge: true });
   }
 
   const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I — easy to read aloud
@@ -2255,11 +2302,29 @@
       await setDoc(doc(db, "players", uid), { username: username, name: username, updatedAt: Date.now() }, { merge: true });
     },
     // Sign in as an existing profile. Returns its player doc (or null).
-    async restoreProfile(username, codePlain) {
+    // carry: this device's anonymous progress is this same player's (older
+    // builds dropped them to a stand-in anonymous account), so fold it in.
+    async restoreProfile(username, codePlain, carry) {
       if (!auth) throw Object.assign(new Error("no auth"), { code: "no-auth" });
-      await signInWithEmailAndPassword(auth, usernameEmail(username.toLowerCase()), codePlain);
+      const before = auth.currentUser;
+      const standIn = carry && before && before.isAnonymous ? await this.getPlayer() : null;
+      // The stand-in stops getting played, so its reminder would nag daily: switch it off (back on if sign-in fails).
+      const nag = standIn && standIn.reminder && standIn.reminder.on;
+      if (nag) { try { await updateDoc(doc(db, "players", uid), { "reminder.on": false }); } catch (e) {} }
+      try {
+        await signInWithEmailAndPassword(auth, usernameEmail(username.toLowerCase()), codePlain);
+      } catch (e) {
+        if (nag) { try { await updateDoc(doc(db, "players", uid), { "reminder.on": true }); } catch (err) {} }
+        throw e;
+      }
       uid = auth.currentUser ? auth.currentUser.uid : uid;
+      if (standIn && before.uid !== uid) { try { await absorbStandIn(standIn); } catch (e) {} }
       return this.getPlayer();
+    },
+    // Is this browser signed in as the username's account (not a stand-in)?
+    isSignedInAs(key) {
+      const u = auth && auth.currentUser;
+      return !!(u && !u.isAnonymous && u.email === usernameEmail(key));
     },
 
     // ---- Moving to thedailyclimb.com: the one-tap move link ----
@@ -2271,12 +2336,17 @@
     // Username accounts: set a fresh secret (a new recovery code) so it can travel
     // in the handoff, and keep Tate's recovery lookup in step. Firebase may refuse
     // with auth/requires-recent-login if this device signed in long ago.
+    // → { code } or { why } (why the code couldn't be read, shown in the profile card).
     async getMyRecoveryCode(key) {
-      if (!uid) return null;
+      const who = auth && auth.currentUser;
+      if (!uid || !who) return { why: "not signed in yet" };
+      if (who.isAnonymous) return { why: "this browser isn't signed in with the username" };
       try {
         const s = await getDoc(doc(db, "recovery", key));
-        return s.exists() && s.data().uid === uid ? (s.data().code || null) : null;
-      } catch (e) { return null; } // until the owner-read rule is published
+        if (!s.exists()) return { why: "no recovery record" };
+        if (s.data().uid !== uid) return { why: "record belongs to another account" };
+        return s.data().code ? { code: s.data().code } : { why: "record has no code" };
+      } catch (e) { return { why: (e && e.code) || "lookup failed" }; }
     },
     async resetMySecret(key, codeDisplay, codePlain) {
       const user = auth && auth.currentUser;
@@ -4295,12 +4365,37 @@
   // restoring, arriving by move link), so the player can see it in their
   // profile and the Home Screen app can be signed in without asking Tate.
   const SECRET_KEY = "three21.secret";
+  // Older builds dropped a username sign-in back to a stand-in anonymous
+  // account on reload. If this device knows the code, sign back in quietly
+  // and bring the stand-in's progress along.
+  async function resumeAccount() {
+    const known = knownSecret();
+    if (!myUsername || !known || !dbReady() || !window.MatchDB.isSignedInAs) return;
+    if (window.MatchDB.isSignedInAs(myUsername.toLowerCase())) return;
+    try {
+      const p = await window.MatchDB.restoreProfile(myUsername, normalizeCode(known), true);
+      if (p) {
+        myDailyStreak = p.dailyStreak || 0;
+        myDailyLastDay = p.dailyLastDay || null;
+        mergeBeatenSeeds(p.beatenSeeds);
+        myPlayer = p;
+        cacheProfile();
+        if (!screens.home.hidden) renderDailyCard();
+      }
+      trackEv("account_resumed");
+    } catch (e) {
+      trackEv("account_resume_failed", { reason: (e && e.code) || "unknown" });
+    }
+  }
+  // Build tag: shown in the profile card's code line, so we can tell which version a phone runs.
+  const BUILD = "2026-09-30d";
+  let codeLookup = "";   // why the last lookup came back empty ("" = not tried / found)
   async function learnMyCode() {
     if (!myUsername || knownSecret() || !dbReady() || !window.MatchDB || !window.MatchDB.getMyRecoveryCode) return;
-    const code = await window.MatchDB.getMyRecoveryCode(myUsername.toLowerCase());
-    if (!code) return;
-    rememberSecret(myUsername, code);
-    if (!screens.profile.hidden) renderSignInCard();
+    const r = await window.MatchDB.getMyRecoveryCode(myUsername.toLowerCase());
+    codeLookup = r && r.code ? "" : ((r && r.why) || "unknown");
+    if (r && r.code) rememberSecret(myUsername, r.code);
+    if (!screens.profile.hidden) renderSignInCard(true);
   }
   function prettyCode(plain) { // "MAPLERIDGE2139" -> "MAPLE-RIDGE-2139"
     const p = normalizeCode(plain);
@@ -4435,8 +4530,9 @@
     btn.disabled = true;
     btn.textContent = "Restoring…";
     let player = null;
+    const sameName = !!myUsername && myUsername.toLowerCase() === name.toLowerCase(); // this device's progress is theirs
     try {
-      player = await window.MatchDB.restoreProfile(name, code);
+      player = await window.MatchDB.restoreProfile(name, code, sameName);
     } catch (e) {
       btn.disabled = false;
       btn.textContent = "Restore my profile";
@@ -4451,13 +4547,13 @@
       trackEv("profile_restore_failed", { reason: c || "unknown" });
       return;
     }
-    adoptRestoredProfile(player || {}, name);
+    adoptRestoredProfile(player || {}, name, sameName);
     rememberSecret((player && player.username) || name, code);
     btn.disabled = false;
     btn.textContent = "Restore my profile";
   }
   // Adopt a signed-in profile wholesale and show "Welcome back" (restore + move link).
-  function adoptRestoredProfile(player, name) {
+  function adoptRestoredProfile(player, name, samePlayer) {
     // Adopt the restored profile wholesale (this device's old anonymous
     // progress, run in progress and reminder registration belonged to a
     // different player).
@@ -4469,13 +4565,15 @@
     myDailyLastDay = p.dailyLastDay || null;
     myBeatenSeeds = Array.isArray(p.beatenSeeds) ? p.beatenSeeds.slice() : [];
     if (p.tutorialSeen) tutorialSeen = true;
-    try {
-      ["three21.resume", "three21.reminder", "three21.today"].forEach((k) => localStorage.removeItem(k));
-      if (tutorialSeen) localStorage.setItem("three21.tut", "1");
-    } catch (e) {}
-    todayResult = null;
+    if (!samePlayer) { // same player signing back in: keep today's result, run and reminder
+      try {
+        ["three21.resume", "three21.reminder", "three21.today"].forEach((k) => localStorage.removeItem(k));
+      } catch (e) {}
+      todayResult = null;
+      resumeState = null;
+    }
+    try { if (tutorialSeen) localStorage.setItem("three21.tut", "1"); } catch (e) {}
     myPlayer = p;
-    resumeState = null;
     cacheProfile();
     prefillNames(myUsername);
     trackEv("profile_restored");
@@ -7038,6 +7136,7 @@
     if (!IS_IOS || IN_APP || isStandalone() || !myUsername || !dbReady() || !window.MatchDB) return;
     const known = knownSecret();
     if (!known || !navigator.clipboard || !navigator.clipboard.writeText) return;
+    if (!window.MatchDB.isSignedInAs || !window.MatchDB.isSignedInAs(myUsername.toLowerCase())) return;
     const token = newMoveToken();
     // Copy first, inside the tap (Safari only allows it there); save the handoff right after.
     navigator.clipboard.writeText(location.origin + location.pathname + "#move=" + token).then(() => {
@@ -7689,21 +7788,27 @@
     try { localStorage.setItem(TODAY_KEY, JSON.stringify(todayResult)); } catch (e) {}
   }
   const ordinalOf = (n) => ordinal(n);
-  function renderSignInCard() {
+  function renderSignInCard(fromLookup) {
     const card = $("#pf-signin");
     card.hidden = !myUsername;
     if (!myUsername) return;
-    if (!knownSecret()) learnMyCode(); // fills the card in when it arrives
+    if (!knownSecret() && !fromLookup) learnMyCode(); // fills the card in when it arrives
     const code = knownSecret();
     $("#pf-code-row").hidden = !code;
     $("#pf-signin-txt").textContent = code
       ? "On a new phone, or in the Home Screen app, tap \u201cI already have a profile\u201d and enter " + myUsername + " with this recovery code."
       : "On a new phone, or in the Home Screen app, tap \u201cI already have a profile\u201d. Need your recovery code? Email tate.cutcliffe@gmail.com.";
+    $("#pf-code-why").textContent = code ? "" : "Code lookup: " + (codeLookup || "loading\u2026") + " \u00b7 build " + BUILD;
+    // Dropped off the account (older builds did this on reload): one restore fixes it for good.
+    const off = !code && dbReady() && window.MatchDB.isSignedInAs && !window.MatchDB.isSignedInAs(myUsername.toLowerCase());
+    $("#btn-pf-resign").hidden = !off;
+    if (off) $("#pf-signin-txt").textContent = "This browser needs your recovery code one more time to stay signed in as " + myUsername + ". Your progress comes with you.";
     const b = $("#pf-code");
     b.dataset.code = code || "";
     b.textContent = code ? code.replace(/[A-Z0-9]/g, "•") : "";
     $("#btn-pf-code-show").textContent = "Show";
   }
+  $("#btn-pf-resign").addEventListener("click", () => showRestoreScreen(myUsername));
   $("#btn-pf-code-show").addEventListener("click", () => {
     const b = $("#pf-code"), showing = b.textContent === b.dataset.code;
     b.textContent = showing ? b.dataset.code.replace(/[A-Z0-9]/g, "•") : b.dataset.code;
@@ -8060,6 +8165,7 @@
         if (!code && (!screens.loading.hidden || !screens.landing.hidden)) leaveLoading(goHome);
         else if (!code && !screens.home.hidden) renderDailyCard(); // refresh the optimistic home
         checkTrophies(); // e.g. yesterday's final place just landed
+        await resumeAccount();
         learnMyCode();   // so Profile and Add app always have it
       });
     }
