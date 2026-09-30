@@ -4227,12 +4227,7 @@
           if (mine !== seq) return;
           if (taken) {
             set("bad", "✗ Taken, try another", false);
-            if (!MOVED) {   // it may be theirs, from the old address or another phone
-              const mine = document.createElement("button");
-              mine.type = "button"; mine.className = "linkbtn ustatus-link"; mine.textContent = "Is it yours? Restore it";
-              mine.addEventListener("click", () => showRestoreScreen(v));
-              note.append(" ", mine);
-            }
+            addRestoreLink(note, v);   // it may be theirs, from another phone or browser
           }
           else set("ok", "✓ Available", true);
         } catch (e) {
@@ -4245,6 +4240,15 @@
     return check;
   }
 
+  // "Is it yours? Restore it" after a taken username. On the old address the
+  // restore happens on thedailyclimb.com (?restore=<name> opens it prefilled).
+  function addRestoreLink(note, name) {
+    const a = document.createElement(MOVED ? "a" : "button");
+    a.className = "linkbtn ustatus-link";
+    if (MOVED) { a.href = NEW_HOME + "?restore=" + encodeURIComponent(name); a.textContent = "Is it yours? Restore it on the new site"; }
+    else { a.type = "button"; a.textContent = "Is it yours? Restore it"; a.addEventListener("click", () => showRestoreScreen(name)); }
+    note.append(" ", a);
+  }
   // Claim `username` for this player. Shows progress/errors in `note`;
   // resolves "claimed" | "fallback" (profiles not set up: saved as a plain
   // name) | null (failed — message already shown).
@@ -4490,7 +4494,10 @@
     const val = $("#moved-input").value.trim();
     const result = await claimUsernameFlow(val, $("#moved-note"), $("#btn-moved-claim"), "Moving…");
     if (result === "fallback") { location.href = NEW_HOME; return; } // usernames switched off: just go
-    if (result !== "claimed" || !lastClaimCode) return;
+    if (result !== "claimed" || !lastClaimCode) {
+      if (result === null && /Taken/.test($("#moved-note").textContent)) addRestoreLink($("#moved-note"), val);
+      return;
+    }
     try { await moveWithSecret(lastClaimCode.plain); }
     catch (e) {
       trackEv("move_link_failed", { reason: (e && e.code) || "unknown" });
@@ -7152,6 +7159,10 @@
   // Lives here, inside the page, because the page is always fetched fresh
   // (sw.js caches other files cache-first, so a notes file could go stale).
   const PATCH_NOTES = [
+    { v: "0.7.1", date: "2026-09-30", title: "Smoother moves",
+      notes: [
+        ["fix", "On the old address, if your username is already taken because you claimed it on another phone or browser, you now get a link to restore it on thedailyclimb.com instead of a dead end."],
+      ] },
     { v: "0.7.0", date: "2026-09-30", title: "A new home",
       notes: [
         ["new", "Daily Climb now lives at thedailyclimb.com. Coming from the old address? Tap \"Bring my profile\" and your streak, trophies and history come with you."],
@@ -7815,6 +7826,10 @@
     const moveMatch = MOVED ? null : /^#move=([a-f0-9]{32,64})$/.exec(location.hash || "");
     if (moveMatch) history.replaceState(null, "", location.pathname);
 
+    // From the old address's "Is it yours?" link: ?restore=<name>.
+    let restoreName = null;
+    try { const r = new URLSearchParams(location.search).get("restore"); if (r && USERNAME_RE.test(r) && !MOVED) restoreName = r; } catch (e) {}
+
     // Versus / invite links are off for now: ignore any ?m= and clean the URL.
     if (location.search) history.replaceState(null, "", location.pathname);
     const code = null;
@@ -7835,6 +7850,8 @@
       showMoved(); // Bring my profile lights up once sign-in resolves (below)
     } else if (moveMatch && dbReady()) {
       show("loading");
+    } else if (restoreName) {
+      showRestoreScreen(restoreName);
     } else if (storedName) {
       prefillNames(storedName);
       document.querySelectorAll(".tomenu").forEach((el) => { el.hidden = false; });
