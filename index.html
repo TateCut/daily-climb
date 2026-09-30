@@ -674,6 +674,10 @@
   .shelfrow.lead .shelfrow-chev::before { content: "Play "; }
   #dailycard-hero:not([hidden]) ~ #btn-adventure-play { margin-top: 12px; }
   #btn-adventure-play + #btn-daily-compact { margin-top: 10px; }
+  .next-daily { margin: 0; display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 0.9rem; color: var(--muted); }
+  .next-daily[hidden] { display: none; }
+  .next-daily b { color: var(--text); font-variant-numeric: tabular-nums; }
+  .next-daily svg { width: 16px; height: 16px; }
   /* Round extras. */
   .home-icons { display: flex; gap: 18px; justify-content: center; }
   .roundbtn { display: flex; flex-direction: column; align-items: center; gap: 5px; background: none; border: 0; padding: 0; font: inherit; color: var(--muted); cursor: pointer; }
@@ -1047,6 +1051,28 @@
   .uname-done-title, .restore-title { margin: 0; font-size: 1.3rem; }
   .uemail { color: var(--text); font-weight: 600; user-select: all; overflow-wrap: anywhere; }
   .restore-help { margin: 0; line-height: 1.5; }
+  button.ghost.restore-paste { flex: none; padding: 0 14px; font-size: 0.85rem; border-color: var(--accent); color: var(--accent); }
+  .restore-paste[hidden] { display: none; }
+  .rwhere { width: 100%; text-align: left; border-radius: 14px; border: 1px solid rgba(232, 135, 30, 0.55); background: rgba(232, 135, 30, 0.08);
+    padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+  .rwhere[hidden], .rsteps[hidden] { display: none; }
+  .rwhere-tag { font-size: 0.66rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+  .rwhere-h, .rsteps-h { margin: 0; font-size: 0.95rem; line-height: 1.3; }
+  .rwhere-p, .rsteps-lead { margin: 0; font-size: 0.82rem; color: var(--muted); line-height: 1.45; }
+  .rwhere-p b { color: var(--text); }
+  .rwhere-path { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.78rem; font-weight: 700; }
+  .rwhere-path span { background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 3px 8px; }
+  .rwhere-path i { font-style: normal; color: var(--muted); }
+  .rsteps { width: 100%; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 9px; }
+  .rsteps ol { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .rsteps li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 9px; align-items: center; font-size: 0.8rem; color: var(--muted); line-height: 1.35; }
+  .rsteps li b { color: var(--text); }
+  .rsteps-n { width: 22px; height: 22px; border-radius: 50%; background: rgba(232, 135, 30, 0.16); color: var(--accent); font-size: 0.72rem; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; }
+  .rsteps-av { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--accent); background: var(--bg); font-weight: 800; font-size: 0.7rem;
+    display: flex; align-items: center; justify-content: center; color: var(--text); }
+  .rsteps-card { font-size: 0.58rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 3px 5px; background: var(--bg); }
+  .rsteps-btn { font-size: 0.66rem; font-weight: 700; border: 1px solid var(--line); border-radius: 6px; padding: 3px 7px; background: var(--bg); color: var(--text); }
   .restore-stats { display: flex; gap: 8px; width: 100%; }
   .restore-stats div { flex: 1; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 4px; }
   .restore-stats b { display: block; font-size: 1.15rem; }
@@ -1410,11 +1436,31 @@
         </div>
         <div class="ufield">
           <label for="restore-code">Recovery code</label>
-          <input class="nameinput ucode" id="restore-code" type="text" placeholder="WORD-WORD-1234" maxlength="24" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false">
+          <div class="linkrow">
+            <input class="nameinput ucode" id="restore-code" type="text" placeholder="WORD-WORD-1234" maxlength="24" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false">
+            <button class="ghost restore-paste" id="restore-paste" type="button" hidden>Paste</button>
+          </div>
           <p class="ustatus bad" id="restore-note" aria-live="polite"></p>
         </div>
+        <!-- Where the code is: one card for the Home Screen app / another app's
+             browser, otherwise the three steps. -->
+        <div class="rwhere" id="restore-where" hidden>
+          <span class="rwhere-tag" id="rwhere-tag"></span>
+          <h3 class="rwhere-h" id="rwhere-h"></h3>
+          <div class="rwhere-path" id="rwhere-path"></div>
+          <p class="rwhere-p" id="rwhere-p"></p>
+        </div>
+        <div class="rsteps" id="restore-steps" hidden>
+          <h3 class="rsteps-h">Where's my code?</h3>
+          <p class="rsteps-lead" id="rsteps-lead"></p>
+          <ol>
+            <li><span class="rsteps-n">1</span><span>Open Daily Climb where you <b>already play</b> and tap your circle, top right</span><span class="rsteps-av" aria-hidden="true">T</span></li>
+            <li><span class="rsteps-n">2</span><span>Scroll to <b>Sign in on another device</b></span><span class="rsteps-card" aria-hidden="true">Sign in…</span></li>
+            <li><span class="rsteps-n">3</span><span>Tap <b>Copy</b>, then come back here and tap <b>Paste</b></span><span class="rsteps-btn" aria-hidden="true">Copy</span></li>
+          </ol>
+        </div>
         <button class="primary" id="restore-go" type="button">Restore my profile</button>
-        <p class="note restore-help">Don't have your code? Email your username to<br><span class="uemail">tate.cutcliffe@gmail.com</span></p>
+        <p class="note restore-help">Can't find it anywhere? Email your username to<br><span class="uemail">tate.cutcliffe@gmail.com</span></p>
         <button class="linkbtn" id="restore-back" type="button">&larr; New player instead</button>
       </div>
       <div class="uname-done" id="restore-done" hidden>
@@ -1465,6 +1511,9 @@
         <button class="dchip" id="btn-difficulty" type="button"></button>
       </div>
       <div class="home-gap"></div>
+      <!-- After today's climb: when the next one arrives. -->
+      <p class="next-daily" id="next-daily" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11.5 10.6A5.5 5.5 0 0 1 5.4 4.5a5.5 5.5 0 1 0 6.1 6.1z" fill="currentColor"/></svg>New daily in <b id="next-daily-t"></b></p>
+      <div class="home-gap" id="next-daily-gap" hidden></div>
 
       <!-- Adventure Mode's compass: one definition, used by its row below. -->
       <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -2875,6 +2924,15 @@
     const nextMid = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
     return nextMid - now;
   }
+  // "12h", or minutes in the last hour ("42m").
+  function nextDailyIn() {
+    const ms = msUntilLocalMidnight();
+    return ms >= 3600000 ? Math.round(ms / 3600000) + "h" : Math.max(1, Math.ceil(ms / 60000)) + "m";
+  }
+  // Keep the home screen's countdown current while it's open.
+  setInterval(() => {
+    if (!screens.home.hidden && !$("#next-daily").hidden) $("#next-daily-t").textContent = nextDailyIn();
+  }, 30000);
   function dailyResetText() {
     const h = Math.round(msUntilLocalMidnight() / 3600000);
     return h <= 1 ? "new puzzle within the hour" : "new puzzle in " + h + "h";
@@ -4520,7 +4578,61 @@
   $("#uname-done-go").addEventListener("click", afterNameSaved);
 
   // Restore: username + recovery code → sign in as that profile.
+  // The browser we're in, by name ("Chrome"), for the restore help.
+  function browserName() {
+    if (/SamsungBrowser/.test(UA)) return "Samsung Internet";
+    if (/EdgiOS|Edg\//.test(UA)) return "Edge";
+    if (/FxiOS|Firefox\//.test(UA)) return "Firefox";
+    if (/OPiOS|OPR\//.test(UA)) return "Opera";
+    if (/CriOS|Chrome\//.test(UA)) return "Chrome";
+    if (/Safari\//.test(UA)) return "Safari";
+    return "";
+  }
+  // Point to the recovery code from wherever the player is. The game can tell
+  // where it's running, but not where they played before (each browser and
+  // the Home Screen app keep their own storage), so it names the usual place.
+  function renderRestoreHelp() {
+    const card = !!(isStandalone() || IN_APP);
+    $("#restore-where").hidden = !card;
+    $("#restore-steps").hidden = card;
+    const usual = IS_IOS ? "Safari" : "Chrome";
+    if (card) {
+      $("#rwhere-tag").textContent = isStandalone() ? "You're in the Home Screen app" : "You're inside another app";
+      $("#rwhere-h").textContent = "Your code is in your web browser";
+      const path = $("#rwhere-path");
+      path.replaceChildren();
+      [usual, "thedailyclimb.com", "Your circle", "Copy"].forEach((t, i) => {
+        if (i) { const c = document.createElement("i"); c.textContent = "›"; path.appendChild(c); }
+        const b = document.createElement("span"); b.textContent = t; path.appendChild(b);
+      });
+      $("#rwhere-p").innerHTML = "Use " + usual + ", or whichever browser you've been playing in. Then come back here and tap <b>Paste</b>.";
+    } else {
+      const here = browserName();
+      $("#rsteps-lead").textContent = (here ? "You're in " + here + ". " : "") +
+        "If you've played somewhere else, like another browser, the Home Screen app or another phone, your code is there.";
+    }
+    $("#restore-paste").hidden = !(navigator.clipboard && navigator.clipboard.readText);
+  }
+  // Paste: a recovery code fills the box; a sign-in link from Safari signs straight in.
+  $("#restore-paste").addEventListener("click", async () => {
+    const note = $("#restore-note");
+    let text = "";
+    try { text = await navigator.clipboard.readText(); } catch (e) {}
+    const link = /#move=([a-f0-9]{32,64})/.exec(text || "");
+    if (link) { show("loading"); await pickupMove(link[1]); return; }
+    const code = /\b[a-z]{3,}-[a-z]{3,}-\d{4}\b/i.exec(text || "");
+    if (code) {
+      $("#restore-code").value = code[0].toUpperCase();
+      note.className = "ustatus ok";
+      note.textContent = $("#restore-name").value.trim() ? "Code pasted. Tap Restore my profile." : "Code pasted. Now enter your username.";
+      if (!$("#restore-name").value.trim()) $("#restore-name").focus();
+      return;
+    }
+    note.className = "ustatus bad";
+    note.textContent = "No recovery code on your clipboard. Copy it from your Profile first, then tap Paste.";
+  });
   function showRestoreScreen(prefill) {
+    renderRestoreHelp();
     $("#restore-form").hidden = false;
     $("#restore-done").hidden = true;
     $("#restore-name").value = typeof prefill === "string" ? prefill : "";
@@ -6412,7 +6524,9 @@
     else if (canResume) btn.textContent = "Resume today's game";
     else btn.textContent = "Play";
     meta.textContent = capFirst(dailyResetText()) + ".";
-    $("#daily-compact-meta").textContent = capFirst(dailyResetText()) + " — tap to see today's results.";
+    $("#daily-compact-meta").textContent = "Completed — see today's standings";
+    $("#next-daily").hidden = $("#next-daily-gap").hidden = !playedToday;
+    if (playedToday) $("#next-daily-t").textContent = nextDailyIn();
     setHomeHero(playedToday);
     renderTodayTheme(playedToday, todayResult);
   }
