@@ -5,6 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Daily Climb</title>
 <link rel="manifest" href="manifest.webmanifest">
+<script>
+// iPhone keeps the Home Screen app's storage apart from Safari's, but saves
+// the page's address into the icon. So in Safari: a manifest without
+// start_url (iOS then keeps the address), and this player's one-time app pass
+// in that address. The app signs itself in with it on first open (appPass).
+(function () {
+  try {
+    var ua = navigator.userAgent;
+    var ios = /iPhone|iPod|iPad/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    var app = navigator.standalone || matchMedia("(display-mode: standalone)").matches;
+    if (!ios || app || location.hostname === "tatecut.github.io") return;
+    document.querySelector('link[rel="manifest"]').href = "manifest-ios.webmanifest";
+    var p = JSON.parse(localStorage.getItem("three21.apppass") || "null");
+    if (p && p.t && p.exp > Date.now() && !location.search) history.replaceState(null, "", location.pathname + "?app=" + p.t + location.hash);
+  } catch (e) {}
+})();
+</script>
 <meta name="theme-color" content="#0c1324">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -2418,13 +2435,18 @@
       await updatePassword(user, codePlain);
       try { await updateDoc(doc(db, "recovery", key), { code: codeDisplay, updated: serverTimestamp() }); } catch (e) {}
     },
-    async createTransfer(token, secret) {
+    async createTransfer(token, secret, ttlMs) {
       const user = auth && auth.currentUser;
       if (!user || !user.email) throw Object.assign(new Error("no auth"), { code: "no-auth" });
       await setDoc(doc(db, "transfers", token), {
         uid: user.uid, email: user.email, secret: secret,
-        expires: Date.now() + 30 * 60 * 1000, created: serverTimestamp(),
+        expires: Date.now() + (ttlMs || 30 * 60 * 1000), created: serverTimestamp(),
       });
+    },
+    // Is this handoff still waiting to be picked up?
+    async transferWaiting(token) {
+      try { const s = await getDoc(doc(db, "transfers", token)); return s.exists() && s.data().expires > Date.now(); }
+      catch (e) { return false; }
     },
     async pickupTransfer(token) {
       if (!auth) throw Object.assign(new Error("no auth"), { code: "no-auth" });
@@ -4519,6 +4541,7 @@
     cacheProfile();
     prefillNames(username);
     trackEv("username_claimed");
+    ensureAppPass();
     done(); return "claimed";
   }
   async function savePlainName(val) {
@@ -4672,6 +4695,7 @@
     }
     adoptRestoredProfile(player || {}, name, sameName);
     rememberSecret((player && player.username) || name, code);
+    ensureAppPass();
     btn.disabled = false;
     btn.textContent = "Restore my profile";
   }
@@ -4834,12 +4858,13 @@
   $("#moved-input").addEventListener("keydown", (e) => { if (e.key === "Enter" && !$("#btn-moved-claim").disabled) { e.preventDefault(); movedClaim(); } });
 
   // The new site: arriving from a move link (#move=<token>) signs straight in.
-  async function pickupMove(token) {
+  async function pickupMove(token, quiet) {
     let player = null;
     try {
       player = await window.MatchDB.pickupTransfer(token);
     } catch (e) {
-      trackEv("move_pickup_failed", { reason: (e && e.code) || "unknown" });
+      trackEv("move_pickup_failed", { reason: (e && e.code) || "unknown", quiet: !!quiet });
+      if (quiet) return false;
       showRestoreScreen();
       const note = $("#restore-note");
       note.className = "ustatus bad";
@@ -4853,6 +4878,45 @@
     if (player) delete player._secret;
     adoptRestoredProfile(player || {}, (player && player.username) || "");
     if (secret && myUsername) rememberSecret(myUsername, secret);
+    return true;
+  }
+
+  // ---- iPhone: the Home Screen app signs itself in ----
+  // In Safari, a signed-in player's address carries a one-time app pass
+  // (?app=<token>, a 30-day handoff). Adding to the Home Screen, from our
+  // steps or Safari's own Share menu, saves that address into the icon, and
+  // the app picks the pass up on first open. The pass only works inside the
+  // Home Screen app and is used up there; Safari then makes a fresh one.
+  const APP_PASS_KEY = "three21.apppass";
+  const APP_PASS_MS = 30 * 86400000;
+  function readAppPass() {
+    try { const p = JSON.parse(localStorage.getItem(APP_PASS_KEY) || "null"); return p && p.t && p.exp > Date.now() ? p : null; } catch (e) { return null; }
+  }
+  function showAppPass(token) {
+    if (location.search && !/^\?app=[a-f0-9]+$/.test(location.search)) return;
+    history.replaceState(null, "", location.pathname + "?app=" + token + location.hash);
+    // Point iOS at the manifest again so it re-reads the address.
+    const link = document.querySelector('link[rel="manifest"]');
+    if (link) link.href = "manifest-ios.webmanifest?p=" + token.slice(0, 8);
+  }
+  let appPassBusy = false;
+  async function ensureAppPass() {
+    if (appPassBusy || !IS_IOS || IN_APP || isStandalone() || MOVED || !myUsername || !dbReady() || !window.MatchDB.isSignedInAs) return;
+    const known = knownSecret();
+    if (!known || !window.MatchDB.isSignedInAs(myUsername.toLowerCase())) return;
+    appPassBusy = true;
+    try {
+      let p = readAppPass();
+      if (p && (p.u !== myUsername.toLowerCase() || p.exp - Date.now() < 86400000 || !(await window.MatchDB.transferWaiting(p.t)))) p = null;
+      if (!p) {
+        const token = newMoveToken();
+        await window.MatchDB.createTransfer(token, normalizeCode(known), APP_PASS_MS);
+        p = { t: token, u: myUsername.toLowerCase(), exp: Date.now() + APP_PASS_MS };
+        try { localStorage.setItem(APP_PASS_KEY, JSON.stringify(p)); } catch (e) {}
+      }
+      showAppPass(p.t);
+    } catch (e) {
+    } finally { appPassBusy = false; }
   }
 
   $("#restore-go").addEventListener("click", restoreGo);
@@ -8368,8 +8432,14 @@
     let restoreName = null;
     try { const r = new URLSearchParams(location.search).get("restore"); if (r && USERNAME_RE.test(r) && !MOVED) restoreName = r; } catch (e) {}
 
+    // The Home Screen app's first open: its icon's address carries the app pass.
+    let appMatch = null;
+    try { const a = new URLSearchParams(location.search).get("app"); if (a && /^[a-f0-9]{32,64}$/.test(a) && isStandalone() && !MOVED) appMatch = a; } catch (e) {}
     // Versus / invite links are off for now: ignore any ?m= and clean the URL.
-    if (location.search) history.replaceState(null, "", location.pathname);
+    // Safari keeps this player's own app pass in its address (see ensureAppPass).
+    const ownPass = readAppPass();
+    const keepPass = !isStandalone() && ownPass && location.search === "?app=" + ownPass.t;
+    if (location.search && !keepPass) history.replaceState(null, "", location.pathname);
     const code = null;
     pendingMatchCode = null;
 
@@ -8426,6 +8496,9 @@
         if (player) myPlayer = player;
         cacheProfile();
         if (moveMatch) { await pickupMove(moveMatch[1]); return; }
+        if (appMatch && !(myUsername && window.MatchDB.isSignedInAs && window.MatchDB.isSignedInAs(myUsername.toLowerCase()))) {
+          if (await pickupMove(appMatch, true)) { trackEv("app_pass_ok"); return; }
+        }
         if (MOVED) { showMoved(); return; }
         if (!storedName) {
           if (!screens.loading.hidden || !screens.landing.hidden || !screens.vsjoin.hidden) {
@@ -8438,7 +8511,8 @@
         else if (!code && !screens.home.hidden) renderDailyCard(); // refresh the optimistic home
         checkTrophies(); // e.g. yesterday's final place just landed
         await resumeAccount();
-        learnMyCode();   // so Profile and Add app always have it
+        await learnMyCode();   // so Profile and Add app always have it
+        ensureAppPass();
       });
     }
 
