@@ -5,23 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Daily Climb</title>
 <link rel="manifest" href="manifest.webmanifest">
-<script>
-// iPhone keeps the Home Screen app's storage apart from Safari's, but saves
-// the page's address into the icon. So in Safari: a manifest without
-// start_url (iOS then keeps the address), and this player's one-time app pass
-// in that address. The app signs itself in with it on first open (appPass).
-(function () {
-  try {
-    var ua = navigator.userAgent;
-    var ios = /iPhone|iPod|iPad/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    var app = navigator.standalone || matchMedia("(display-mode: standalone)").matches;
-    if (!ios || app || location.hostname === "tatecut.github.io") return;
-    document.querySelector('link[rel="manifest"]').href = "manifest-ios.webmanifest";
-    var p = JSON.parse(localStorage.getItem("three21.apppass") || "null");
-    if (p && p.t && p.exp > Date.now() && !location.search) history.replaceState(null, "", location.pathname + "?app=" + p.t + location.hash);
-  } catch (e) {}
-})();
-</script>
 <meta name="theme-color" content="#0c1324">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -124,6 +107,10 @@
   body:has(#screen-patch-notes:not([hidden])) .brandmark,
   body:has(#screen-patch-notes:not([hidden])) h1,
   body:has(#screen-restore:not([hidden])) h1,
+  body:has(#screen-emoji:not([hidden])) .brandmark,
+  body:has(#screen-emoji:not([hidden])) h1,
+  body:has(#screen-signin:not([hidden])) .brandmark,
+  body:has(#screen-signin:not([hidden])) h1,
   body:has(#screen-profile:not([hidden])) .brandmark,
   body:has(#screen-profile:not([hidden])) h1,
   body:has(#screen-trophies:not([hidden])) .brandmark,
@@ -734,8 +721,6 @@
   .moved-msg b { color: var(--text); }
   .moved-foot { margin: 0; max-width: 32ch; }
   .ustatus-link { font-size: inherit; padding: 0; color: var(--accent); }
-  .paste-signin { width: 100%; padding: 12px; font-size: 0.95rem; border-color: var(--accent); }
-  .paste-signin[hidden] { display: none; }
   .ucodebig { margin: 0; font-size: 1.25rem; font-weight: 800; letter-spacing: 0.08em; color: var(--gold); }
   .pf-signin-txt { margin: 0 0 8px; font-size: 0.8rem; color: var(--muted); line-height: 1.4; }
   .pf-resign { width: 100%; margin: 0 0 8px; padding: 10px; }
@@ -747,12 +732,9 @@
   .install-handoff { margin: 0 0 14px; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(242, 193, 78, 0.45); background: rgba(242, 193, 78, 0.08); }
   .install-handoff[hidden] { display: none; }
   .install-handoff p { margin: 0 0 6px; font-size: 0.8rem; line-height: 1.4; color: var(--muted); }
-  .install-handoff .ih-ok { color: var(--good); font-weight: 700; }
-  .install-handoff .ih-ok[hidden] { display: none; }
   .ih-code { display: flex; align-items: center; gap: 8px; }
   .ih-code span { font-size: 0.8rem; color: var(--muted); }
   .ih-code b { flex: 1; color: var(--gold); letter-spacing: 0.06em; font-size: 0.95rem; }
-  .ih-code button { padding: 6px 10px; font-size: 0.78rem; }
   /* Difficulty sheet. */
   #difficulty-sheet h3 { margin-bottom: 4px; }
   .tier-T { color: var(--tier-t); } .tier-R { color: var(--tier-r); } .tier-S { color: var(--tier-s); }
@@ -1053,6 +1035,41 @@
 
   /* Username profiles: pick / restore screens + the claim sheet. */
   .uname-pick, #restore-form, .uname-done { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  /* Welcome: new player, or sign in. */
+  .wl-choices { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+  .wl-choice { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; padding: 14px; border-radius: 14px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }
+  .wl-choice.lead { border-color: var(--accent); background: rgba(232, 135, 30, 0.1); }
+  .wl-ic { flex: none; width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; background: var(--bg); }
+  .wl-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .wl-txt b { font-size: 1rem; }
+  .wl-txt small { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+  .wl-chev { flex: none; color: var(--muted); font-size: 1.2rem; }
+  /* Secret emoji: slots for the 3 picked, then the grid. */
+  .em-tag { font-size: 0.66rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); }
+  .em-tag[hidden] { display: none; }
+  .em-title { margin: 0; font-size: 1.3rem; }
+  .em-label { margin: 0; align-self: flex-start; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .em-slots { display: flex; gap: 10px; justify-content: center; }
+  .em-slots.shake { animation: fx-shake 0.38s ease; }
+  .em-slot { width: 54px; height: 54px; border-radius: 14px; border: 1.5px dashed var(--line); background: var(--bg); color: var(--text);
+    font: inherit; font-size: 1.7rem; display: flex; align-items: center; justify-content: center; padding: 0; cursor: default; }
+  .em-slot.full { border-style: solid; border-color: var(--accent); cursor: pointer; }
+  .em-slot.next { border-color: var(--gold); }
+  .em-grid { width: 100%; max-width: 330px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+  .em-cell { aspect-ratio: 1; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text);
+    font: inherit; font-size: 1.35rem; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .em-cell.on { border-color: var(--accent); background: rgba(232, 135, 30, 0.2); box-shadow: 0 0 0 2px rgba(232, 135, 30, 0.35); }
+  .em-secret { margin: 0; font-size: 2rem; letter-spacing: 0.15em; }
+  /* Short phones (no page scroll): a smaller grid and tighter spacing. */
+  @media (max-height: 740px) {
+    #screen-emoji .uname-pick, #screen-signin .uname-pick { gap: 9px; }
+    .em-grid { max-width: 264px; gap: 5px; }
+    .em-cell { font-size: 1.15rem; }
+    .em-slot { width: 44px; height: 44px; font-size: 1.4rem; }
+  }
+  .pf-emoji-btn { width: 100%; margin-top: 8px; padding: 9px; font-size: 0.85rem; }
+  .pf-emoji-btn[hidden] { display: none; }
   .uname-pick[hidden], #restore-form[hidden], .uname-done[hidden], .claim-done[hidden], #claim-ask[hidden] { display: none; }
   .ufield { width: 100%; display: flex; flex-direction: column; gap: 5px; text-align: left; }
   .ufield label { font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
@@ -1428,10 +1445,8 @@
           <input class="nameinput" id="name-input" type="text" placeholder="e.g. summit_sam" maxlength="16" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
           <p class="ustatus" id="name-note" aria-live="polite"></p>
         </div>
-        <button class="primary" id="name-save" type="button">Continue</button>
-        <button class="ghost paste-signin" id="btn-paste-signin" type="button" hidden>Signed in on Safari? Finish signing in</button>
-        <p class="ustatus" id="paste-note" aria-live="polite" hidden></p>
-        <button class="linkbtn" id="btn-have-profile" type="button">I already have a profile</button>
+        <button class="primary" id="name-save" type="button">Next</button>
+        <button class="linkbtn" id="btn-have-profile" type="button">I already play</button>
       </div>
       <div class="uname-done" id="uname-done" hidden>
         <div class="ucheck" aria-hidden="true">✓</div>
@@ -1442,11 +1457,61 @@
       </div>
     </section>
 
+    <!-- WELCOME — a device that isn't signed in: new player, or sign in. -->
+    <section id="screen-welcome" hidden>
+      <p class="lede">A new word climb every day.</p>
+      <div class="wl-choices">
+        <button class="wl-choice lead" id="btn-wl-new" type="button"><span class="wl-ic" aria-hidden="true">✨</span><span class="wl-txt"><b>I'm new here</b><small>Pick a username and start climbing</small></span><span class="wl-chev" aria-hidden="true">›</span></button>
+        <button class="wl-choice" id="btn-wl-signin" type="button"><span class="wl-ic" aria-hidden="true">👋</span><span class="wl-txt"><b>I already play</b><small>Sign in with your name and emoji</small></span><span class="wl-chev" aria-hidden="true">›</span></button>
+      </div>
+    </section>
+
+    <!-- SECRET EMOJI — any 3, any order: a new profile's sign-in, switching
+         from a recovery code, or changing them. Picked, then tapped again. -->
+    <section id="screen-emoji" hidden>
+      <div class="uname-pick" id="emoji-pick">
+        <span class="em-tag" id="em-tag" hidden>New way to sign in</span>
+        <h2 class="em-title" id="em-title"></h2>
+        <p class="lede" id="em-lede"></p>
+        <div class="em-slots" id="em-slots"></div>
+        <div class="em-grid" id="em-grid"></div>
+        <p class="ustatus" id="em-note" aria-live="polite"></p>
+        <button class="primary" id="em-next" type="button" disabled>Next</button>
+        <button class="linkbtn" id="em-back" type="button">&lsaquo; Back</button>
+      </div>
+      <div class="uname-done" id="emoji-done" hidden>
+        <div class="ucheck" aria-hidden="true">✓</div>
+        <h2 class="uname-done-title" id="em-done-title"></h2>
+        <p class="em-secret" id="em-done-emoji"></p>
+        <p class="lede">Remember these. With your username, they get you back in on any phone, browser or the Home Screen app. They're also in your Profile.</p>
+        <button class="primary" id="em-done-go" type="button">Play</button>
+      </div>
+    </section>
+
+    <!-- SIGN IN — username + secret emoji, on any device. -->
+    <section id="screen-signin" hidden>
+      <div class="uname-pick">
+        <h2 class="restore-title">Welcome back</h2>
+        <div class="ufield">
+          <label for="signin-name">Username</label>
+          <input class="nameinput" id="signin-name" type="text" maxlength="16" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+        </div>
+        <p class="em-label">Tap your 3 secret emoji, in any order</p>
+        <div class="em-slots" id="si-slots"></div>
+        <div class="em-grid" id="si-grid"></div>
+        <p class="ustatus" id="signin-note" aria-live="polite"></p>
+        <button class="primary" id="signin-go" type="button">Sign in</button>
+        <p class="note restore-help">Forgot your emoji? They're in your Profile on any device where you're signed in. Or email your username to<br><span class="uemail">tate.cutcliffe@gmail.com</span></p>
+        <button class="linkbtn" id="signin-code" type="button">Have an old recovery code?</button>
+        <button class="linkbtn" id="signin-back" type="button">&lsaquo; I'm new here</button>
+      </div>
+    </section>
+
     <!-- RESTORE — get a profile back with username + recovery code -->
     <section id="screen-restore" hidden>
       <div id="restore-form">
-        <h2 class="restore-title">Welcome back</h2>
-        <p class="lede">Enter your username and recovery code to get your profile back.</p>
+        <h2 class="restore-title">Sign in with a recovery code</h2>
+        <p class="lede">For profiles made before secret emoji. Enter your username and recovery code.</p>
         <div class="ufield">
           <label for="restore-name">Username</label>
           <input class="nameinput" id="restore-name" type="text" maxlength="16" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
@@ -1478,7 +1543,7 @@
         </div>
         <button class="primary" id="restore-go" type="button">Restore my profile</button>
         <p class="note restore-help">Can't find it anywhere? Email your username to<br><span class="uemail">tate.cutcliffe@gmail.com</span></p>
-        <button class="linkbtn" id="restore-back" type="button">&larr; New player instead</button>
+        <button class="linkbtn" id="restore-back" type="button">&lsaquo; Back</button>
       </div>
       <div class="uname-done" id="restore-done" hidden>
         <div class="ucheck" aria-hidden="true">✓</div>
@@ -1653,6 +1718,7 @@
             <button class="ghost" id="btn-pf-code-show" type="button">Show</button>
             <button class="ghost" id="btn-pf-code-copy" type="button">Copy</button>
           </div>
+          <button class="ghost pf-emoji-btn" id="btn-pf-emoji" type="button" hidden>Change my emoji</button>
         </div>
       </div>
     </section>
@@ -2013,9 +2079,8 @@
     </div>
     <ol class="install-steps" id="install-steps"></ol>
     <div class="install-handoff" id="install-handoff" hidden>
-      <p class="ih-ok" id="ih-ok">✓ Your sign-in is copied for the new app.</p>
-      <p class="ih-txt">After adding, open the app and tap <b>Finish signing in</b>. Or tap <b>I already have a profile</b> and use:</p>
-      <div class="ih-code"><span id="ih-name"></span><b id="ih-code"></b><button class="ghost" id="btn-ih-copy" type="button">Copy code</button></div>
+      <p class="ih-txt">After adding, open the app, tap <b>I already play</b> and sign in with:</p>
+      <div class="ih-code"><span id="ih-name"></span><b id="ih-code"></b></div>
     </div>
     <div class="install-actions">
       <button class="ghost" id="btn-install-copy" type="button" hidden>Copy link</button>
@@ -2063,7 +2128,7 @@
       </div>
       <div class="install-actions">
         <button class="ghost" id="btn-claim-later" type="button">Later</button>
-        <button class="primary" id="btn-claim-go" type="button">Claim it</button>
+        <button class="primary" id="btn-claim-go" type="button">Next</button>
       </div>
     </div>
     <div class="claim-done" id="claim-done" hidden>
@@ -2118,11 +2183,12 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
   import {
     getFirestore, doc, setDoc, getDoc, getDocs, updateDoc, onSnapshot, serverTimestamp,
-    arrayUnion, arrayRemove, collection, query, where, deleteDoc,
+    arrayUnion, arrayRemove, collection, query, where, deleteDoc, deleteField,
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
   import {
     getAuth, signInAnonymously, onAuthStateChanged,
     linkWithCredential, EmailAuthProvider, signInWithEmailAndPassword, updatePassword,
+    reauthenticateWithCredential,
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
   import {
     getAnalytics, logEvent,
@@ -2352,7 +2418,9 @@
         throw Object.assign(new Error("usernames unreadable"), { code: e.code === "permission-denied" ? "not-set-up" : (e.code || "network") });
       }
     },
-    async claimUsername(username, codeDisplay, codePlain) {
+    // secret: the sign-in secret (secret emoji, or an older recovery code);
+    // recFields: what Tate can look up in recovery/ ({ emoji } or { code }).
+    async claimUsername(username, codePlain, recFields) {
       const user = auth && auth.currentUser;
       if (!user || !uid) throw Object.assign(new Error("not signed in"), { code: "no-auth" });
       const key = username.toLowerCase();
@@ -2361,7 +2429,7 @@
       //    mid-claiming reads as taken).
       const recRef = doc(db, "recovery", key);
       try {
-        await setDoc(recRef, { uid: uid, username: username, code: codeDisplay, created: serverTimestamp() });
+        await setDoc(recRef, Object.assign({ uid: uid, username: username }, recFields, { created: serverTimestamp() }));
       } catch (e) {
         throw Object.assign(new Error("recovery write refused"), { code: "taken" });
       }
@@ -2426,6 +2494,7 @@
         const s = await getDoc(doc(db, "recovery", key));
         if (!s.exists()) return { why: "no recovery record" };
         if (s.data().uid !== uid) return { why: "record belongs to another account" };
+        if (s.data().emoji) return { emoji: s.data().emoji };
         return s.data().code ? { code: s.data().code } : { why: "record has no code" };
       } catch (e) { return { why: (e && e.code) || "lookup failed" }; }
     },
@@ -2433,20 +2502,26 @@
       const user = auth && auth.currentUser;
       if (!user) throw Object.assign(new Error("no auth"), { code: "no-auth" });
       await updatePassword(user, codePlain);
-      try { await updateDoc(doc(db, "recovery", key), { code: codeDisplay, updated: serverTimestamp() }); } catch (e) {}
+      try { await updateDoc(doc(db, "recovery", key), { code: codeDisplay, emoji: deleteField(), updated: serverTimestamp() }); } catch (e) {}
     },
-    async createTransfer(token, secret, ttlMs) {
+    // Change this account's secret (e.g. a recovery code -> secret emoji).
+    // Firebase wants a recent sign-in for that, so confirm the current secret
+    // first when this device knows it. recFields replace the old lookup.
+    async setMySecret(key, oldSecret, newSecret, recFields) {
+      const user = auth && auth.currentUser;
+      if (!user || user.isAnonymous || !user.email) throw Object.assign(new Error("no auth"), { code: "no-auth" });
+      if (oldSecret) await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, oldSecret));
+      await updatePassword(user, newSecret);
+      const clear = recFields.emoji ? { code: deleteField() } : { emoji: deleteField() };
+      try { await updateDoc(doc(db, "recovery", key), Object.assign({}, recFields, clear, { updated: serverTimestamp() })); } catch (e) {}
+    },
+    async createTransfer(token, secret) {
       const user = auth && auth.currentUser;
       if (!user || !user.email) throw Object.assign(new Error("no auth"), { code: "no-auth" });
       await setDoc(doc(db, "transfers", token), {
         uid: user.uid, email: user.email, secret: secret,
-        expires: Date.now() + (ttlMs || 30 * 60 * 1000), created: serverTimestamp(),
+        expires: Date.now() + 30 * 60 * 1000, created: serverTimestamp(),
       });
-    },
-    // Is this handoff still waiting to be picked up?
-    async transferWaiting(token) {
-      try { const s = await getDoc(doc(db, "transfers", token)); return s.exists() && s.data().expires > Date.now(); }
-      catch (e) { return false; }
     },
     async pickupTransfer(token) {
       if (!auth) throw Object.assign(new Error("no auth"), { code: "no-auth" });
@@ -3343,6 +3418,9 @@
   const screens = {
     loading: $("#screen-loading"),
     name: $("#screen-name"),
+    welcome: $("#screen-welcome"),
+    emoji: $("#screen-emoji"),
+    signin: $("#screen-signin"),
     tutorial: $("#screen-tutorial"),
     home: $("#screen-home"),
     landing: $("#screen-landing"),
@@ -4400,6 +4478,14 @@
     const n = String(1000 + (r[2] % 9000));
     return { display: w1 + "-" + w2 + "-" + n, plain: w1 + w2 + n };
   }
+  // Secret emoji: any 3 from this grid, in any order, are a profile's sign-in.
+  // Each is a single character (no variation selectors), so they split cleanly.
+  const EMOJI_SET = ["🍕", "🐶", "🚀", "🌮", "🐱", "🌈", "⚽", "🎸", "🍩", "🦊", "🌵", "🍓", "🐙", "🎲", "🔥",
+    "🌙", "⭐", "🍉", "🐢", "🎈", "🧩", "🍔", "🦄", "🌻", "🐝", "🎯", "🦋", "🍪", "🐧", "🍋"];
+  const EMOJI_PICK = 3;
+  const emojiList = (s) => Array.from(String(s || "").replace(/\uFE0F/g, "")).filter((c) => c.trim());
+  // The sign-in secret: the emoji sorted, so the order they're tapped never matters.
+  const emojiSecret = (list) => "dc-emoji:" + list.slice().sort().join("");
   // What the player types → the sign-in secret (case, dashes and spaces ignored).
   const normalizeCode = (s) => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
   // Are username profiles switched on in Firebase (Email/Password sign-in +
@@ -4453,7 +4539,7 @@
     const a = document.createElement(MOVED ? "a" : "button");
     a.className = "linkbtn ustatus-link";
     if (MOVED) { a.href = NEW_HOME + "?restore=" + encodeURIComponent(name); a.textContent = "Is it yours? Restore it on the new site"; }
-    else { a.type = "button"; a.textContent = "Is it yours? Restore it"; a.addEventListener("click", () => showRestoreScreen(name)); }
+    else { a.type = "button"; a.textContent = "Is it yours? Sign in"; a.addEventListener("click", () => showSignIn(name)); }
     note.append(" ", a);
   }
   // This device remembers the recovery code whenever it learns it (claiming,
@@ -4468,7 +4554,7 @@
     if (!myUsername || !known || !dbReady() || !window.MatchDB.isSignedInAs) return;
     if (window.MatchDB.isSignedInAs(myUsername.toLowerCase())) return;
     try {
-      const p = await window.MatchDB.restoreProfile(myUsername, normalizeCode(known), true);
+      const p = await window.MatchDB.restoreProfile(myUsername, knownPassword(), true);
       if (p) {
         myDailyStreak = p.dailyStreak || 0;
         myDailyLastDay = p.dailyLastDay || null;
@@ -4485,7 +4571,8 @@
   async function learnMyCode() {
     if (!myUsername || knownSecret() || !dbReady() || !window.MatchDB || !window.MatchDB.getMyRecoveryCode) return;
     const r = await window.MatchDB.getMyRecoveryCode(myUsername.toLowerCase());
-    if (r && r.code) rememberSecret(myUsername, r.code);
+    if (r && r.emoji) rememberEmoji(myUsername, emojiList(r.emoji));
+    else if (r && r.code) rememberSecret(myUsername, r.code);
     if (!screens.profile.hidden) renderSignInCard(true);
   }
   function prettyCode(plain) { // "MAPLERIDGE2139" -> "MAPLE-RIDGE-2139"
@@ -4499,17 +4586,28 @@
   function rememberSecret(username, code) {
     try { localStorage.setItem(SECRET_KEY, JSON.stringify({ u: String(username).toLowerCase(), c: prettyCode(code) })); } catch (e) {}
   }
-  function knownSecret() { // this player's code, if this device knows it
+  function rememberEmoji(username, list) {
+    try { localStorage.setItem(SECRET_KEY, JSON.stringify({ u: String(username).toLowerCase(), e: list.join("") })); } catch (e) {}
+  }
+  function mySecretRecord() {
     try {
       const s = JSON.parse(localStorage.getItem(SECRET_KEY) || "null");
-      return s && myUsername && s.u === myUsername.toLowerCase() ? s.c : null;
+      return s && myUsername && s.u === myUsername.toLowerCase() ? s : null;
     } catch (e) { return null; }
   }
+  // This player's secret emoji, if this device knows them (else null).
+  function knownEmoji() { const s = mySecretRecord(); return s && s.e ? emojiList(s.e) : null; }
+  // How to show this player's secret: their emoji, or an older recovery code.
+  function knownSecret() { const s = mySecretRecord(); return s ? (s.e ? emojiList(s.e).join(" ") : s.c || null) : null; }
+  // The secret itself, as Firebase knows it.
+  function knownPassword() { const s = mySecretRecord(); return s ? (s.e ? emojiSecret(emojiList(s.e)) : s.c ? normalizeCode(s.c) : null) : null; }
   // Claim `username` for this player. Shows progress/errors in `note`;
   // resolves "claimed" | "fallback" (profiles not set up: saved as a plain
   // name) | null (failed — message already shown).
   let lastClaimCode = null; // the recovery code of the claim just made (the move link carries it)
-  async function claimUsernameFlow(username, note, button, busyLabel) {
+  // With `emoji` the secret is the player's secret emoji; without (the old
+  // address's move), a generated recovery code.
+  async function claimUsernameFlow(username, note, button, busyLabel, emoji) {
     const idle = button.textContent;
     button.disabled = true;
     button.textContent = busyLabel || "Saving…";
@@ -4518,9 +4616,10 @@
       note.className = "ustatus bad"; note.textContent = "Only letters, numbers and _ (3–16)";
       done(); return null;
     }
-    const code = makeRecoveryCode();
+    const legacy = emoji ? null : makeRecoveryCode();
+    const code = emoji ? { display: emoji.join(" "), plain: emojiSecret(emoji) } : legacy;
     try {
-      await window.MatchDB.claimUsername(username, code.display, code.plain);
+      await window.MatchDB.claimUsername(username, code.plain, emoji ? { emoji: emoji.join("") } : { code: legacy.display });
     } catch (e) {
       if (e && e.code === "not-set-up") {
         // Usernames aren't switched on in Firebase yet: keep today's behavior.
@@ -4529,19 +4628,18 @@
       }
       note.className = "ustatus bad";
       note.textContent = e && e.code === "taken"
-        ? "✗ Taken, try another"
+        ? "✗ Someone has that name now. Go back and try another."
         : "Couldn't save that. Check your connection and try again.";
       done(); return null;
     }
     lastClaimCode = code;
-    rememberSecret(username, code.display);
+    if (emoji) rememberEmoji(username, emoji); else rememberSecret(username, code.display);
     myUsername = username;
     storedName = username;
     playerName = username;
     cacheProfile();
     prefillNames(username);
     trackEv("username_claimed");
-    ensureAppPass();
     done(); return "claimed";
   }
   async function savePlainName(val) {
@@ -4559,8 +4657,6 @@
     $("#uname-pick").hidden = false;
     $("#uname-done").hidden = true;
     $("#btn-have-profile").hidden = !claimable || !!myUsername;
-    $("#btn-paste-signin").hidden = !(isStandalone() && !myUsername && dbReady() && navigator.clipboard && navigator.clipboard.readText);
-    $("#paste-note").hidden = true;
     $("#name-input").maxLength = claimable ? 16 : 24;
     $("#name-input").placeholder = claimable ? "e.g. summit_sam" : "Your name";
     $("#name-input").value = storedName || "";
@@ -4585,15 +4681,206 @@
       afterNameSaved();
       return;
     }
-    const result = await claimUsernameFlow(val, $("#name-note"), $("#name-save"));
-    if (result === "fallback") { afterNameSaved(); return; }
-    if (result !== "claimed") return;
-    $("#uname-done-title").textContent = nameScreenFirstEver ? "Welcome, " + val + "!" : "Saved as " + val;
-    $("#uname-done-code").textContent = lastClaimCode ? lastClaimCode.display : "";
-    $("#uname-pick").hidden = true;
-    $("#uname-done").hidden = false;
-    $("#uname-done-go").focus();
+    showEmojiPick({ mode: "create", name: val, from: "name" });
   }
+  // ---- The front door: a device that isn't signed in ----
+  function showWelcome() {
+    if (!canClaimUsername()) { showNameScreen(); return; } // profiles off: the plain-name flow
+    show("welcome");
+  }
+  $("#btn-wl-new").addEventListener("click", showNameScreen);
+  $("#btn-wl-signin").addEventListener("click", () => showSignIn());
+
+  // A tap-to-choose grid of the secret emoji: any 3 (tap again, or tap a slot, to drop one).
+  function emojiPicker(grid, slots, onChange) {
+    let picked = [];
+    EMOJI_SET.forEach((e) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "em-cell"; b.textContent = e; b.setAttribute("aria-pressed", "false");
+      b.addEventListener("click", () => {
+        const i = picked.indexOf(e);
+        if (i >= 0) picked.splice(i, 1);
+        else if (picked.length < EMOJI_PICK) picked.push(e);
+        else return;
+        draw(); if (onChange) onChange(picked.slice());
+      });
+      grid.appendChild(b);
+    });
+    function draw() {
+      slots.replaceChildren();
+      for (let i = 0; i < EMOJI_PICK; i++) {
+        const s = document.createElement("button");
+        s.type = "button";
+        s.className = "em-slot" + (picked[i] ? " full" : i === picked.length ? " next" : "");
+        s.textContent = picked[i] || "";
+        s.setAttribute("aria-label", picked[i] ? "Remove " + picked[i] : "Empty");
+        if (picked[i]) s.addEventListener("click", () => { picked.splice(i, 1); draw(); if (onChange) onChange(picked.slice()); });
+        slots.appendChild(s);
+      }
+      [...grid.children].forEach((b) => { const on = picked.includes(b.textContent); b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); });
+    }
+    draw();
+    return {
+      get: () => picked.slice(),
+      clear() { picked = []; draw(); },
+      shake() { slots.classList.remove("shake"); void slots.offsetWidth; slots.classList.add("shake"); },
+    };
+  }
+  const sameEmoji = (a, b) => a.length === b.length && a.slice().sort().join() === b.slice().sort().join();
+
+  // Picking secret emoji. mode: "create" (a new profile: username, then these),
+  // "switch" (an older recovery code → emoji), "change". from: where Back goes.
+  let emojiFlow = { mode: "create", first: null };
+  const emPicker = emojiPicker($("#em-grid"), $("#em-slots"), (p) => {
+    $("#em-next").disabled = p.length < EMOJI_PICK;
+    if (p.length) { $("#em-note").className = "ustatus"; $("#em-note").textContent = ""; }
+  });
+  function showEmojiPick(flow) {
+    emojiFlow = Object.assign({ first: null }, flow);
+    $("#emoji-pick").hidden = false;
+    $("#emoji-done").hidden = true;
+    emPicker.clear();
+    drawEmojiStep();
+    show("emoji");
+  }
+  function drawEmojiStep() {
+    const f = emojiFlow, again = !!f.first;
+    $("#em-tag").hidden = f.mode !== "switch" || again;
+    $("#em-title").textContent = again ? "Tap them once more" : f.mode === "change" ? "Pick 3 new secret emoji" : "Pick 3 secret emoji";
+    $("#em-lede").textContent = again ? "Just to be sure, tap the same 3 again. Any order."
+      : f.mode === "switch" ? "Swap your recovery code for 3 emoji. They're easier to remember, and with your username they sign you in on any device."
+      : "Tap any 3. With your username, they sign you in on other phones, browsers or the Home Screen app. Order doesn't matter.";
+    $("#em-next").textContent = !again ? "Next" : f.mode === "create" ? "Create my profile" : "Save";
+    $("#em-next").disabled = true;
+    $("#em-note").className = "ustatus";
+    $("#em-note").textContent = "";
+    $("#em-back").innerHTML = again ? "&lsaquo; Pick different emoji" : f.mode === "switch" ? "Not now" : "&lsaquo; Back";
+  }
+  function leaveEmojiFlow() {
+    const f = emojiFlow;
+    if (f.mode === "create") { if (f.from === "claim") goHome(); else showNameScreen(); return; }
+    if (f.from === "profile") showProfile(); else goHome();
+  }
+  $("#em-back").addEventListener("click", () => {
+    if (emojiFlow.first) { emojiFlow.first = null; emPicker.clear(); drawEmojiStep(); return; }
+    if (emojiFlow.mode === "switch") noteSwitchAsked();
+    leaveEmojiFlow();
+  });
+  $("#em-next").addEventListener("click", async () => {
+    const f = emojiFlow, picked = emPicker.get(), note = $("#em-note"), btn = $("#em-next");
+    if (picked.length < EMOJI_PICK || (f.mode === "create" && !f.name)) return;
+    if (!f.first) { f.first = picked; emPicker.clear(); drawEmojiStep(); return; }
+    if (!sameEmoji(picked, f.first)) {
+      emPicker.shake(); emPicker.clear();
+      note.className = "ustatus bad"; note.textContent = "Those don't match. Try again, or pick different emoji.";
+      return;
+    }
+    if (f.mode === "create") {
+      const result = await claimUsernameFlow(f.name, note, btn, "Creating…", picked);
+      if (result === "fallback") { afterNameSaved(); return; }
+      if (result !== "claimed") return;
+      emojiDone(nameScreenFirstEver ? "Welcome, " + f.name + "!" : "You're all set, " + f.name + "!", picked);
+      return;
+    }
+    const idle = btn.textContent;
+    btn.disabled = true; btn.textContent = "Saving…";
+    try {
+      await window.MatchDB.setMySecret(myUsername.toLowerCase(), knownPassword(), emojiSecret(picked), { emoji: picked.join("") });
+    } catch (e) {
+      btn.disabled = false; btn.textContent = idle;
+      note.className = "ustatus bad";
+      note.textContent = e && e.code === "auth/network-request-failed" ? "Couldn't connect. Check your connection and try again."
+        : "Couldn't save your emoji. Sign in again from your Profile, then try once more.";
+      trackEv("emoji_save_failed", { mode: f.mode, reason: (e && e.code) || "unknown" });
+      return;
+    }
+    rememberEmoji(myUsername, picked);
+    noteSwitchAsked();
+    trackEv(f.mode === "switch" ? "emoji_switched" : "emoji_changed");
+    btn.disabled = false; btn.textContent = idle;
+    emojiDone("Saved!", picked);
+  });
+  function emojiDone(title, picked) {
+    $("#em-done-title").textContent = title;
+    $("#em-done-emoji").textContent = picked.join(" ");
+    $("#em-done-go").textContent = emojiFlow.mode === "create" ? "Play" : "Done";
+    $("#emoji-pick").hidden = true;
+    $("#emoji-done").hidden = false;
+    $("#em-done-go").focus();
+  }
+  $("#em-done-go").addEventListener("click", () => { if (emojiFlow.mode === "create") afterNameSaved(); else leaveEmojiFlow(); });
+
+  // Players with an older recovery code: offer the switch once (Profile has it after that).
+  const SWITCH_ASKED_KEY = "three21.emojiAsked";
+  function noteSwitchAsked() { try { localStorage.setItem(SWITCH_ASKED_KEY, "1"); } catch (e) {} }
+  function maybeAskEmojiSwitch(tries) {
+    if (!screens.loading.hidden && (tries || 0) < 10) { setTimeout(() => maybeAskEmojiSwitch((tries || 0) + 1), 500); return; } // wait out the loader
+    if (MOVED || !myUsername || knownEmoji() || !knownPassword() || screens.home.hidden) return;
+    if (!window.MatchDB.isSignedInAs || !window.MatchDB.isSignedInAs(myUsername.toLowerCase())) return;
+    try { if (localStorage.getItem(SWITCH_ASKED_KEY) === "1") return; } catch (e) { return; }
+    showEmojiPick({ mode: "switch", from: "home" });
+    trackEv("emoji_switch_offered");
+  }
+
+  // ---- Sign in: username + secret emoji ----
+  const siPicker = emojiPicker($("#si-grid"), $("#si-slots"), () => { $("#signin-note").textContent = ""; });
+  function showSignIn(prefill) {
+    $("#signin-name").value = typeof prefill === "string" ? prefill : "";
+    $("#signin-note").className = "ustatus";
+    $("#signin-note").textContent = "";
+    $("#signin-go").disabled = false;
+    $("#signin-go").textContent = "Sign in";
+    siPicker.clear();
+    show("signin");
+    if (!$("#signin-name").value) $("#signin-name").focus();
+  }
+  async function signInGo() {
+    const name = $("#signin-name").value.trim(), picked = siPicker.get();
+    const note = $("#signin-note"), btn = $("#signin-go");
+    note.className = "ustatus bad";
+    if (!USERNAME_RE.test(name)) { note.textContent = "Enter your username."; return; }
+    if (picked.length < EMOJI_PICK) { note.textContent = "Tap all 3 of your emoji."; return; }
+    btn.disabled = true;
+    btn.textContent = "Signing in…";
+    const sameName = !!myUsername && myUsername.toLowerCase() === name.toLowerCase(); // this device's progress is theirs
+    let player = null;
+    try {
+      player = await window.MatchDB.restoreProfile(name, emojiSecret(picked), sameName);
+    } catch (e) {
+      const c = e && e.code;
+      btn.disabled = false;
+      btn.textContent = "Sign in";
+      siPicker.shake(); siPicker.clear();
+      note.className = "ustatus bad";
+      if (c === "auth/too-many-requests") note.textContent = "Too many tries. Wait a few minutes, then try again.";
+      else if (c === "auth/network-request-failed") note.textContent = "Couldn't connect. Check your connection and try again.";
+      else {
+        let exists = true;
+        try { exists = await window.MatchDB.isUsernameTaken(name); } catch (err) {}
+        if (!exists) {
+          note.textContent = "There's no profile called " + name + ". ";
+          const b = document.createElement("button");
+          b.type = "button"; b.className = "linkbtn ustatus-link"; b.textContent = "Create it?";
+          b.addEventListener("click", () => { showNameScreen(); $("#name-input").value = name; checkNameField(); });
+          note.appendChild(b);
+        } else {
+          note.textContent = "Those aren't the right emoji. Still using a recovery code? Use the link below.";
+        }
+      }
+      trackEv("emoji_signin_failed", { reason: c || "unknown" });
+      return;
+    }
+    rememberEmoji((player && player.username) || name, picked);
+    trackEv("emoji_signin_ok");
+    adoptRestoredProfile(player || {}, name, sameName);
+    btn.disabled = false;
+    btn.textContent = "Sign in";
+  }
+  $("#signin-go").addEventListener("click", signInGo);
+  $("#signin-name").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); signInGo(); } });
+  $("#signin-code").addEventListener("click", () => showRestoreScreen($("#signin-name").value.trim()));
+  $("#signin-back").addEventListener("click", showNameScreen);
+
   function afterNameSaved() {
     if (nameScreenFirstEver && !tutorialSeen) { showTutorial(); return; }
     afterNameOrTutorial();
@@ -4695,7 +4982,6 @@
     }
     adoptRestoredProfile(player || {}, name, sameName);
     rememberSecret((player && player.username) || name, code);
-    ensureAppPass();
     btn.disabled = false;
     btn.textContent = "Restore my profile";
   }
@@ -4741,31 +5027,7 @@
     show("restore");
     $("#restore-done-go").focus();
   }
-  $("#btn-have-profile").addEventListener("click", () => showRestoreScreen());
-  $("#btn-paste-signin").addEventListener("click", async () => {
-    const note = $("#paste-note");
-    let text = "";
-    try { text = await navigator.clipboard.readText(); } catch (e) {}
-    const m = /#move=([a-f0-9]{32,64})/.exec(text || "");
-    const pastedCode = !m && /\b[a-z]{3,}-[a-z]{3,}-\d{4}\b/i.exec(text || "");
-    if (pastedCode) {   // they copied their recovery code instead: just the username left to type
-      showRestoreScreen();
-      $("#restore-code").value = pastedCode[0].toUpperCase();
-      const rn = $("#restore-note");
-      rn.className = "ustatus ok";
-      rn.textContent = "Your recovery code is filled in. Enter your username to finish.";
-      $("#restore-name").focus();
-      return;
-    }
-    if (!m) {
-      note.className = "ustatus bad";
-      note.textContent = "No sign-in link found. In Safari, open thedailyclimb.com and tap Add app, then come back and try again. Or tap \u201cI already have a profile\u201d and use the recovery code from your Profile in Safari.";
-      note.hidden = false;
-      return;
-    }
-    show("loading");
-    await pickupMove(m[1]);
-  });
+  $("#btn-have-profile").addEventListener("click", () => showSignIn());
 
   // ---- Moving to thedailyclimb.com ----
   // The old GitHub address shows "We've moved" instead of the game, with a
@@ -4824,7 +5086,7 @@
     btn.textContent = "Moving…";
     const known = knownSecret();
     if (known) {   // this device already knows the code: no reset needed
-      try { await moveWithSecret(normalizeCode(known)); return; } catch (e) {}
+      try { await moveWithSecret(knownPassword()); return; } catch (e) {}
     }
     const code = makeRecoveryCode();
     try {
@@ -4858,13 +5120,12 @@
   $("#moved-input").addEventListener("keydown", (e) => { if (e.key === "Enter" && !$("#btn-moved-claim").disabled) { e.preventDefault(); movedClaim(); } });
 
   // The new site: arriving from a move link (#move=<token>) signs straight in.
-  async function pickupMove(token, quiet) {
+  async function pickupMove(token) {
     let player = null;
     try {
       player = await window.MatchDB.pickupTransfer(token);
     } catch (e) {
-      trackEv("move_pickup_failed", { reason: (e && e.code) || "unknown", quiet: !!quiet });
-      if (quiet) return false;
+      trackEv("move_pickup_failed", { reason: (e && e.code) || "unknown" });
       showRestoreScreen();
       const note = $("#restore-note");
       note.className = "ustatus bad";
@@ -4878,51 +5139,13 @@
     if (player) delete player._secret;
     adoptRestoredProfile(player || {}, (player && player.username) || "");
     if (secret && myUsername) rememberSecret(myUsername, secret);
-    return true;
-  }
-
-  // ---- iPhone: the Home Screen app signs itself in ----
-  // In Safari, a signed-in player's address carries a one-time app pass
-  // (?app=<token>, a 30-day handoff). Adding to the Home Screen, from our
-  // steps or Safari's own Share menu, saves that address into the icon, and
-  // the app picks the pass up on first open. The pass only works inside the
-  // Home Screen app and is used up there; Safari then makes a fresh one.
-  const APP_PASS_KEY = "three21.apppass";
-  const APP_PASS_MS = 30 * 86400000;
-  function readAppPass() {
-    try { const p = JSON.parse(localStorage.getItem(APP_PASS_KEY) || "null"); return p && p.t && p.exp > Date.now() ? p : null; } catch (e) { return null; }
-  }
-  function showAppPass(token) {
-    if (location.search && !/^\?app=[a-f0-9]+$/.test(location.search)) return;
-    history.replaceState(null, "", location.pathname + "?app=" + token + location.hash);
-    // Point iOS at the manifest again so it re-reads the address.
-    const link = document.querySelector('link[rel="manifest"]');
-    if (link) link.href = "manifest-ios.webmanifest?p=" + token.slice(0, 8);
-  }
-  let appPassBusy = false;
-  async function ensureAppPass() {
-    if (appPassBusy || !IS_IOS || IN_APP || isStandalone() || MOVED || !myUsername || !dbReady() || !window.MatchDB.isSignedInAs) return;
-    const known = knownSecret();
-    if (!known || !window.MatchDB.isSignedInAs(myUsername.toLowerCase())) return;
-    appPassBusy = true;
-    try {
-      let p = readAppPass();
-      if (p && (p.u !== myUsername.toLowerCase() || p.exp - Date.now() < 86400000 || !(await window.MatchDB.transferWaiting(p.t)))) p = null;
-      if (!p) {
-        const token = newMoveToken();
-        await window.MatchDB.createTransfer(token, normalizeCode(known), APP_PASS_MS);
-        p = { t: token, u: myUsername.toLowerCase(), exp: Date.now() + APP_PASS_MS };
-        try { localStorage.setItem(APP_PASS_KEY, JSON.stringify(p)); } catch (e) {}
-      }
-      showAppPass(p.t);
-    } catch (e) {
-    } finally { appPassBusy = false; }
   }
 
   $("#restore-go").addEventListener("click", restoreGo);
   $("#restore-code").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); restoreGo(); } });
-  $("#restore-back").addEventListener("click", showNameScreen);
-  $("#restore-done-go").addEventListener("click", goHome);
+  $("#restore-back").addEventListener("click", () => showSignIn($("#restore-name").value.trim()));
+  // Signed in with an old recovery code: offer the switch to emoji right away.
+  $("#restore-done-go").addEventListener("click", () => { goHome(); maybeAskEmojiSwitch(); });
 
   // Existing players: after a finished daily, offer (once a day) to claim a
   // username so their streak can't be lost. The reminder offer waits its turn.
@@ -4960,15 +5183,12 @@
     if (claimOpenedFrom && claimOpenedFrom.focus) claimOpenedFrom.focus();
     claimOpenedFrom = null;
   }
-  $("#btn-claim-go").addEventListener("click", async () => {
+  $("#btn-claim-go").addEventListener("click", () => {
     const val = $("#claim-input").value.trim();
-    const result = await claimUsernameFlow(val, $("#claim-note"), $("#btn-claim-go"), "Claiming…");
-    if (result === "fallback") { hideClaimSheet(); return; }
-    if (result !== "claimed") return;
-    $("#claim-done-title").textContent = "Saved as " + val;
-    $("#claim-ask").hidden = true;
-    $("#claim-done").hidden = false;
-    $("#btn-claim-done").focus();
+    if (!USERNAME_RE.test(val)) { $("#claim-note").className = "ustatus bad"; $("#claim-note").textContent = "Only letters, numbers and _ (3–16)"; return; }
+    hideClaimSheet();
+    nameScreenFirstEver = false;
+    showEmojiPick({ mode: "create", name: val, from: "claim" });
   });
   $("#btn-claim-later").addEventListener("click", hideClaimSheet);
   $("#btn-claim-done").addEventListener("click", hideClaimSheet);
@@ -7454,47 +7674,17 @@
       arrow: { edge: "up", x: 94 } };
   }
 
-  // iPhone keeps the Home Screen app's sign-in separate from Safari's. When a
-  // signed-in player opens these steps, copy a one-time sign-in link; the app's
-  // first screen offers "Finish signing in", which pastes it (pickupMove).
-  let installHandoff = false; // this sheet copied a sign-in link
-  let handoffLink = "";       // the sign-in link that sheet copied
-  function prepareAppHandoff() {
-    installHandoff = false;
-    handoffLink = "";
-    if (!IS_IOS || IN_APP || isStandalone() || !myUsername || !dbReady() || !window.MatchDB) return;
-    const known = knownSecret();
-    if (!known || !navigator.clipboard || !navigator.clipboard.writeText) return;
-    if (!window.MatchDB.isSignedInAs || !window.MatchDB.isSignedInAs(myUsername.toLowerCase())) return;
-    const token = newMoveToken();
-    handoffLink = location.origin + location.pathname + "#move=" + token;
-    // Copy first, inside the tap (Safari only allows it there); save the handoff right after.
-    navigator.clipboard.writeText(handoffLink).then(() => {
-      window.MatchDB.createTransfer(token, normalizeCode(known)).catch(() => {});
-    }).catch(() => {});
-    installHandoff = true;
-    trackEv("app_handoff_prepared");
-  }
-  // The sheet's handoff box: shown to signed-in iPhone players in Safari.
+  // iPhone keeps the Home Screen app's sign-in separate from Safari's, so the
+  // steps remind signed-in players how to sign in there: name + secret emoji.
   function renderInstallHandoff(allowed) {
     const box = $("#install-handoff");
     const code = knownSecret();
     box.hidden = !(allowed && IS_IOS && !IN_APP && !isStandalone() && myUsername && code);
     if (box.hidden) return;
-    $("#ih-ok").hidden = !installHandoff;
     $("#ih-name").textContent = myUsername;
     $("#ih-code").textContent = code;
-    $("#btn-ih-copy").textContent = handoffLink ? "Copy link again" : "Copy code";
   }
-  // Re-copies the sign-in link if something else got copied over it (the app
-  // looks for the link); without a link, the code.
-  $("#btn-ih-copy").addEventListener("click", () => {
-    const text = handoffLink || knownSecret();
-    if (!text || !navigator.clipboard) return;
-    navigator.clipboard.writeText(text).then(() => { $("#btn-ih-copy").textContent = "Copied"; }).catch(() => {});
-  });
   function openInstall() {
-    prepareAppHandoff();
     const kind = IN_APP ? "in_app" : IS_IOS ? "ios" : deferredInstall ? "prompt" : "android_steps";
     trackEv("install_tap", { kind: kind });
     // Chrome can install directly — use its real dialog.
@@ -7723,6 +7913,12 @@
   // Lives here, inside the page, because the page is always fetched fresh
   // (sw.js caches other files cache-first, so a notes file could go stale).
   const PATCH_NOTES = [
+    { v: "0.9.0", date: "2026-09-30", title: "Sign in anywhere",
+      notes: [
+        ["new", "A welcome screen. Tap \"I'm new here\" to start, or \"I already play\" to sign in."],
+        ["new", "Sign in with 3 secret emoji. Pick them when you make your profile, then use your name and emoji to get back in on any phone, browser or the Home Screen app."],
+        ["imp", "Already have a profile? Swap your recovery code for emoji in one tap. They're in your Profile, where you can change them anytime."],
+      ] },
     { v: "0.8.0", date: "2026-09-30", title: "See it in action",
       notes: [
         ["imp", "How to play now shows the game moving. Each card plays a short scene: letters shuffle into words, new letters drop in, the theme word glows gold, and cheap steps get turned away."],
@@ -8130,24 +8326,30 @@
     card.hidden = !myUsername;
     if (!myUsername) return;
     if (!knownSecret() && !fromLookup) learnMyCode(); // fills the card in when it arrives
-    const code = knownSecret();
-    $("#pf-code-row").hidden = !code;
-    $("#pf-signin-txt").textContent = code
-      ? "On a new phone, or in the Home Screen app, tap \u201cI already have a profile\u201d and enter " + myUsername + " with this recovery code."
-      : "On a new phone, or in the Home Screen app, tap \u201cI already have a profile\u201d. Need your recovery code? Email tate.cutcliffe@gmail.com.";
-    // Dropped off the account (older builds did this on reload): one restore fixes it for good.
+    const code = knownSecret(), emo = knownEmoji();
+    // Dropped off the account (older builds did this on reload): signing in once fixes it for good.
     const off = !code && dbReady() && window.MatchDB.isSignedInAs && !window.MatchDB.isSignedInAs(myUsername.toLowerCase());
+    $("#pf-code-row").hidden = !code;
     $("#btn-pf-resign").hidden = !off;
-    if (off) $("#pf-signin-txt").textContent = "This browser needs your recovery code one more time to stay signed in as " + myUsername + ". Your progress comes with you.";
+    $("#pf-signin-txt").textContent = off
+      ? "This browser needs your secret emoji (or recovery code) one more time to stay signed in as " + myUsername + ". Your progress comes with you."
+      : emo ? "On another phone, browser or the Home Screen app, tap \u201cI already play\u201d, then enter " + myUsername + " and these emoji."
+      : code ? "On another device, tap \u201cI already play\u201d, then \u201cHave an old recovery code?\u201d, and enter " + myUsername + " with this code. Or switch to secret emoji, which are easier to remember."
+      : "On another device, tap \u201cI already play\u201d. Forgot how you sign in? Email tate.cutcliffe@gmail.com.";
     const b = $("#pf-code");
     b.dataset.code = code || "";
-    b.textContent = code ? code.replace(/[A-Z0-9]/g, "•") : "";
+    b.textContent = maskSecret(code);
     $("#btn-pf-code-show").textContent = "Show";
+    $("#btn-pf-code-copy").hidden = !code || !!emo;
+    $("#btn-pf-emoji").hidden = off || !code;
+    $("#btn-pf-emoji").textContent = emo ? "Change my emoji" : "Switch to secret emoji";
   }
-  $("#btn-pf-resign").addEventListener("click", () => showRestoreScreen(myUsername));
+  const maskSecret = (s) => !s ? "" : /[A-Z0-9]/.test(s) ? s.replace(/[A-Z0-9]/g, "•") : "• • •";
+  $("#btn-pf-resign").addEventListener("click", () => showSignIn(myUsername));
+  $("#btn-pf-emoji").addEventListener("click", () => showEmojiPick({ mode: knownEmoji() ? "change" : "switch", from: "profile" }));
   $("#btn-pf-code-show").addEventListener("click", () => {
     const b = $("#pf-code"), showing = b.textContent === b.dataset.code;
-    b.textContent = showing ? b.dataset.code.replace(/[A-Z0-9]/g, "•") : b.dataset.code;
+    b.textContent = showing ? maskSecret(b.dataset.code) : b.dataset.code;
     $("#btn-pf-code-show").textContent = showing ? "Show" : "Hide";
   });
   $("#btn-pf-code-copy").addEventListener("click", () => {
@@ -8432,14 +8634,8 @@
     let restoreName = null;
     try { const r = new URLSearchParams(location.search).get("restore"); if (r && USERNAME_RE.test(r) && !MOVED) restoreName = r; } catch (e) {}
 
-    // The Home Screen app's first open: its icon's address carries the app pass.
-    let appMatch = null;
-    try { const a = new URLSearchParams(location.search).get("app"); if (a && /^[a-f0-9]{32,64}$/.test(a) && isStandalone() && !MOVED) appMatch = a; } catch (e) {}
     // Versus / invite links are off for now: ignore any ?m= and clean the URL.
-    // Safari keeps this player's own app pass in its address (see ensureAppPass).
-    const ownPass = readAppPass();
-    const keepPass = !isStandalone() && ownPass && location.search === "?app=" + ownPass.t;
-    if (location.search && !keepPass) history.replaceState(null, "", location.pathname);
+    if (location.search) history.replaceState(null, "", location.pathname);
     const code = null;
     pendingMatchCode = null;
 
@@ -8496,13 +8692,10 @@
         if (player) myPlayer = player;
         cacheProfile();
         if (moveMatch) { await pickupMove(moveMatch[1]); return; }
-        if (appMatch && !(myUsername && window.MatchDB.isSignedInAs && window.MatchDB.isSignedInAs(myUsername.toLowerCase()))) {
-          if (await pickupMove(appMatch, true)) { trackEv("app_pass_ok"); return; }
-        }
         if (MOVED) { showMoved(); return; }
         if (!storedName) {
           if (!screens.loading.hidden || !screens.landing.hidden || !screens.vsjoin.hidden) {
-            leaveLoading(showNameScreen); // genuine first run — but don't yank someone mid-flow
+            leaveLoading(showWelcome); // genuine first run — but don't yank someone mid-flow
           }
           return;
         }
@@ -8512,7 +8705,7 @@
         checkTrophies(); // e.g. yesterday's final place just landed
         await resumeAccount();
         await learnMyCode();   // so Profile and Add app always have it
-        ensureAppPass();
+        maybeAskEmojiSwitch();
       });
     }
 
