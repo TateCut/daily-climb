@@ -3475,7 +3475,43 @@
     roundend: $("#screen-roundend"),
     over: $("#screen-over"),
   };
+  // ---- Stay current ----
+  // A Home Screen app (or a tab) left in the background comes back as the old
+  // copy of the page; iPhone resumes it rather than reloading. So when the
+  // page comes back into view, and every 30 minutes while it's open, ask
+  // whether index.html changed (its ETag / Last-Modified; the service worker
+  // lets HEAD requests through). If it did, reload into the new version:
+  // straight away, or once the player leaves a climb or a form they're filling in.
+  const BUSY_SCREENS = new Set(["play", "climbroundend", "tutorial", "name", "emoji", "signin", "restore", "vsjoin"]);
+  let pageStamp = null;       // the version this page loaded as
+  let updateWaiting = false;  // a newer version is up; reload at the next calm moment
+  async function readPageStamp() {
+    try {
+      const r = await fetch(location.pathname + "?v=" + Date.now(), { method: "HEAD", cache: "no-store" });
+      return r.ok ? (r.headers.get("etag") || r.headers.get("last-modified")) : null;
+    } catch (e) { return null; }
+  }
+  async function checkForUpdate() {
+    if (updateWaiting) return;
+    const now = await readPageStamp();
+    if (!now) return;
+    if (!pageStamp) { pageStamp = now; return; }
+    if (now !== pageStamp) { updateWaiting = true; applyUpdateWhenCalm(); }
+  }
+  function applyUpdateWhenCalm() {
+    if (!updateWaiting || document.hidden) return;
+    const current = Object.keys(screens).find((k) => !screens[k].hidden);
+    if (current && BUSY_SCREENS.has(current)) return; // show() tries again on the next screen change
+    trackEv("auto_update", { from: current || "?" });
+    location.reload();
+  }
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { checkForUpdate(); applyUpdateWhenCalm(); } });
+  window.addEventListener("pageshow", (e) => { if (e.persisted) checkForUpdate(); });
+  setInterval(() => { if (!document.hidden) checkForUpdate(); }, 30 * 60 * 1000);
+  setTimeout(checkForUpdate, 4000); // note the version this page loaded as
+
   function show(name) {
+    if (updateWaiting && !BUSY_SCREENS.has(name)) setTimeout(applyUpdateWhenCalm, 300);
     hideChipPopover(); // never leave a word definition floating over the next screen
     hideInstallSheet(); // ...or the Add to Home Screen how-to
     hideReminderSheet(); // ...or the daily reminder sheet
