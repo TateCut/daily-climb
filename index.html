@@ -3513,25 +3513,42 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   // ---- Stay current ----
   // A Home Screen app (or a tab) left in the background comes back as the old
   // copy of the page; iPhone resumes it rather than reloading. So when the
-  // page comes back into view, and every 30 minutes while it's open, ask
-  // whether index.html changed (its ETag / Last-Modified; the service worker
-  // lets HEAD requests through). If it did, reload into the new version:
-  // straight away, or once the player leaves a climb or a form they're filling in.
+  // page comes back (visible, focused or restored), and every 10 minutes while
+  // it's open, check the published page against this one: a quick HEAD for its
+  // ETag first, and only when that's new, the page itself, fingerprinted the
+  // same way as the code running here (its inline scripts and styles). A
+  // newer page means reload: straight away, or once the player leaves a climb
+  // or a form they're filling in.
   const BUSY_SCREENS = new Set(["play", "climbroundend", "tutorial", "name", "emoji", "signin", "restore", "vsjoin"]);
-  let pageStamp = null;       // the version this page loaded as
-  let updateWaiting = false;  // a newer version is up; reload at the next calm moment
-  async function readPageStamp() {
-    try {
-      const r = await fetch(location.pathname + "?v=" + Date.now(), { method: "HEAD", cache: "no-store" });
-      return r.ok ? (r.headers.get("etag") || r.headers.get("last-modified")) : null;
-    } catch (e) { return null; }
+  function codePrint(doc) { // FNV-1a over the page's inline scripts and styles
+    let h = 2166136261;
+    doc.querySelectorAll("script:not([src]), style").forEach((el) => {
+      const t = el.textContent;
+      for (let i = 0; i < t.length; i++) h = Math.imul(h ^ t.charCodeAt(i), 16777619) >>> 0;
+    });
+    return h;
   }
+  const myPrint = codePrint(document); // taken now, before anything adds to the page
+  let lastEtag = null;        // the published page's ETag at the last full check
+  let updateWaiting = false;  // a newer version is up; reload at the next calm moment
+  let checking4Update = false, lastUpdateCheck = 0;
   async function checkForUpdate() {
-    if (updateWaiting) return;
-    const now = await readPageStamp();
-    if (!now) return;
-    if (!pageStamp) { pageStamp = now; return; }
-    if (now !== pageStamp) { updateWaiting = true; applyUpdateWhenCalm(); }
+    if (updateWaiting || checking4Update || Date.now() - lastUpdateCheck < 20000) return;
+    checking4Update = true;
+    lastUpdateCheck = Date.now();
+    try {
+      const url = location.pathname + "?v=" + Date.now();
+      const head = await fetch(url, { method: "HEAD", cache: "no-store" });
+      const etag = head.ok ? (head.headers.get("etag") || head.headers.get("last-modified")) : null;
+      if (etag && etag === lastEtag) return; // nothing new published since the last look
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) return;
+      const doc = new DOMParser().parseFromString(await res.text(), "text/html");
+      if (!doc.querySelector("script:not([src])")) return; // not the game page (an error page, say)
+      lastEtag = etag;
+      if (codePrint(doc) !== myPrint) { updateWaiting = true; applyUpdateWhenCalm(); }
+    } catch (e) {
+    } finally { checking4Update = false; }
   }
   function applyUpdateWhenCalm() {
     if (!updateWaiting || document.hidden) return;
@@ -3540,10 +3557,13 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     trackEv("auto_update", { from: current || "?" });
     location.reload();
   }
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) { checkForUpdate(); applyUpdateWhenCalm(); } });
-  window.addEventListener("pageshow", (e) => { if (e.persisted) checkForUpdate(); });
-  setInterval(() => { if (!document.hidden) checkForUpdate(); }, 30 * 60 * 1000);
-  setTimeout(checkForUpdate, 4000); // note the version this page loaded as
+  const onBack = () => { if (!document.hidden) { checkForUpdate(); applyUpdateWhenCalm(); } };
+  document.addEventListener("visibilitychange", onBack);
+  window.addEventListener("focus", onBack);
+  window.addEventListener("pageshow", onBack);
+  window.addEventListener("online", onBack);
+  setInterval(() => { if (!document.hidden) checkForUpdate(); }, 10 * 60 * 1000);
+  setTimeout(checkForUpdate, 4000); // catches a page that loaded just before a new version went up
 
   function show(name) {
     if (updateWaiting && !BUSY_SCREENS.has(name)) setTimeout(applyUpdateWhenCalm, 300);
