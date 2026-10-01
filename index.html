@@ -270,6 +270,16 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   /* Climbs: the Letters label as a word trail (see renderWordTrail). Same
      height as the plain label so the play screen doesn't grow. */
   .rowlabel.wordtrail-label { display: flex; align-items: center; min-height: 1.1rem; }
+  /* The Letters label shares its line with a used hint, so the screen doesn't grow. */
+  .labelrow { display: flex; align-items: center; gap: 8px; width: 100%; margin-bottom: -8px; }
+  .labelrow .rowlabel { flex: 1; min-width: 0; width: auto; margin-bottom: 0; }
+  .hint-pill { flex: none; display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px 2px 7px; border-radius: 999px;
+    border: 1px solid var(--gold); background: rgba(242, 193, 78, 0.12); color: var(--gold); font-size: 0.74rem; font-weight: 800; white-space: nowrap; }
+  .hint-pill[hidden] { display: none; }
+  .hint-pill b { font-size: 0.84rem; letter-spacing: 0.1em; }
+  .hint-pill.pop { animation: hint-pop 0.5s cubic-bezier(.2,.8,.25,1.4); }
+  @keyframes hint-pop { 0% { scale: 0.6; opacity: 0; } 100% { scale: 1; opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .hint-pill.pop { animation: none; } }
   .wordtrail-wrap {
     width: 100%; overflow: hidden; display: flex; justify-content: flex-end;
     -webkit-mask-image: linear-gradient(90deg, transparent, #000 22px);
@@ -1338,6 +1348,20 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   .lb-row.pending .lb-score { font-weight: 400; font-size: 0.8rem; color: var(--muted); }
   .lb-detail { width: 100%; padding: 2px 4px 8px; }
   .lb-detail-badge { color: var(--accent); margin: 0 0 6px; }
+  /* Themed days: the day's theme words as flags, and a flag on each theme rung. */
+  .lb-flags { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; margin: 0 0 10px; border: 1px solid var(--line); border-radius: 10px; background: rgba(18, 20, 31, 0.55); text-align: left; }
+  .lb-flags-lab { font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .lb-flags-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .lb-flag { display: inline-flex; align-items: center; gap: 5px; font-size: 0.76rem; font-weight: 800; letter-spacing: 0.04em; color: var(--muted); }
+  .lb-flag span { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+  .lb-flag.got { color: var(--gold); }
+  .lb-flag.got span { text-decoration: none; }
+  .lb-flag-ic { width: 13px; height: 15px; flex: none; }
+  .chips.flagged { padding-top: 5px; }
+  .chips span.theme-rung { position: relative; }
+  .chips span.theme-rung.gold { border-color: var(--gold); color: var(--gold); background: rgba(242, 193, 78, 0.14); }
+  .chip-flag { position: absolute; top: -9px; right: -5px; width: 12px; height: 14px; color: var(--muted); }
+  .chip-flag.got { color: var(--gold); }
 
   /* Tutorial */
   .tut-card {
@@ -1983,7 +2007,11 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
         <div class="ascent-toast" id="ascent-toast" role="status" aria-live="polite"></div>
       </div>
 
-      <div class="rowlabel" id="letters-label">Letters</div>
+      <div class="labelrow">
+        <div class="rowlabel" id="letters-label">Letters</div>
+        <!-- A used hint stays pinned here until this word is solved. -->
+        <span class="hint-pill" id="hint-pill" role="status" hidden></span>
+      </div>
       <div class="row" id="tray"></div>
 
       <div class="rowlabel">Your word</div>
@@ -3838,6 +3866,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
 
     ans = new Array(tiles.length).fill(null);
     checking = false;
+    $("#hint-pill").hidden = true; // a hint only covers the word it was used on
     wrongGuesses = []; // fresh pile, fresh list of dead ends
     renderWrongWords();
     stageShownAt = Date.now();
@@ -3941,7 +3970,13 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     const reveal = ex.length >= 5 ? ex.slice(0, 2) : ex.slice(0, 1);
     hintUsed = true;
     $("#btn-hint").hidden = true;
-    msg("Hint: a word here starts with “" + reveal.toUpperCase() + "”", "good");
+    // Pinned next to the Letters label (not the message line, which the next
+    // message would overwrite) until this word is solved.
+    const pill = $("#hint-pill");
+    pill.replaceChildren("💡 Starts with ", Object.assign(document.createElement("b"), { textContent: reveal.toUpperCase() }));
+    pill.hidden = false;
+    pill.classList.remove("pop"); void pill.offsetWidth; pill.classList.add("pop");
+    msg("");
     FX.play("hint");
   }
 
@@ -4372,17 +4407,27 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   }
 
   // Renders one player's per-round word chips into a `.rounds` container.
-  function renderRoundsBlock(container, wordsByRound) {
+  // theme (the daily board): label climbs, and put a flag on each climb's
+  // theme rung (gold if they found the theme word there, grey if not).
+  function renderRoundsBlock(container, wordsByRound, theme) {
     container.innerHTML = "";
     (wordsByRound || []).forEach((words, i) => {
       const row = document.createElement("div");
       row.className = "round";
       const label = document.createElement("div");
       label.className = "round-label";
-      label.textContent = "Round " + (i + 1) + " · " + wordsLabel(words.length);
+      label.textContent = (theme ? "Climb " : "Round ") + (i + 1) + " · " + wordsLabel(words.length);
       const chips = document.createElement("div");
       chips.className = "chips";
       fillChips(chips, words);
+      const tr = theme && themeRung(theme, i, words);
+      if (tr && chips.children[tr.rung]) {
+        const chip = chips.children[tr.rung];
+        chip.classList.add("theme-rung");
+        if (tr.found) chip.classList.add("gold");
+        chip.appendChild(themeFlagSvg(tr.found, "chip-flag"));
+        chips.classList.add("flagged");
+      }
       row.appendChild(label);
       row.appendChild(chips);
       container.appendChild(row);
@@ -5681,8 +5726,8 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     row.appendChild(r); row.appendChild(nmwrap);
     if (themeEl) row.appendChild(themeEl);
     row.appendChild(sc);
-    // Tap a finisher's row to expand their words, round by round.
-    row.addEventListener("click", () => toggleLbDetail(row, e));
+    // Tap a finisher's row to expand their words, climb by climb (themed days flag the theme words).
+    row.addEventListener("click", () => toggleLbDetail(row, e, boardTheme));
     return row;
   }
 
@@ -7162,7 +7207,52 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     return row;
   }
 
-  function toggleLbDetail(row, e) {
+  // Which rung of climb i is the theme rung for these words, and did they find it?
+  // (Any of the climb's theme words counts.)
+  function themeRung(theme, i, words) {
+    const tws = (theme.words && theme.words[i]) || [];
+    if (!tws.length) return null;
+    const hit = words.findIndex((w) => tws.includes(w));
+    if (hit >= 0) return { rung: hit, found: true, word: words[hit] };
+    const rung = theme.climbs[i].c.indexOf(tws[0]);
+    return rung >= 0 ? { rung: rung, found: false, word: tws[0] } : null;
+  }
+  function themeFlagSvg(found, cls) {
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 14 16");
+    svg.setAttribute("class", cls + (found ? " got" : ""));
+    svg.setAttribute("aria-hidden", "true");
+    const pole = document.createElementNS(ns, "line");
+    [["x1", 1.5], ["y1", 1], ["x2", 1.5], ["y2", 16], ["stroke", "currentColor"], ["stroke-width", 1.6]].forEach(([k, v]) => pole.setAttribute(k, v));
+    const cloth = document.createElementNS(ns, "path");
+    cloth.setAttribute("d", "M2 1.5h10l-2.4 3 2.4 3H2z");
+    cloth.setAttribute("fill", "currentColor");
+    svg.append(pole, cloth);
+    return svg;
+  }
+  // The day's theme words as flags: gold found, grey and crossed out missed.
+  function themeFlagStrip(theme, wordsByRound) {
+    const box = document.createElement("div");
+    box.className = "lb-flags";
+    const marks = theme.climbs.map((_, i) => themeRung(theme, i, wordsByRound[i] || []) || { found: false, word: theme.words[i][0] });
+    const lab = document.createElement("div");
+    lab.className = "lb-flags-lab";
+    lab.textContent = theme.theme.emoji + " " + theme.theme.name + " · " + marks.filter((m) => m.found).length + " of " + marks.length + " theme words";
+    const rowEl = document.createElement("div");
+    rowEl.className = "lb-flags-row";
+    marks.forEach((m) => {
+      const f = document.createElement("span");
+      f.className = "lb-flag" + (m.found ? " got" : "");
+      const w = document.createElement("span");
+      w.textContent = m.word.toUpperCase();
+      f.append(themeFlagSvg(m.found, "lb-flag-ic"), w);
+      rowEl.appendChild(f);
+    });
+    box.append(lab, rowEl);
+    return box;
+  }
+  function toggleLbDetail(row, e, theme) {
     const open = row.nextElementSibling && row.nextElementSibling.classList.contains("lb-detail");
     document.querySelectorAll(".lb-detail").forEach((d) => d.remove());
     if (open) return;
@@ -7174,9 +7264,10 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
       badge.textContent = "★ Completed without using a hint";
       d.appendChild(badge);
     }
+    if (theme) d.appendChild(themeFlagStrip(theme, e.roundWords || []));
     const rounds = document.createElement("div");
     rounds.className = "rounds";
-    renderRoundsBlock(rounds, e.roundWords || []);
+    renderRoundsBlock(rounds, e.roundWords || [], theme);
     d.appendChild(rounds);
     row.after(d);
   }
@@ -7968,6 +8059,11 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   // Lives here, inside the page, because the page is always fetched fresh
   // (sw.js caches other files cache-first, so a notes file could go stale).
   const PATCH_NOTES = [
+    { v: "0.9.1", date: "2026-10-01", title: "Good to know",
+      notes: [
+        ["imp", "Tap a player on the leaderboard to see the day's theme words as flags, gold for the ones they found and grey for the ones they missed. A little flag also marks where the theme word was in each climb."],
+        ["imp", "Hints stay put. Once you use one, it stays pinned above your letters until you solve that word."],
+      ] },
     { v: "0.9.0", date: "2026-09-30", title: "Sign in anywhere",
       notes: [
         ["new", "A welcome screen. Tap \"I'm new here\" to start, or \"I already play\" to sign in."],
