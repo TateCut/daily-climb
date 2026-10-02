@@ -2,7 +2,7 @@
 // land immediately; static assets (dictionary, icons) are cache-first for a
 // fast, offline-capable launch. Firebase / Datamuse / gstatic always hit the
 // network.
-const CACHE = "wadder-shell-v11"; // bump to re-fetch cached assets (v11: theme-words.js)
+const CACHE = "wadder-shell-v12"; // bump to re-fetch cached assets (v12: new app icons + manifest)
 const ASSETS = [
   "./words.js",
   "./freq.js",
