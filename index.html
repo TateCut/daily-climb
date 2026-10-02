@@ -2811,6 +2811,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     saveTrophies: async function (map) { var p = player(); p.trophies = Object.assign(p.trophies || {}, map); save(); },
     getTrophyRarity: async function () { return null; },
     markSeedBeaten: async function (i) { var p = player(); p.beatenSeeds = p.beatenSeeds || []; if (p.beatenSeeds.indexOf(i) < 0) p.beatenSeeds.push(i); save(); },
+    markAdventureBeaten: async function (i) { var p = player(); p.adventureBeaten = p.adventureBeaten || []; if (p.adventureBeaten.indexOf(i) < 0) p.adventureBeaten.push(i); save(); },
     createMatch: async function () { throw new Error("Not in the beta"); },
     getMatch: async function () { return null; },
     joinMatch: async function () { throw new Error("Not in the beta"); },
@@ -3310,6 +3311,15 @@ $1{ display: flex; gap: 8px; width: 100%; }
       if (!uid) return;
       try {
         await setDoc(doc(db, "players", uid), { beatenSeeds: arrayUnion(seedIndex) }, { merge: true });
+      } catch (e) {}
+    },
+    // ...and, when it was cleared in Adventure Mode itself, players/{uid}.adventureBeaten
+    // (beatenSeeds also holds Climbs cleared during a daily). A separate write, so if the
+    // rules ever refuse this field it can't take beatenSeeds down with it.
+    async markAdventureBeaten(seedIndex) {
+      if (!uid) return;
+      try {
+        await setDoc(doc(db, "players", uid), { adventureBeaten: arrayUnion(seedIndex) }, { merge: true });
       } catch (e) {}
     },
 
@@ -6513,6 +6523,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     mode = "collection";
     matchCode = null; matchSeed = 0; dailyDay = null;
     collectionSeed = seedIndex;
+    trackEv("adventure_start", { seed: seedIndex });
     startClimbSession();
     climbPuzzle = CLIMBS[seedIndex];
     beginClimbRound();
@@ -6866,7 +6877,12 @@ $1{ display: flex; gap: 8px; width: 100%; }
   function submitCollectionResult() {
     const got = roundWords[0] || [];
     const completed = got.length === climbLen();
-    if (completed) { markSeedBeatenLocally(collectionSeed); checkTrophies(); }
+    if (completed) {
+      markSeedBeatenLocally(collectionSeed);
+      trackEv("adventure_beaten", { seed: collectionSeed });
+      if (dbReady() && window.MatchDB.hasAuth && window.MatchDB.markAdventureBeaten) window.MatchDB.markAdventureBeaten(collectionSeed).catch(() => {});
+      checkTrophies();
+    }
     $("#co-title").textContent = completed ? "Climb beaten!" : "Climb over";
     $("#co-label").textContent = completed ? "Your ladder" : "You cleared";
     fillChips($("#co-words"), got);
