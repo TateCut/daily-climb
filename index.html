@@ -129,7 +129,6 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   /* The few inner scrollers draw their bar in the theme's line color. */
   .lb-list, .collection-grid, .def, .patch-list, .pf-scroll { scrollbar-color: var(--line) transparent; scrollbar-width: thin; }
   /* Tutorial is a fixed card — kill touch-panning so a swipe is never stolen. */
-  #screen-tutorial { touch-action: none; }
   h1 {
     margin: 0 0 22px;
     font-size: 2.1rem;
@@ -337,11 +336,17 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     user-select: none;
     touch-action: none;
   }
-  .tile.pop { animation: pop 0.34s cubic-bezier(.2,.8,.25,1.4); }
-  @keyframes pop {
-    0%   { transform: translateY(-16px) scale(0.55); opacity: 0; }
-    60%  { transform: translateY(2px) scale(1.06); opacity: 1; }
-    100% { transform: translateY(0) scale(1); opacity: 1; }
+  /* A new climb's fresh letter drops in from above and bounces once, as soon
+     as the next word starts. No highlight on purpose — the motion is the cue. */
+  .tile.pop { animation: drop-in 0.65s ease-in backwards; }
+  @keyframes drop-in {
+    0%   { transform: translateY(-110px); opacity: 0; }
+    45%  { opacity: 1; }
+    62%  { transform: translateY(0); animation-timing-function: ease-out; }
+    76%  { transform: translateY(-14px); animation-timing-function: ease-in; }
+    88%  { transform: translateY(0); animation-timing-function: ease-out; }
+    94%  { transform: translateY(-4px); animation-timing-function: ease-in; }
+    100% { transform: translateY(0); opacity: 1; }
   }
 
   /* juice: reusable one-shot animations, driven from JS by adding the class */
@@ -587,14 +592,22 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
 
   /* ---- Themed dailies ---- */
   /* Climb screen: "🍝 FOOD ⚑PASTA ⚑SAUCE ⚑?" under the round line. */
-  .themestrip { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap;
-    font-size: 0.74rem; font-weight: 800; letter-spacing: 0.06em; color: var(--gold); margin: -8px 0 -6px; }
+  /* Daily: today's theme is the headline of the play screen, with a flag chip
+     per climb (Climb N → the theme word once found, struck through if missed). */
+  .themestrip { display: flex; flex-direction: column; align-items: center; gap: 7px; margin: -6px 0 -2px; }
   .themestrip[hidden] { display: none; }
-  .ts-flag { display: inline-flex; align-items: center; gap: 3px; font-size: 0.66rem; letter-spacing: 0.04em; color: var(--muted); }
+  .ts-k { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+  .ts-name { margin-top: -3px; font-size: 1.75rem; font-weight: 900; letter-spacing: 0.07em; line-height: 1; color: var(--gold);
+    text-shadow: 0 0 18px rgba(242, 193, 78, 0.3); text-transform: uppercase; }
+  .ts-chips { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+  .ts-flag { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 999px; border: 1px solid var(--line);
+    background: rgba(18, 20, 31, 0.5); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; }
   .ts-flag svg { width: 9px; height: 13px; }
-  .ts-flag.got { color: var(--gold); }
+  .ts-flag.now { border-color: #5a6182; color: var(--text); }
+  .ts-flag.got { border-color: var(--gold); background: rgba(242, 193, 78, 0.12); color: var(--gold); }
   .ts-flag.miss { text-decoration: line-through; opacity: 0.7; }
   .ts-flag.fresh { animation: ts-pulse 1.6s ease-in-out 3; }
+  @media (max-height: 700px) { .ts-k { display: none; } .ts-name { font-size: 1.4rem; margin-top: 0; } .themestrip { gap: 6px; } }
   @keyframes ts-pulse { 50% { filter: drop-shadow(0 0 5px rgba(242, 193, 78, 0.9)); } }
   .wordtrail .wordtrail-theme { color: var(--gold); text-shadow: 0 0 10px rgba(242, 193, 78, 0.5); font-weight: 800; }
   /* Between climbs: the theme word, found or missed. */
@@ -606,8 +619,6 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   .theme-reveal b { color: var(--gold); letter-spacing: 0.03em; }
   .theme-reveal .you { color: var(--warn); font-weight: 700; letter-spacing: 0.03em; }
   /* Leaderboard: theme words found. */
-  .lb-theme { font-size: 0.74rem; font-weight: 700; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .lb-theme.all { color: var(--gold); }
   .dchip { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 3px 9px 3px 8px; font: inherit;
     font-size: 0.78rem; font-weight: 750; border: 1px solid; background: transparent; cursor: pointer; white-space: nowrap; }
   .dchip.T { color: var(--tier-t); border-color: rgba(111, 208, 140, 0.55); }
@@ -676,16 +687,9 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   .home-tagline { margin: 0; }
   .today-theme { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; }
   .today-theme[hidden] { display: none; }
-  /* Theme word floats in the sky over peaks that run edge to edge. */
+  /* Today's peaks run edge to edge. (The theme isn't named on home: the theme card shows it when you tap Play.) */
   .tt-hero { position: relative; width: calc(100% + 32px); margin: 0 -16px; display: flex; flex-direction: column; align-items: center; }
-  .tt-glow { position: absolute; left: 50%; top: -8px; width: 220px; height: 150px; transform: translateX(-50%); border-radius: 50%;
-    background: radial-gradient(closest-side, rgba(255, 178, 102, 0.28), rgba(255, 178, 102, 0)); pointer-events: none; }
-  .tt-lab { position: relative; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); }
-  /* The word itself sits dead centre; the emoji hangs off its left edge. */
-  .tt-big { position: relative; margin-top: 6px; font-size: 2.6rem; font-weight: 900; letter-spacing: 0.08em; padding-left: 0.08em; line-height: 1;
-    color: var(--gold); text-shadow: 0 0 22px rgba(242, 193, 78, 0.35); }
-  .tt-em { position: absolute; right: 100%; top: 50%; transform: translateY(-50%); margin-right: 10px; font-size: 1.9rem; letter-spacing: 0; text-shadow: none; }
-  .tt-mtn { display: block; width: 100%; max-width: 420px; height: auto; max-height: 150px; margin-top: -6px; } /* tall (10-11 letter) days scale down instead of crowding */
+  .tt-mtn { display: block; width: 100%; max-width: 420px; height: auto; max-height: 150px; } /* tall (10-11 letter) days scale down instead of crowding */
   .today-theme.after .tt-mtn { width: 86%; }
   .tt-cap { margin: 0; font-size: 0.86rem; color: var(--muted); }
   .tt-cap[hidden] { display: none; }
@@ -789,8 +793,9 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   }
   .board-callout b { display: block; color: var(--accent); font-size: 0.62rem; letter-spacing: 0.1em; }
   /* The mountain takes ~150px, so the list gives some back to stay scroll-free. */
-  #screen-daily-board .lb-list { max-height: max(120px, min(48vh, calc(100vh - 534px))); } /* room for the reminder button */
-  #screen-daily-board .lb-list { max-height: max(120px, min(48dvh, calc(100dvh - 534px))); }
+  #screen-daily-board .board-mtn svg { max-height: 120px; }
+  #screen-daily-board .lb-list { max-height: max(120px, min(54vh, calc(100vh - 500px))); } /* room for the reminder button */
+  #screen-daily-board .lb-list { max-height: max(120px, min(54dvh, calc(100dvh - 500px))); }
   #daily-board-list .lb-row.spot { border-color: var(--text); }
   #daily-board-list .lb-row.me.spot { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   @media (prefers-reduced-motion: reduce) { .board-mtn .bflag { transition: none; } }
@@ -1029,6 +1034,79 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   .tr-sheet-meta { margin: 0 0 6px; font-size: 0.74rem; color: var(--muted); }
   .tr-sheet-meta b { color: var(--text); }
   .tr-sheet .install-actions { width: 100%; }
+  /* Today's theme card: once a day before the first word of a themed daily
+     (and again by tapping the theme strip). The clock waits while it's open. */
+  .tc-veil { position: fixed; inset: 0; z-index: 60; background: rgba(8, 10, 20, 0.74); display: flex;
+    align-items: center; justify-content: center; padding: 16px; animation: tc-fade .25s ease-out; }
+  .tc-veil[hidden] { display: none; }
+  @keyframes tc-fade { from { opacity: 0; } }
+  .tc-card { width: min(100%, 360px); background: var(--surface); border: 1px solid var(--line); border-radius: 22px;
+    padding: 22px 20px 18px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); animation: tc-pop-in .35s cubic-bezier(.2,.8,.25,1.2); }
+  /* its own pop-in: the trophy one also carries that pop-up's translate(-50%, -50%) centering */
+  @keyframes tc-pop-in { from { opacity: 0; transform: translateY(8px) scale(.94); } to { opacity: 1; transform: none; } }
+  .tc-kick { margin: 0; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+  .tc-name { margin: -6px 0 0; font-size: 2.5rem; font-weight: 900; letter-spacing: 0.06em; line-height: 1; color: var(--gold);
+    text-transform: uppercase; overflow-wrap: anywhere; }
+  .tc-ex { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; padding: 14px 10px;
+    border-radius: 14px; background: var(--bg, #12141f); border: 1px solid var(--line); }
+  .tc-ex-lab { margin: 0; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .tc-ex-lab[hidden] { display: none; }
+  .tc-legend { display: grid; grid-template-columns: auto auto; justify-content: center; gap: 10px 14px; align-items: center; }
+  .tc-word { display: flex; gap: 4px; }
+  .tc-sw { width: 30px; height: 35px; border-radius: 7px; border: 1px solid var(--good); color: var(--good); background: var(--bg-elev, #262c40);
+    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem; text-transform: uppercase; }
+  .tc-sw.gold { border-color: var(--gold); background: rgba(242, 193, 78, 0.16); color: var(--gold); }
+  .tc-legend .tc-plain { font-size: 0.95rem; font-weight: 700; text-align: right; }
+  .tc-pts { font-size: 1rem; font-weight: 800; color: var(--text); text-align: left; white-space: nowrap; }
+  .tc-pts.g { color: var(--gold); }
+  @media (max-width: 360px) { .tc-ex { padding-inline: 6px; } .tc-sw { width: 23px; height: 28px; font-size: 0.82rem; } .tc-word { gap: 3px; } .tc-legend { column-gap: 9px; } }
+  .tc-foot { margin: -2px 0 0; font-size: 0.86rem; line-height: 1.4; color: var(--muted); }
+  .tc-card .primary { width: 100%; margin-top: 2px; }
+  #themestrip.tappable { cursor: pointer; }
+  /* How to play: a small card (first Play, or the How to play button), the full rules on request,
+     and one-time tips in a new player's first game. */
+  .ht-card { gap: 14px; text-align: left; align-items: stretch; }
+  .ht-card h3 { margin: 0; font-size: 1.6rem; font-weight: 900; }
+  .ht-card ul { margin: 0; padding-left: 1.15em; display: flex; flex-direction: column; gap: 9px; font-size: 1rem; line-height: 1.4; }
+  .ht-card ul b { color: var(--gold); }
+  .ht-card .linkbtn { align-self: center; }
+  .rs-card { position: relative; gap: 12px; text-align: left; align-items: stretch; max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow-y: auto; }
+  .rs-card h3 { margin: 0; font-size: 1.5rem; font-weight: 900; }
+  .rs-card ul { margin: 0; padding-left: 1.15em; display: flex; flex-direction: column; gap: 8px; font-size: 0.94rem; line-height: 1.4; }
+  .rs-card ul b.g { color: var(--gold); }
+  .rs-x { position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line);
+    background: var(--bg); color: var(--muted); font: inherit; font-size: 1rem; cursor: pointer; }
+  .rs-sep { height: 1px; background: var(--line); }
+  .rs-ex { display: flex; flex-direction: column; gap: 5px; }
+  .rs-ex p { margin: 0; font-size: 0.86rem; line-height: 1.4; color: var(--muted); }
+  .rs-ex p b { color: var(--text); }
+  .rs-ex p b.g { color: var(--gold); }
+  .rs-ex p b.w { color: var(--warn); }
+  .tc-sw.plain { border-color: var(--line); color: var(--text); }
+  .tc-sw.bad { border-color: var(--warn); color: var(--warn); text-decoration: line-through; }
+  .coach { position: fixed; z-index: 55; max-width: min(300px, calc(100vw - 24px)); background: var(--accent); color: #1c1005;
+    font-weight: 800; font-size: 0.92rem; line-height: 1.35; padding: 10px 14px; border-radius: 12px; box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+    pointer-events: none; }
+  .coach[hidden] { display: none; }
+  .coach small { display: block; font-weight: 600; font-size: 0.76rem; opacity: 0.78; margin-top: 3px; }
+  .coach small:empty { display: none; }
+  .coach::after { content: ""; position: absolute; left: var(--ax, 50%); transform: translateX(-50%); border: 8px solid transparent; }
+  .coach.down::after { top: 100%; border-top-color: var(--accent); }
+  .coach.up::after { bottom: 100%; border-bottom-color: var(--accent); }
+  .coach.gold { background: var(--gold); }
+  .coach.gold.down::after { border-top-color: var(--gold); }
+  .coach.gold.up::after { border-bottom-color: var(--gold); }
+  /* Climbs: "Forfeit climb" is a real button, set lower, and asks first. */
+  #btn-endround.forfeit { margin-top: 14px; padding: 10px 22px; color: var(--muted); }
+  .ff-card { gap: 10px; }
+  .ff-card h3 { margin: 0; font-size: 1.2rem; }
+  .ff-card p { margin: 0; font-size: 0.92rem; line-height: 1.45; color: var(--muted); }
+  .ff-card p b { color: var(--text); }
+  .ff-actions { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 6px; }
+  .ff-actions button { width: 100%; }
+  button.ghost.ff-go { padding: 12px 16px; font-size: 0.95rem; color: var(--warn); border-color: rgba(240, 122, 106, 0.5); }
+  @media (prefers-reduced-motion: reduce) { .tc-veil, .tc-card { animation: none; } }
   /* trophy unlocked pop */
   .tr-pop {
     position: fixed; z-index: 62; left: 50%; top: 50%; transform: translate(-50%, -50%);
@@ -1335,18 +1413,24 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   .lb-row.me .lb-rank { color: var(--accent); }
   .lb-namewrap { flex: 1; min-width: 0; }
   .lb-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  /* Daily board only: a no-hint badge next to the name. Wrapping .lb-name in
-     its own flex row (rather than changing .lb-name itself) keeps the
-     ellipsis truncation working exactly as before for the shared .lb-name
-     class the versus leaderboard (lbRow) also uses — the star just never
-     gets truncated away. */
-  .lb-namerow { display: flex; align-items: baseline; gap: 4px; min-width: 0; }
-  .lb-namerow .lb-name { flex: 1; min-width: 0; }
-  .lb-star { flex: none; color: var(--accent); font-size: 0.85em; }
+  /* Daily board: # · Player · Points · Time, with a small header over the columns. */
+  /* (rem widths so the header's smaller text still lines up with the rows) */
+  #daily-board-list .lb-rank, .lb-head .h-rank { min-width: 2.2rem; text-align: center; }
+  #daily-board-list .lb-row > .lb-name, .lb-head .h-name { flex: 1; min-width: 0; text-align: left; }
+  #daily-board-list .lb-score, .lb-head .h-score { min-width: 3rem; text-align: center; }
+  .lb-time, .lb-head .h-time { min-width: 3.2rem; text-align: right; }
+  .lb-time { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .lb-head { display: flex; align-items: center; gap: 10px; width: 100%; padding: 0 13px 2px; font-size: 0.64rem; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
   .lb-meta { font-size: 0.72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .lb-score { font-weight: 700; font-variant-numeric: tabular-nums; }
   .lb-row.pending .lb-score { font-weight: 400; font-size: 0.8rem; color: var(--muted); }
   .lb-detail { width: 100%; padding: 2px 4px 8px; }
+  .lb-tip { position: absolute; left: 0; right: 0; bottom: 2px; width: max-content; margin: 0 auto; padding: 7px 12px; border-radius: 12px;
+    background: var(--accent); color: #1c1005; font-weight: 800; font-size: 0.8rem;
+    box-shadow: 0 6px 18px rgba(0,0,0,.3); }
+  .lb-tip::after { content: ""; position: absolute; left: 50%; bottom: -7px; transform: translateX(-50%);
+    border: 7px solid transparent; border-bottom: 0; border-top-color: var(--accent); }
   .lb-detail-badge { color: var(--accent); margin: 0 0 6px; }
   /* Themed days: the day's theme words as flags, and a flag on each theme rung. */
   .lb-flags { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; margin: 0 0 10px; border: 1px solid var(--line); border-radius: 10px; background: rgba(18, 20, 31, 0.55); text-align: left; }
@@ -1363,53 +1447,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   .chip-flag { position: absolute; top: -9px; right: -5px; width: 12px; height: 14px; color: var(--muted); }
   .chip-flag.got { color: var(--gold); }
 
-  /* Tutorial */
-  .tut-card {
-    display: flex; flex-direction: column; align-items: center;
-    gap: 14px; width: 100%; min-height: 250px;
-  }
-  .tut-visual { position: relative; width: 250px; max-width: 100%; height: 186px; flex-shrink: 0; transition: opacity 0.4s; }
-  .tut-visual.fade { opacity: 0; }
-  .tut-h { margin: 0; font-size: 1.35rem; }
-  .tut-dots { display: flex; gap: 7px; }
-  .tut-dot { width: 7px; height: 7px; border-radius: 999px; background: var(--line); }
-  .tut-dot.on { background: var(--accent); }
-  /* Tutorial scenes: letters shuffle and snap into words while a climber walks up the mountain. */
-  .ta-mtn { position: absolute; left: 0; top: 0; }
-  .ta-climber { transition: transform 0.7s cubic-bezier(.3,.7,.3,1); }
-  .ta-tile {
-    position: absolute; left: 0; top: 0; z-index: 2;
-    width: 32px; height: 38px; display: flex; align-items: center; justify-content: center;
-    background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
-    font-weight: 700; font-size: 17px; text-transform: uppercase;
-    transition: transform 0.38s cubic-bezier(.2,.8,.25,1.1), border-color 0.25s, color 0.25s, background 0.25s, box-shadow 0.25s;
-  }
-  .ta-tile.new { border-color: var(--accent); color: var(--accent); }
-  .ta-tile.good { border-color: var(--good); box-shadow: 0 0 0 3px rgba(111, 208, 140, 0.22); }
-  .ta-tile.gold { border-color: var(--gold); color: var(--gold); background: rgba(242, 193, 78, 0.14); box-shadow: 0 0 12px rgba(242, 193, 78, 0.4); }
-  .ta-tile.bad { border-color: var(--warn); color: var(--warn); }
-  .ta-tile.drop { animation: ta-drop 0.42s cubic-bezier(.2,.8,.25,1.4); }
-  .ta-tile.shake { animation: ta-shake 0.38s ease; }
-  .ta-tile.hop { animation: ta-hop 0.38s ease; }
-  @keyframes ta-drop { 0% { translate: 0 -20px; scale: 0.55; opacity: 0; } 60% { translate: 0 2px; scale: 1.06; opacity: 1; } 100% { translate: 0 0; scale: 1; } }
-  @keyframes ta-shake { 20% { translate: -6px 0; } 40% { translate: 5px 0; } 60% { translate: -4px 0; } 80% { translate: 3px 0; } }
-  @keyframes ta-hop { 50% { translate: 0 -12px; } }
-  .ta-cap { position: absolute; left: 0; right: 0; top: 160px; text-align: center; font-size: 13px; font-weight: 700; min-height: 18px; }
-  .ta-ttag { position: absolute; left: 0; top: 0; font-size: 11px; font-weight: 900; letter-spacing: 0.1em; color: var(--gold); }
-  .ta-pips { position: absolute; left: 0; top: 2px; justify-content: flex-start; gap: 6px; }
-  .ta-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
-  .ta-chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
-  .ta-minis { display: flex; gap: 10px; }
-  .ta-big { font-size: 1.3rem; font-weight: 700; letter-spacing: 0.06em; color: var(--accent); text-align: center; }
-  .ta-pop { animation: ta-popin 0.45s cubic-bezier(.2,.8,.25,1.4) both; }
-  @keyframes ta-popin { 0% { scale: 0.4; opacity: 0; } 100% { scale: 1; opacity: 1; } }
-  @media (prefers-reduced-motion: reduce) {
-    .ta-tile, .ta-climber, .tut-visual { transition: none; }
-    .ta-tile.drop, .ta-tile.shake, .ta-tile.hop, .ta-pop { animation: none; }
-  }
-  .tut-visual .dchip { cursor: default; font-size: 0.9rem; padding: 5px 12px 5px 10px; }
-
-  .diffrow { display: flex; gap: 8px; width: 100%; }
+$1{ display: flex; gap: 8px; width: 100%; }
   .diffbtn {
     flex: 1;
     border: 1px solid var(--line);
@@ -1436,14 +1474,12 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     .brandmark { height: 44px; margin-bottom: 8px; }
     h1 { font-size: 1.75rem; margin-bottom: 12px; }
     main > section { gap: 12px; }
-    .tt-big { font-size: 2.1rem; }
-    .tt-em { font-size: 1.5rem; }
     .tt-mtn { max-height: 108px; }
     .home-play button.primary { padding: 12px 26px; font-size: 1.1rem; }
     .rb-ic { width: 40px; height: 40px; }
     .home-foot { margin-top: 6px; }
     .home-gap { min-height: 6px; }
-    .board-mtn svg { max-height: 124px; }
+    .board-mtn svg, #screen-daily-board .board-mtn svg { max-height: 96px; }
     .em-grid { max-width: none; grid-template-columns: repeat(10, 1fr); gap: 4px; }
     .em-cell { font-size: 1.05rem; border-radius: 8px; }
     .em-slot { width: 42px; height: 42px; font-size: 1.35rem; }
@@ -1454,7 +1490,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
      out the clock and home-bar areas (a dark strip at the bottom). Size to the
      whole screen, as before. */
   html.standalone body { min-height: 100vh; }
-  html.standalone #screen-daily-board .lb-list { max-height: max(120px, min(48vh, calc(100vh - 534px))); }
+  html.standalone #screen-daily-board .lb-list { max-height: max(120px, min(54vh, calc(100vh - 500px))); }
   html.standalone .pf-scroll { max-height: calc(100vh - 130px); }
 </style>
 </head>
@@ -1613,20 +1649,6 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
       </div>
     </section>
 
-    <!-- TUTORIAL (first run, or "How to play") -->
-    <section id="screen-tutorial" hidden>
-      <div class="tut-card">
-        <div class="tut-visual" id="tut-visual"></div>
-        <h2 class="tut-h" id="tut-h"></h2>
-        <p class="lede" id="tut-p"></p>
-      </div>
-      <div class="tut-dots" id="tut-dots"></div>
-      <div class="btnrow">
-        <button class="ghost" id="tut-skip" type="button">Skip</button>
-        <button class="primary" id="tut-next" type="button">Next</button>
-      </div>
-    </section>
-
     <!-- HOME (once signed in with a name) -->
     <section id="screen-home" hidden>
       <!-- Top banner: theme calendar · the name · your profile (initial + streak). -->
@@ -1642,9 +1664,6 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
            is found. Replaces the tagline. -->
       <div class="today-theme" id="today-theme" hidden>
         <div class="tt-hero">
-          <div class="tt-glow" aria-hidden="true"></div>
-          <div class="tt-lab">Today's theme</div>
-          <div class="tt-big"><span class="tt-em" id="tt-emoji" aria-hidden="true"></span><span id="tt-name"></span></div>
           <svg class="tt-mtn" id="tt-mtn" viewBox="0 0 300 140" role="img"></svg>
         </div>
         <p class="tt-cap" id="tt-cap" hidden></p>
@@ -1838,6 +1857,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
       <div class="scr-head"><button class="backpill" id="btn-daily-board-home" type="button"><span class="bp-ch" aria-hidden="true">&lsaquo;</span>Home</button><h2 class="scr-ttl" id="daily-board-title">Daily Climb</h2><span class="dailycard-streak" id="daily-board-streak" hidden></span></div>
       <p class="note" id="daily-board-sub"></p>
       <div class="board-mtn" id="daily-board-mtn" hidden></div>
+      <div class="lb-head" id="daily-board-head" hidden><span class="h-rank">Rank</span><span class="h-name">Player</span><span class="h-score">Points</span><span class="h-time">Time</span></div>
       <div class="lb-list" id="daily-board-list"></div>
       <p class="note" id="daily-board-foot"></p>
       <button class="reminder-cta" id="btn-reminder" type="button" hidden></button>
@@ -1965,7 +1985,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
 
     <!-- PLAY -->
     <section id="screen-play" hidden>
-      <div class="roundline"><span id="roundline-rounds">Round <b id="round-n">1</b> of <b id="round-total">3</b></span><span id="roundline-practice" hidden>Practice</span><span id="roundline-climb" hidden></span></div>
+      <div class="roundline" id="roundline"><span id="roundline-rounds">Round <b id="round-n">1</b> of <b id="round-total">3</b></span><span id="roundline-practice" hidden>Practice</span><span id="roundline-climb" hidden></span></div>
       <div class="themestrip" id="themestrip" hidden></div>
       <div class="timerbar" id="timerbar"><div class="timerbar-fill" id="bar"></div></div>
       <div class="secs" id="secline"><span id="secs">30</span>s left</div>
@@ -1990,8 +2010,8 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
               <circle cx="288" cy="-104" r="1" opacity=".45"/>
             </g>
             <g clip-path="url(#ascentAboveGround)">
-              <circle id="ascentSunGlow" cx="222" cy="58" r="55" fill="url(#ascentSunGlowFill)" opacity=".35"/>
-              <circle id="ascentSun" cx="222" cy="58" r="15" fill="var(--sun-core)" opacity=".55"/>
+              <circle id="ascentSunGlow" cx="268" cy="58" r="40" fill="url(#ascentSunGlowFill)" opacity=".35"/>
+              <circle id="ascentSun" cx="268" cy="58" r="12" fill="var(--sun-core)" opacity=".55"/>
             </g>
             <polygon fill="var(--mtn-far)"
               points="0,68 6,60 25,50 45,36 62,22 82,12 105,5 130,5 148,3 165,12 188,24 212,17 240,30 270,45 294,60 300,68"/>
@@ -2208,6 +2228,67 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     <p class="tr-sheet-meta" id="tr-sheet-meta"></p>
     <div class="install-actions"><button class="primary" id="btn-tr-sheet-close" type="button">Close</button></div>
   </div>
+  <!-- How to play (first Play, or the How to play button) -->
+  <div class="tc-veil" id="howto-card" hidden>
+    <div class="tc-card ht-card" role="dialog" aria-modal="true" aria-labelledby="ht-title">
+      <h3 id="ht-title">How to play</h3>
+      <ul>
+        <li>Rearrange the letters into a word.</li>
+        <li>Each word adds a letter. Keep climbing.</li>
+        <li>Words that fit the theme are worth <b>2 points</b>.</li>
+      </ul>
+      <button class="primary" id="btn-howto-go" type="button">Let's climb</button>
+      <button class="linkbtn" id="btn-howto-rules" type="button">See all the rules</button>
+    </div>
+  </div>
+  <!-- All the rules (from the How to play card) -->
+  <div class="tc-veil" id="rules-sheet" hidden>
+    <div class="tc-card rs-card" role="dialog" aria-modal="true" aria-labelledby="rs-title">
+      <button class="rs-x" id="btn-rules-close" type="button" aria-label="Close">&#x2715;</button>
+      <h3 id="rs-title">All the rules</h3>
+      <ul>
+        <li>Rearrange the letters into a <b>real word</b>.</li>
+        <li>Solve it and <b>a new letter drops in</b>. Use every letter to make a longer word.</li>
+        <li>You can't just add an ending, like <b>-s</b>, <b>-d</b>, <b>-r</b> or <b>-n</b>.</li>
+        <li><b>Three</b> words that don't work end the climb.</li>
+        <li>Words that fit the day's theme are worth <b class="g">2 points</b>. Every climb has at least one.</li>
+        <li>One <b>hint</b> a day. Three climbs, the same for everyone. Ties go to the fastest time.</li>
+      </ul>
+      <div class="rs-sep"></div>
+      <div class="rs-ex"><div class="tc-word" aria-label="CHEAP"><span class="tc-sw plain">C</span><span class="tc-sw plain">H</span><span class="tc-sw plain">E</span><span class="tc-sw plain">A</span><span class="tc-sw plain">P</span></div>
+        <p><b>HEAP</b> plus a <b>C</b>: CHEAP uses every letter.</p></div>
+      <div class="rs-ex"><div class="tc-word" aria-label="PEACH"><span class="tc-sw gold">P</span><span class="tc-sw gold">E</span><span class="tc-sw gold">A</span><span class="tc-sw gold">C</span><span class="tc-sw gold">H</span></div>
+        <p>If the theme is Food, <b class="g">PEACH</b> fits it: <b class="g">2 points</b>.</p></div>
+      <div class="rs-ex"><div class="tc-word" aria-label="HEAPS"><span class="tc-sw bad">H</span><span class="tc-sw bad">E</span><span class="tc-sw bad">A</span><span class="tc-sw bad">P</span><span class="tc-sw bad">S</span></div>
+        <p><b class="w">HEAPS</b> doesn't count: it's just HEAP + S.</p></div>
+    </div>
+  </div>
+  <!-- A one-time tip in a new player's first game -->
+  <div class="coach" id="coach" role="status" aria-live="polite" hidden><span id="coach-t"></span><small id="coach-s"></small></div>
+  <!-- Forfeit a climb? -->
+  <div class="tc-veil" id="forfeit-confirm" hidden>
+    <div class="tc-card ff-card" role="alertdialog" aria-modal="true" aria-labelledby="ff-title" aria-describedby="ff-body">
+      <h3 id="ff-title">Forfeit this climb?</h3>
+      <p id="ff-body"></p>
+      <div class="ff-actions">
+        <button class="primary" id="btn-ff-keep" type="button">Keep climbing</button>
+        <button class="ghost ff-go" id="btn-ff-go" type="button">Forfeit climb</button>
+      </div>
+    </div>
+  </div>
+  <!-- Today's theme (themed dailies) -->
+  <div class="tc-veil" id="theme-card" hidden>
+    <div class="tc-card" role="dialog" aria-modal="true" aria-labelledby="tc-name">
+      <p class="tc-kick">Today's theme</p>
+      <h3 class="tc-name" id="tc-name"></h3>
+      <div class="tc-ex">
+        <p class="tc-ex-lab" id="tc-ex-lab">Example</p>
+        <div class="tc-legend" id="tc-legend"></div>
+      </div>
+      <p class="tc-foot">Every climb has at least one word related to the theme.</p>
+      <button class="primary" id="btn-theme-card" type="button">Start climbing</button>
+    </div>
+  </div>
   <!-- Trophy unlocked! (queued; shown on home / board / profile screens) -->
   <div class="tr-pop" id="trophy-pop" role="dialog" aria-modal="true" aria-labelledby="tr-pop-name" hidden>
     <p class="tr-pop-kick" id="tr-pop-kick">Trophy unlocked!</p>
@@ -2237,6 +2318,215 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   } catch (e) {}
 </script>
 <script src="firebase-config.js"></script>
+<script>
+// Beta (beta.thedailyclimb.com, or localhost with ?beta=1): the same game with
+// its online parts swapped for a pretend database kept on this device, so
+// testing never touches real players. Adds a BETA badge with test tools.
+// Inline (not a separate file) so the service worker never serves a stale copy.
+(function () {
+  var h = location.hostname, beta = /^beta\./.test(h);
+  if (!beta && /^(localhost|127\.0\.0\.1)$/.test(h)) {
+    try {
+      if (/[?&]beta=1/.test(location.search)) sessionStorage.setItem("dc.beta", "1");
+      beta = sessionStorage.getItem("dc.beta") === "1";
+    } catch (e) {}
+  }
+  if (!beta) return;
+  window.DC_BETA = true;
+  window.THREE21_FIREBASE_CONFIG = null; // no Firebase, no analytics
+
+  var KEY = "beta.db", UID = "beta-you";
+  var db;
+  try { db = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
+  db = db || {};
+  db.usernames = db.usernames || {};
+  db.dailies = db.dailies || {};
+  var save = function () { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {} };
+  // Signed in straight away as a test player, unless a sign-up test was asked for.
+  if (!db.player && !db.signupTest) {
+    db.player = { name: "Tester", username: "Tester", tutorialSeen: true };
+    db.usernames.tester = { username: "Tester", secret: "", rec: {} };
+    db.signedIn = "tester";
+    save();
+  }
+  var player = function () { return db.player || (db.player = {}); };
+  var copy = function (o) { return o ? JSON.parse(JSON.stringify(o)) : null; };
+  var fail = function (code) { return Object.assign(new Error(code), { code: code }); };
+  var nameKey = function (n) { return String(n).trim().toLowerCase().replace(/ +/g, "."); };   // same as the live MatchDB
+  var noop = function () {};
+
+  // Pretend players: the same names every day, with scores that vary by day.
+  var NAMES = ["Summit_Sam", "Priya", "Marco", "jules", "KestrelK", "Bea", "Otis", "ridge_runner", "Nova", "Theo", "Lark", "Wren"];
+  function seeded(str) { var x = 2166136261; for (var i = 0; i < str.length; i++) x = Math.imul(x ^ str.charCodeAt(i), 16777619) >>> 0; return function () { x = Math.imul(x ^ (x >>> 15), 2246822507) >>> 0; x = Math.imul(x ^ (x >>> 13), 3266489909) >>> 0; return ((x ^= x >>> 16) >>> 0) / 4294967296; }; }
+  function dayInfo(day) {
+    var cal = window.DAILY_CALENDAR, base = String(day).slice(0, 10);
+    if (!cal) return { max: 18, climbs: 0 };
+    var i = Math.round((Date.UTC(+base.slice(0, 4), +base.slice(5, 7) - 1, +base.slice(8, 10)) - Date.UTC(+cal.start.slice(0, 4), +cal.start.slice(5, 7) - 1, +cal.start.slice(8, 10))) / 86400000);
+    var d = i >= 0 ? cal.days[i] : null;
+    return d ? { max: d.c.reduce(function (a, c) { return a + c.length; }, 0), climbs: d.c.length, theme: d.t, ladders: d.c, themeWords: d.w } : { max: 18, climbs: 0 };
+  }
+  // Each pretend player climbs the day's own ladders, stopping a word or two
+  // short now and then, so their words, score and theme flags all agree.
+  function fakeBoard(day) {
+    if (db.noFakes) return [];
+    var r = seeded(String(day)), info = dayInfo(day), now = Date.now();
+    return NAMES.map(function (n, i) {
+      var e = { uid: "fake-" + i, name: n, total: 0, strikes: Math.floor(r() * 3), solveMs: Math.floor(90000 + r() * 900000),
+        hintUsed: r() < 0.5, roundWords: [], finishedAt: now - Math.floor(r() * 36e6) };
+      if (info.ladders) {
+        e.roundWords = info.ladders.map(function (ladder) {
+          var x = r(), drop = x < 0.6 ? 0 : x < 0.85 ? 1 : 2;
+          return ladder.slice(0, Math.max(1, ladder.length - drop));
+        });
+        e.total = e.roundWords.reduce(function (a, w) { return a + w.length; }, 0);
+        var list = String((window.THEME_WORDS || {})[info.theme] || "").split(" ");
+        e.themeWords = e.roundWords.reduce(function (n, w, c) { return n + w.filter(function (word) { return info.themeWords[c].indexOf(word) >= 0 || list.indexOf(word) >= 0; }).length; }, 0);
+        e.max = info.max; e.theme = info.theme;
+      } else {
+        e.total = Math.max(3, info.max - Math.floor(r() * r() * 9));
+      }
+      return e;
+    });
+  }
+  function mine(day) { var d = db.dailies[day]; return d ? copy(d) : null; }
+
+  var fake = {
+    ready: true, uid: UID, hasAuth: true,
+    track: noop,
+    whenReady: function (cb) { setTimeout(function () { cb(UID); }, 30); },
+    getPlayer: async function () { return copy(db.player); },
+    getPlayerName: async function () { return (db.player && db.player.name) || null; },
+    savePlayerName: async function (name) { player().name = name; save(); },
+    markTutorialSeen: async function () { player().tutorialSeen = true; save(); },
+    pushSupported: async function () { return false; },
+    enableReminders: async function () { throw new Error("Reminders are off in the beta"); },
+    disableReminders: async function () {},
+    isUsernameTaken: async function (n) { var k = nameKey(n); return k === "taken" || !!db.usernames[k]; },
+    claimUsername: async function (username, secret, rec) {
+      var k = nameKey(username);
+      if (k === "taken" || db.usernames[k]) throw fail("taken");
+      db.usernames[k] = { username: username, secret: secret, rec: rec || {} };
+      Object.assign(player(), { username: username, name: username });
+      db.signedIn = k; save();
+    },
+    restoreProfile: async function (username, secret) {
+      var k = nameKey(username), u = db.usernames[k];
+      if (!u || u.secret !== secret) throw fail("auth/invalid-credential");
+      Object.assign(player(), { username: u.username, name: u.username });
+      db.signedIn = k; save();
+      return copy(db.player);
+    },
+    isSignedInAs: function (k) { return db.signedIn === nameKey(k); },
+    myEmail: function () { return null; },
+    getMyRecoveryCode: async function (k) { var u = db.usernames[nameKey(k)]; return u ? (u.rec.emoji ? { emoji: u.rec.emoji } : u.rec.code ? { code: u.rec.code } : { why: "none" }) : { why: "none" }; },
+    resetMySecret: async function (k, display, plain) { var u = db.usernames[nameKey(k)]; if (u) { u.secret = plain; u.rec = { code: display }; save(); } },
+    setMySecret: async function (k, old, secret, rec) { var u = db.usernames[nameKey(k)]; if (u) { u.secret = secret; u.rec = rec; save(); } },
+    createTransfer: async function () { throw fail("beta"); },
+    pickupTransfer: async function () { throw fail("gone"); },
+    saveTrophies: async function (map) { var p = player(); p.trophies = Object.assign(p.trophies || {}, map); save(); },
+    getTrophyRarity: async function () { return null; },
+    markSeedBeaten: async function (i) { var p = player(); p.beatenSeeds = p.beatenSeeds || []; if (p.beatenSeeds.indexOf(i) < 0) p.beatenSeeds.push(i); save(); },
+    createMatch: async function () { throw new Error("Not in the beta"); },
+    getMatch: async function () { return null; },
+    joinMatch: async function () { throw new Error("Not in the beta"); },
+    submitResult: async function () { throw new Error("Not in the beta"); },
+    closeMatch: async function () {},
+    watch: function () { return noop; },
+    watchEntrants: function () { return noop; },
+    watchMyMatches: function (cb) { setTimeout(function () { cb([]); }, 30); return noop; },
+    getDailyEntrant: async function (day) { return mine(day); },
+    submitDaily: async function (day, r) {
+      db.dailies[day] = Object.assign({ uid: UID, name: r.name || "Player", total: r.total || 0, strikes: r.strikes || 0, solveMs: r.solveMs || 0,
+        hintUsed: !!r.hintUsed, roundWords: r.roundWords || [], finishedAt: Date.now() },
+        r.themeWords != null ? { themeWords: r.themeWords, max: r.max, theme: r.theme } : {});
+      save();
+    },
+    getDailyBoard: async function (day) { var m = mine(day); return fakeBoard(day).concat(m ? [m] : []); },
+    watchDailyBoard: function (day, cb) { setTimeout(function () { var m = mine(day); cb(fakeBoard(day).concat(m ? [m] : [])); }, 60); return noop; },
+    bumpStreak: async function (day, prevDay) {
+      var p = player();
+      if (p.dailyLastDay === day) return;
+      var streak = p.dailyLastDay === prevDay ? (p.dailyStreak || 0) + 1 : 1;
+      Object.assign(p, { dailyStreak: streak, dailyLastDay: day, bestStreak: Math.max(p.bestStreak || 0, streak) });
+      save();
+    },
+  };
+  Object.defineProperty(window, "MatchDB", { configurable: true, get: function () { return fake; }, set: function () {} });
+
+  // ---- BETA badge + test tools ----
+  window.DC_BETA_TOOLS = {
+    resetAll: function () {
+      try { Object.keys(localStorage).filter(function (k) { return /^(three21\.|beta\.)/.test(k); }).forEach(function (k) { localStorage.removeItem(k); }); sessionStorage.removeItem("three21.devDay"); } catch (e) {}
+      location.reload();
+    },
+    replayToday: function () {
+      var base = document.documentElement.dataset.betaDay || "";
+      Object.keys(db.dailies).forEach(function (k) { if (k.slice(0, 10) === base) delete db.dailies[k]; });
+      if (db.player && db.player.dailyLastDay && db.player.dailyLastDay.slice(0, 10) === base) { db.player.dailyLastDay = null; db.player.dailyStreak = Math.max(0, (db.player.dailyStreak || 1) - 1); }
+      save();
+      try {
+        ["three21.today", "three21.resume", "three21.themeCardDay"].forEach(function (k) { localStorage.removeItem(k); });
+        var prof = JSON.parse(localStorage.getItem("three21.profile") || "null");
+        if (prof) { prof.dailyLastDay = null; localStorage.setItem("three21.profile", JSON.stringify(prof)); }
+      } catch (e) {}
+      location.reload();
+    },
+    goToDay: function (base) {
+      try { if (base) sessionStorage.setItem("three21.devDay", base); else sessionStorage.removeItem("three21.devDay"); } catch (e) {}
+      location.reload();
+    },
+    newPlayer: function () { // keep the test profile, but forget How to play and every first-game tip, then replay today
+      if (db.player) db.player.tutorialSeen = false;
+      try { ["three21.tut", "three21.tips", "three21.tipsOn", "three21.tapTipShown"].forEach(function (k) { localStorage.removeItem(k); }); } catch (e) {}
+      window.DC_BETA_TOOLS.replayToday();
+    },
+    toggleFakes: function () { db.noFakes = !db.noFakes; save(); location.reload(); },
+    signupTest: function () { // a brand-new visitor: the welcome and sign-up screens
+      try { Object.keys(localStorage).filter(function (k) { return /^(three21\.|beta\.)/.test(k); }).forEach(function (k) { localStorage.removeItem(k); }); localStorage.setItem(KEY, JSON.stringify({ signupTest: true })); } catch (e) {}
+      location.reload();
+    },
+  };
+  document.addEventListener("DOMContentLoaded", function () {
+    var day = null;
+    try { day = sessionStorage.getItem("three21.devDay"); } catch (e) {}
+    var d = new Date(), today = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    document.documentElement.dataset.betaDay = day || today;
+    var css = document.createElement("style");
+    css.textContent =
+      ".beta-pill{position:fixed;left:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);z-index:9000;font:800 11px/1 -apple-system,system-ui,sans-serif;letter-spacing:.12em;" +
+      "color:#1c1005;background:#f2c14e;border:0;border-radius:999px;padding:7px 10px;box-shadow:0 4px 14px rgba(0,0,0,.4);cursor:pointer}" +
+      ".beta-sheet{position:fixed;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 48px);z-index:9001;max-width:360px;background:#1d2233;border:1px solid #f2c14e;border-radius:16px;" +
+      "padding:14px;display:flex;flex-direction:column;gap:9px;font:14px -apple-system,system-ui,sans-serif;color:#f3ece1;box-shadow:0 12px 40px rgba(0,0,0,.5)}" +
+      ".beta-sheet[hidden]{display:none}.beta-sheet b{font-size:13px;letter-spacing:.08em;color:#f2c14e}.beta-sheet p{margin:0;font-size:12px;color:#a29cb2;line-height:1.4}" +
+      ".beta-sheet button,.beta-sheet input{font:inherit;font-size:14px;border-radius:10px;padding:9px 10px;border:1px solid #313852;background:#12141f;color:#f3ece1}" +
+      ".beta-sheet .r{display:flex;gap:8px}.beta-sheet .r input{flex:1;min-width:0}";
+    document.head.appendChild(css);
+    var pill = document.createElement("button");
+    pill.className = "beta-pill"; pill.type = "button";
+    pill.textContent = "BETA" + (day ? " · " + day.slice(5) : "");
+    var sheet = document.createElement("div");
+    sheet.className = "beta-sheet"; sheet.hidden = true;
+    sheet.innerHTML = "<b>BETA TOOLS</b><p>Nothing here reaches the real game. Your test profile, scores and streak live only on this device.</p>" +
+      "<div class='r'><input type='date' id='beta-day' aria-label='Play as this date'><button type='button' id='beta-go'>Go</button></div>" +
+      "<button type='button' id='beta-today'>Back to today</button>" +
+      "<button type='button' id='beta-replay'>Replay this day's daily</button>" +
+      "<button type='button' id='beta-newplayer'>Play it as a new player</button>" +
+      "<button type='button' id='beta-fakes'>" + (db.noFakes ? "Show" : "Hide") + " pretend players</button>" +
+      "<button type='button' id='beta-reset'>Reset (fresh test player)</button>" +
+      "<button type='button' id='beta-signup'>Try the sign-up screens</button>";
+    document.body.append(pill, sheet);
+    sheet.querySelector("#beta-day").value = day || today;
+    pill.addEventListener("click", function () { sheet.hidden = !sheet.hidden; });
+    sheet.querySelector("#beta-go").addEventListener("click", function () { window.DC_BETA_TOOLS.goToDay(sheet.querySelector("#beta-day").value); });
+    sheet.querySelector("#beta-today").addEventListener("click", function () { window.DC_BETA_TOOLS.goToDay(null); });
+    sheet.querySelector("#beta-replay").addEventListener("click", window.DC_BETA_TOOLS.replayToday);
+    sheet.querySelector("#beta-newplayer").addEventListener("click", window.DC_BETA_TOOLS.newPlayer);
+    sheet.querySelector("#beta-fakes").addEventListener("click", window.DC_BETA_TOOLS.toggleFakes);
+    sheet.querySelector("#beta-reset").addEventListener("click", window.DC_BETA_TOOLS.resetAll);
+    sheet.querySelector("#beta-signup").addEventListener("click", window.DC_BETA_TOOLS.signupTest);
+  });
+})();
+</script>
 <script type="module">
   // Thin adapter around Firestore for versus-mode match state. Exposes
   // window.MatchDB, used by the main game script below. If no Firebase
@@ -2263,7 +2553,11 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
 
   // Username profiles sign in with a made-up address per username; it never
   // receives mail (.invalid is a reserved domain). Firebase accepts the format.
-  const usernameEmail = (key) => key + "@players.dailyclimb.invalid";
+  // Usernames can have spaces; database keys and the sign-in email can't, so a
+  // space becomes "." there ("Tate C" -> "tate.c"). Names never contain dots
+  // otherwise, so no two names share a key. Safe to apply twice.
+  const nameKey = (name) => String(name).trim().toLowerCase().replace(/ +/g, ".");
+  const usernameEmail = (key) => nameKey(key) + "@players.dailyclimb.invalid";
 
   const cfg = window.THREE21_FIREBASE_CONFIG;
   let db = null, auth = null, analytics = null, fbApp = null;
@@ -2474,7 +2768,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     // switched on yet) | "no-auth" | a Firebase auth/... code.
     async isUsernameTaken(username) {
       try {
-        const snap = await getDoc(doc(db, "usernames", username.toLowerCase()));
+        const snap = await getDoc(doc(db, "usernames", nameKey(username)));
         return snap.exists();
       } catch (e) {
         throw Object.assign(new Error("usernames unreadable"), { code: e.code === "permission-denied" ? "not-set-up" : (e.code || "network") });
@@ -2485,7 +2779,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     async claimUsername(username, codePlain, recFields) {
       const user = auth && auth.currentUser;
       if (!user || !uid) throw Object.assign(new Error("not signed in"), { code: "no-auth" });
-      const key = username.toLowerCase();
+      const key = nameKey(username);
       if (await this.isUsernameTaken(username)) throw Object.assign(new Error("taken"), { code: "taken" });
       // 1. The recovery record first (create-only, so a name someone else is
       //    mid-claiming reads as taken).
@@ -2523,7 +2817,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
       const nag = standIn && standIn.reminder && standIn.reminder.on;
       if (nag) { try { await updateDoc(doc(db, "players", uid), { "reminder.on": false }); } catch (e) {} }
       try {
-        await signInWithEmailAndPassword(auth, usernameEmail(username.toLowerCase()), codePlain);
+        await signInWithEmailAndPassword(auth, usernameEmail(username), codePlain);
       } catch (e) {
         if (nag) { try { await updateDoc(doc(db, "players", uid), { "reminder.on": true }); } catch (err) {} }
         throw e;
@@ -2553,7 +2847,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
       if (!uid || !who) return { why: "not signed in yet" };
       if (who.isAnonymous) return { why: "this browser isn't signed in with the username" };
       try {
-        const s = await getDoc(doc(db, "recovery", key));
+        const s = await getDoc(doc(db, "recovery", nameKey(key)));
         if (!s.exists()) return { why: "no recovery record" };
         if (s.data().uid !== uid) return { why: "record belongs to another account" };
         if (s.data().emoji) return { emoji: s.data().emoji };
@@ -2564,7 +2858,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
       const user = auth && auth.currentUser;
       if (!user) throw Object.assign(new Error("no auth"), { code: "no-auth" });
       await updatePassword(user, codePlain);
-      try { await updateDoc(doc(db, "recovery", key), { code: codeDisplay, emoji: deleteField(), updated: serverTimestamp() }); } catch (e) {}
+      try { await updateDoc(doc(db, "recovery", nameKey(key)), { code: codeDisplay, emoji: deleteField(), updated: serverTimestamp() }); } catch (e) {}
     },
     // Change this account's secret (e.g. a recovery code -> secret emoji).
     // Firebase wants a recent sign-in for that, so confirm the current secret
@@ -2575,7 +2869,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
       if (oldSecret) await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, oldSecret));
       await updatePassword(user, newSecret);
       const clear = recFields.emoji ? { code: deleteField() } : { emoji: deleteField() };
-      try { await updateDoc(doc(db, "recovery", key), Object.assign({}, recFields, clear, { updated: serverTimestamp() })); } catch (e) {}
+      try { await updateDoc(doc(db, "recovery", nameKey(key)), Object.assign({}, recFields, clear, { updated: serverTimestamp() })); } catch (e) {}
     },
     async createTransfer(token, secret) {
       const user = auth && auth.currentUser;
@@ -2765,7 +3059,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
         hintUsed: !!r.hintUsed,
         roundWords: wrapRoundWords(r.roundWords),
         finishedAt: Date.now(),
-        // Themed days: theme words found (the first tiebreaker) and the day's most words.
+        // Themed days: theme words found (a bonus point each) and the day's most words.
         ...(r.themeWords != null ? { themeWords: r.themeWords, max: r.max, theme: r.theme } : {}),
       });
     },
@@ -2802,6 +3096,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
 <script src="words.js"></script>
 <script src="climbs.js"></script>
 <script src="daily-calendar.js"></script>
+<script src="theme-words.js"></script>
 <script>
 (function () {
   const RAW = window.THREE21_WORDS || [];
@@ -3004,8 +3299,8 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   let format = "timed";
   let guessesLeft = 0;   // strikes left this round
   let wrongGuesses = []; // invalid words tried this stage — no repeat penalty
-  let sessionStrikes = 0; // total wrong words this session — leaderboard tiebreak #1
-  let solveMs = 0;        // time actively spent solving (sum of solved stages) — tiebreak #2
+  let sessionStrikes = 0; // total wrong words this session (trophies; no longer a tiebreak)
+  let solveMs = 0;        // time actively spent solving (sum of solved stages) — the daily tiebreak
   let stageShownAt = 0;
   let hintUsed = false;  // one hint per session
 
@@ -3060,7 +3355,8 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     } catch (e) {}
   })();
   function devDay() {
-    try { return localStorage.getItem("three21.dev") === "1" ? sessionStorage.getItem(DEV_DAY_KEY) : null; } catch (e) { return null; }
+    // Dev mode, or the beta (which plays a chosen day for real, results and all).
+    try { return localStorage.getItem("three21.dev") === "1" || window.DC_BETA ? sessionStorage.getItem(DEV_DAY_KEY) : null; } catch (e) { return null; }
   }
   function dailyKeyOf(d) { return (d ? dayKeyOf(d) : (devDay() || dayKeyOf())) + DAILY_SALT; }
   function dayBase(key) { const m = /^\d{4}-\d{2}-\d{2}/.exec(key || ""); return m ? m[0] : (key || ""); }
@@ -3483,7 +3779,6 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     welcome: $("#screen-welcome"),
     emoji: $("#screen-emoji"),
     signin: $("#screen-signin"),
-    tutorial: $("#screen-tutorial"),
     home: $("#screen-home"),
     landing: $("#screen-landing"),
     vscreate: $("#screen-vs-create"),
@@ -3519,7 +3814,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   // same way as the code running here (its inline scripts and styles). A
   // newer page means reload: straight away, or once the player leaves a climb
   // or a form they're filling in.
-  const BUSY_SCREENS = new Set(["play", "climbroundend", "tutorial", "name", "emoji", "signin", "restore", "vsjoin"]);
+  const BUSY_SCREENS = new Set(["play", "climbroundend", "name", "emoji", "signin", "restore", "vsjoin"]);
   function codePrint(doc) { // FNV-1a over the page's inline scripts and styles
     let h = 2166136261;
     doc.querySelectorAll("script:not([src]), style").forEach((el) => {
@@ -3572,6 +3867,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     hideReminderSheet(); // ...or the daily reminder sheet
     hideClaimSheet(); // ...or the claim-a-username sheet
     hideTrophySheet(); hideTrophyPop(); // ...or trophy overlays
+    coachPending = null; hideCoach(); if (name !== "play") clearTimeout(stuckT); // ...or a first-game tip
     if (!$("#difficulty-sheet").hidden) hideDifficultySheet(); // ...or the Trail/Ridge/Summit explainer
     setTimeout(() => drainTrophyQueue(), 450); // queued "Trophy unlocked!" pops wait for a calm screen
     const el = screens[name];
@@ -3780,9 +4076,9 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
       hiddenAt = Date.now();
       return;
     }
-    if (hiddenAt && stageShownAt) stageShownAt += Date.now() - hiddenAt;
+    if (hiddenAt && stageShownAt && !themeCardOpenAt && !howtoOpenAt) stageShownAt += Date.now() - hiddenAt;
     hiddenAt = 0;
-    if (dailySessionActive) startDailyTimer();
+    if (dailySessionActive && !themeCardOpenAt && !howtoOpenAt) startDailyTimer();
   });
   // One word's share of the leaderboard time. Capped as a backstop in case a
   // phone ever suspends the game without saying it went away.
@@ -3797,6 +4093,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     $("#roundline-rounds").hidden = climb || !multiRound;
     $("#roundline-practice").hidden = climb || multiRound;
     $("#roundline-climb").hidden = !climb;
+    $("#roundline").hidden = climb && mode === "daily" && !!dailyTheme;
     if (climb) {
       $("#roundline-climb").textContent = mode === "collection"
         ? "Seed #" + (collectionSeed + 1) + " · word " + climbStage + " of " + climbLen()
@@ -3806,7 +4103,8 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     }
     // "Quit to menu" shows in practice/collection; the daily is one attempt, versus restarts.
     $("#btn-play-home").hidden = mode !== "solo" && mode !== "climb" && mode !== "collection";
-    $("#btn-endround").textContent = climb ? "End climb" : "End round";
+    $("#btn-endround").textContent = climb ? "Forfeit climb" : "End round";
+    $("#btn-endround").className = climb ? "ghost forfeit" : "linkbtn";
   }
 
   function startRound() {
@@ -3893,6 +4191,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
 
     render(true);
     renderWordTrail();
+    stageTips();
 
     clearInterval(timerId);
     timerId = null;
@@ -3978,6 +4277,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
         ? "“" + word.toUpperCase() + "” isn't a word — try again"
         : "“" + word.toUpperCase() + "” isn't a word — strike " + (GUESS_BUDGET - guessesLeft) + " of " + GUESS_BUDGET;
       msg(msgText, "warn");
+      if (!unlimited) coachTip("strike", $("#guesspips"), "That's a strike. Three strikes ends the climb.", "These dots show how many you have left.", { below: true, ms: 7000 });
     }
   }
 
@@ -4063,6 +4363,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
       trayEl.appendChild(cell.type === "letter" ? makeTile(cell.id, firstOfStage) : slotEl());
     });
     ans.forEach((id) => ansEl.appendChild(id === null ? slotEl() : makeTile(id, false)));
+    if (isClimb() && answerFull() && !locked && !checking) coachTip("enter", $("#btn-enter"), "All set? Press Enter");
   }
 
   const inAnswer = (id) => ans.indexOf(id) > -1;
@@ -4337,6 +4638,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     if (isClimb() && isInflectionOf(g, climbPrev)) {
       msg("“" + g.toUpperCase() + "” is just “" + climbPrev.toUpperCase() + "” plus a letter — find another word.", "warn");
       FX.play("nope"); fxClass($("#answer"), "fx-shake");
+      coachTip("cheap", $("#answer"), "No cheap steps: you can't just add -s, -d, -r or -n.", "This doesn't cost a strike.", { ms: 8000 });
       return;
     }
 
@@ -4440,14 +4742,14 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
       const chips = document.createElement("div");
       chips.className = "chips";
       fillChips(chips, words);
-      const tr = theme && themeRung(theme, i, words);
-      if (tr && chips.children[tr.rung]) {
+      (theme ? themeRungs(theme, i, words) : []).forEach((tr) => {
         const chip = chips.children[tr.rung];
+        if (!chip) return;
         chip.classList.add("theme-rung");
         if (tr.found) chip.classList.add("gold");
         chip.appendChild(themeFlagSvg(tr.found, "chip-flag"));
         chips.classList.add("flagged");
-      }
+      });
       row.appendChild(label);
       row.appendChild(chips);
       container.appendChild(row);
@@ -4590,8 +4892,45 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   // profile survives deleting the app or switching phones. See
   // MatchDB.claimUsername / restoreProfile. Until usernames are switched on
   // in Firebase, the username screen falls back to saving a plain name.
-  const USERNAME_RE = /^[A-Za-z0-9_]{3,16}$/;
-  const USERNAME_HINT = "3–16 letters, numbers or _";
+  // Letters, numbers and _, with single spaces between words (no space at
+  // either end). In the database a space becomes "." (see MatchDB nameKey).
+  const USERNAME_RE = /^(?=.{3,16}$)[A-Za-z0-9_]+(?: [A-Za-z0-9_]+)*$/;
+  const USERNAME_HINT = "3–16 letters, numbers, spaces or _";
+  const USERNAME_BAD = "Only letters, numbers, spaces and _ (3–16)";
+  // Typing: no leading space, and runs of spaces become one.
+  const tidyUsername = (v) => String(v).replace(/\s+/g, " ").replace(/^ /, "");
+
+  // ---- Name filter ----
+  // Keeps slurs and swearing out of usernames (and off the leaderboard: a
+  // name that fails shows as "Climber"). Checked after undoing look-alike
+  // characters (0→o, 1→i, $→s ...) and dropping spaces and _, so "f_u_c_k"
+  // and "sh1t" are caught. Short words that hide inside ordinary ones
+  // (ass in "class", cum in "cucumber") only count as a whole word.
+  const BLOCK_ANYWHERE = ["fuck", "fuk", "fck", "phuck", "shit", "cunt", "bitch", "biatch", "whore", "slut", "pussy",
+    "penis", "vagina", "dildo", "porn", "nigg", "niga", "faggot", "fagot", "retard", "nazi", "hitler", "twat",
+    "wank", "jizz", "asshole", "arsehole", "bastard", "motherf", "kike", "tranny", "molest", "incest", "blowjob",
+    "handjob", "boner", "orgasm", "hentai", "milf", "dickhead", "cocksuck", "kkk"];
+  const BLOCK_WORD = ["ass", "arse", "cum", "sex", "tit", "tits", "titty", "dick", "cock", "anal", "anus", "pedo",
+    "hoe", "hoes", "fag", "fags", "coon", "chink", "spic", "gook", "nig", "rape", "raped", "rapes", "rapist", "rapists", "piss", "crap",
+    "damn", "boob", "boobs", "nude", "nudes", "horny", "sexy", "puta", "puto"];
+  const LEET = { "0": "o", "1": "i", "!": "i", "3": "e", "4": "a", "@": "a", "5": "s", "$": "s", "7": "t", "8": "b", "9": "g" };
+  function nameIsBlocked(name) {
+    const lower = String(name || "").toLowerCase();
+    const plain = lower.replace(/[0-9!@$]/g, (c) => LEET[c] || c);
+    const squashed = plain.replace(/[^a-z]/g, "");
+    const deduped = squashed.replace(/(.)\1+/g, "$1");   // fuuuck -> fuck
+    if (BLOCK_ANYWHERE.some((w) => squashed.includes(w) || deduped.includes(w))) return true;
+    const words = plain.split(/[^a-z]+/).filter(Boolean);
+    return words.some((w) => BLOCK_WORD.includes(w) || BLOCK_WORD.includes(w.replace(/(.)\1+/g, "$1")));
+  }
+  // How a player's name shows to everyone else.
+  const shownName = (n, fallback) => (n && nameIsBlocked(n) ? "Climber" : (n || fallback || "?"));
+  // A new username: the format first, then the filter.
+  function usernameProblem(v) {
+    if (!USERNAME_RE.test(v)) return USERNAME_BAD;
+    if (nameIsBlocked(v)) return "That name isn't allowed. Try another.";
+    return "";
+  }
   // Recovery codes: WORD-WORD-1234 from 128 plain words (~27 bits); guessing
   // is throttled by Firebase's sign-in rate limits.
   const CODE_WORDS = ("MAPLE RIVER CEDAR STONE CLOUD EMBER FROST BLOOM CANYON SUMMIT RIDGE TRAIL " +
@@ -4642,11 +4981,13 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     let timer = null, seq = 0;
     const set = (cls, msg, ok) => { note.className = "ustatus" + (cls ? " " + cls : ""); note.textContent = msg; button.disabled = !ok; };
     const check = () => {
+      if (input.value !== tidyUsername(input.value)) input.value = tidyUsername(input.value);
       const v = input.value.trim();
       clearTimeout(timer);
       if (!canClaimUsername()) { set("", v ? "" : "", !!v); return; } // plain-name fallback: anything non-empty
       if (!v) { set("", USERNAME_HINT, false); return; }
-      if (!USERNAME_RE.test(v)) { set("bad", "Only letters, numbers and _ (3–16)", false); return; }
+      const problem = usernameProblem(v);
+      if (problem) { set("bad", problem, false); return; }
       set("", "Checking…", false);
       const mine = ++seq;
       timer = setTimeout(async () => {
@@ -4747,8 +5088,9 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     button.disabled = true;
     button.textContent = busyLabel || "Saving…";
     const done = () => { button.disabled = false; button.textContent = idle; };
-    if (!USERNAME_RE.test(username)) {
-      note.className = "ustatus bad"; note.textContent = "Only letters, numbers and _ (3–16)";
+    const problem = usernameProblem(username);
+    if (problem) {
+      note.className = "ustatus bad"; note.textContent = problem;
       done(); return null;
     }
     const legacy = emoji ? null : makeRecoveryCode();
@@ -4970,7 +5312,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     if (!$("#signin-name").value) $("#signin-name").focus();
   }
   async function signInGo() {
-    const name = $("#signin-name").value.trim(), picked = siPicker.get();
+    const name = tidyUsername($("#signin-name").value).trim(), picked = siPicker.get();
     const note = $("#signin-note"), btn = $("#signin-go");
     note.className = "ustatus bad";
     if (!USERNAME_RE.test(name)) { note.textContent = "Enter your username."; return; }
@@ -5017,8 +5359,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   $("#signin-back").addEventListener("click", showNameScreen);
 
   function afterNameSaved() {
-    if (nameScreenFirstEver && !tutorialSeen) { showTutorial(); return; }
-    afterNameOrTutorial();
+    afterNameSet();   // How to play shows the first time they tap Play
   }
   $("#uname-done-go").addEventListener("click", afterNameSaved);
 
@@ -5320,7 +5661,8 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   }
   $("#btn-claim-go").addEventListener("click", () => {
     const val = $("#claim-input").value.trim();
-    if (!USERNAME_RE.test(val)) { $("#claim-note").className = "ustatus bad"; $("#claim-note").textContent = "Only letters, numbers and _ (3–16)"; return; }
+    const problem = usernameProblem(val);
+    if (problem) { $("#claim-note").className = "ustatus bad"; $("#claim-note").textContent = problem; return; }
     hideClaimSheet();
     nameScreenFirstEver = false;
     showEmojiPick({ mode: "create", name: val, from: "claim" });
@@ -5328,243 +5670,9 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   $("#btn-claim-later").addEventListener("click", hideClaimSheet);
   $("#btn-claim-done").addEventListener("click", hideClaimSheet);
   $("#claim-input").addEventListener("keydown", (e) => { if (e.key === "Enter" && !$("#btn-claim-go").disabled) { e.preventDefault(); $("#btn-claim-go").click(); } });
-  function afterNameOrTutorial() {
+  function afterNameSet() {
     if (pendingMatchCode) { show("vsjoin"); loadJoinPreview(pendingMatchCode); }
     else goHome();
-  }
-
-  // ---- tutorial ----
-  const TUTORIAL = [
-    {
-      h: "Start with four letters",
-      p: "Every climb opens with a 4-letter word. Rearrange the letters into a real word.",
-      visual: "pool",
-    },
-    {
-      h: "Climb to the peak",
-      p: "Solve one and a new letter drops in. Rearrange everything into a longer word and keep climbing. Each climb tops out between 7 and 11 letters.",
-      visual: "grow",
-    },
-    {
-      h: "Find the theme word",
-      p: "Every day has a theme, and one word in each climb fits it. Find it and it glows gold. Spell a different word from the same letters and you keep climbing, but you miss the theme word.",
-      visual: "theme",
-    },
-    {
-      h: "No cheap steps",
-      p: "A word can't just be the one before it with an ending tacked on, like adding -s, -d, -r or -n. Find another one.",
-      visual: "nope",
-    },
-    {
-      h: "Three strikes",
-      p: "Take your time. Three words that don't work ends the climb.",
-      visual: "strikes",
-    },
-    {
-      h: "Trail, Ridge, Summit",
-      p: "Some days climb higher than others. Trail days top out around 8 letters, Ridge days reach 9, and Summit days go to 10 or 11. Tap the badge on the home screen to see today's.",
-      visual: "tiers",
-    },
-    {
-      h: "Once a day",
-      p: "Three climbs, the same for everyone, once a day. Score is how many words you get. Ties go to whoever found more theme words, then fewest strikes, then fastest time.",
-      visual: "daily",
-    },
-  ];
-  // Tutorial scenes: each card's letters shuffle and snap into words on their
-  // own while a climber walks up a little mountain. The example climb has a
-  // food theme: CASE -> SAUCE (theme word) -> CLAUSE. A scene loops until the
-  // card changes or the tutorial closes.
-  const TA_W = 250, TA_T = 32, TA_G = 6, TA_Y = 112;
-  const TA_RUNG = [[20, 86], [82, 66], [142, 44], [204, 18]];
-  const TA_STOP = {};
-  let taTok = { dead: true };
-  const taX = (n, i) => (TA_W - (n * TA_T + (n - 1) * TA_G)) / 2 + i * (TA_T + TA_G);
-  const taWait = (ms, tok) => new Promise((res, rej) =>
-    setTimeout(() => (tok.dead || screens.tutorial.hidden ? rej(TA_STOP) : res()), ms));
-  function taRetrigger(el, c) { el.classList.remove(c); void el.offsetWidth; el.classList.add(c); }
-  function taStage(el) {
-    el.innerHTML = '<svg class="ta-mtn" viewBox="0 0 250 96" width="250" height="96" aria-hidden="true">' +
-      '<polygon points="0,96 30,74 58,80 100,52 126,60 170,30 204,12 236,40 250,34 250,96" fill="var(--mtn-far)"/>' +
-      '<polyline points="' + TA_RUNG.map((p) => p.join(",")).join(" ") + '" fill="none" stroke="var(--muted)" stroke-width="2" stroke-dasharray="1 6" stroke-linecap="round" opacity=".8"/>' +
-      '<g class="ta-flag" opacity="0"><line x1="204" y1="18" x2="204" y2="0" stroke="var(--text)" stroke-width="1.5"/><polygon points="204,0 218,4 204,9" fill="var(--gold)"/></g>' +
-      '<circle class="ta-climber" r="6" cx="0" cy="0" fill="var(--accent)" stroke="var(--text)" stroke-width="2.5"/></svg>' +
-      '<div class="ta-ttag"></div><div class="ta-pips guesspips"></div><div class="ta-cap"></div>';
-    return { el: el, all: [], row: [], climber: el.querySelector(".ta-climber"), flag: el.querySelector(".ta-flag"),
-      cap: el.querySelector(".ta-cap"), ttag: el.querySelector(".ta-ttag"), pips: el.querySelector(".ta-pips") };
-  }
-  function taTile(r, ch, cls) {
-    const d = document.createElement("div");
-    d.className = "ta-tile" + (cls ? " " + cls : "");
-    d.textContent = ch;
-    r.el.appendChild(d);
-    const t = { el: d, ch: ch };
-    r.all.push(t);
-    return t;
-  }
-  function taPos(t, x, instant) {
-    if (instant) t.el.style.transition = "none";
-    t.el.style.transform = "translate(" + x + "px," + TA_Y + "px)";
-    if (instant) { void t.el.offsetWidth; t.el.style.transition = ""; }
-  }
-  function taUnclass(ts) { ts.forEach((t) => t.el.classList.remove("good", "gold", "bad", "new", "shake", "hop", "drop")); }
-  function taPick(word, pool) { const used = []; for (const ch of word) used.push(pool.find((t) => t.ch === ch && !used.includes(t))); return used; }
-  function taClimb(r, i, instant) {
-    if (instant) r.climber.style.transition = "none";
-    r.climber.style.transform = "translate(" + TA_RUNG[i][0] + "px," + TA_RUNG[i][1] + "px)";
-    if (instant) { void r.el.offsetWidth; r.climber.style.transition = ""; }
-  }
-  function taCap(r, color, text) { r.cap.style.color = color ? "var(--" + color + ")" : ""; r.cap.textContent = text; }
-  function taReset(r, rung) {
-    r.all.forEach((t) => t.el.remove());
-    r.all = []; r.row = [];
-    r.flag.setAttribute("opacity", "0");
-    taCap(r, "", ""); r.ttag.textContent = ""; r.pips.innerHTML = "";
-    taClimb(r, rung, true);
-  }
-  // A row of tiles. opts.newAt marks the letter that just dropped in; opts.solved lays out a finished word.
-  function taLay(r, order, opts) {
-    opts = opts || {};
-    r.row = [...order].map((ch, i) => {
-      const t = taTile(r, ch, opts.solved || (i === opts.newAt ? "new drop" : "drop"));
-      if (!opts.solved) t.el.style.animationDelay = (i * 60) + "ms";
-      taPos(t, taX(order.length, i), true);
-      return t;
-    });
-  }
-  function taArrange(r, ts, hop) {
-    r.row = ts;
-    ts.forEach((t, i) => { taPos(t, taX(ts.length, i)); if (hop) taRetrigger(t.el, "hop"); });
-  }
-  function taShuffled(ts) { let s; do { s = ts.slice().sort(() => Math.random() - 0.5); } while (s.every((t, i) => t === ts[i])); return s; }
-  // A new letter drops into `order`; the others slide over to make room.
-  async function taAdd(r, order, tok) {
-    taUnclass(r.all);
-    taCap(r, "muted", "+1 letter");
-    const next = [];
-    let made = false;
-    [...order].forEach((ch) => {
-      let t = r.row.find((t) => t.ch === ch && !next.includes(t));
-      if (!t && !made) { t = taTile(r, ch, "new drop"); made = true; }
-      next.push(t);
-    });
-    next.forEach((t, i) => taPos(t, taX(next.length, i), t.el.classList.contains("drop")));
-    r.row = next;
-    await taWait(900, tok);
-  }
-  async function taSolve(r, word, tok, shuffles) {
-    for (let i = 0; i < (shuffles == null ? 1 : shuffles); i++) { taArrange(r, taShuffled(r.row), true); await taWait(520, tok); }
-    taArrange(r, taPick(word, r.row));
-    await taWait(420, tok);
-  }
-  function taMark(r, kind, text) {
-    taUnclass(r.row);
-    r.row.forEach((t) => {
-      if (kind === "warn") { t.el.classList.add("bad"); taRetrigger(t.el, "shake"); }
-      else if (kind !== "muted") t.el.classList.add(kind);
-    });
-    taCap(r, kind, text);
-  }
-  async function taFade(r, tok) { r.el.classList.add("fade"); await taWait(420, tok); r.el.classList.remove("fade"); }
-  const TA_SCENES = {
-    async pool(r, tok) { for (;;) {
-      taReset(r, 0); taLay(r, "SECA"); await taWait(900, tok);
-      await taSolve(r, "CASE", tok, 2); taMark(r, "good", "CASE"); taClimb(r, 1); await taWait(1800, tok);
-      await taFade(r, tok);
-    } },
-    async grow(r, tok) { for (;;) {
-      taReset(r, 1); taLay(r, "CASE", { solved: "good" }); taCap(r, "good", "CASE"); await taWait(1000, tok);
-      await taAdd(r, "ESUCA", tok); await taSolve(r, "CAUSE", tok); taMark(r, "good", "CAUSE"); taClimb(r, 2); await taWait(1100, tok);
-      await taAdd(r, "SLEUAC", tok); await taSolve(r, "CLAUSE", tok); taMark(r, "good", "CLAUSE"); taClimb(r, 3); await taWait(500, tok);
-      r.flag.setAttribute("opacity", "1"); taCap(r, "gold", "Top of the climb"); await taWait(1600, tok);
-      await taFade(r, tok);
-    } },
-    async theme(r, tok) { for (;;) {
-      taReset(r, 1); r.ttag.textContent = "🍝 FOOD"; taLay(r, "ESUCA", { newAt: 2 }); await taWait(1000, tok);
-      await taSolve(r, "CAUSE", tok); taMark(r, "muted", "CAUSE works, but it isn't food"); await taWait(1700, tok);
-      await taSolve(r, "SAUCE", tok); taMark(r, "gold", "SAUCE · theme word 🍝"); taClimb(r, 2); await taWait(2000, tok);
-      await taFade(r, tok);
-    } },
-    async nope(r, tok) { for (;;) {
-      taReset(r, 2); taLay(r, "SAUCE", { solved: "gold" }); taCap(r, "gold", "SAUCE"); await taWait(1100, tok);
-      await taAdd(r, "SAUCES", tok); taMark(r, "warn", "That's just SAUCE + S"); await taWait(1700, tok);
-      await taSolve(r, "CAUSES", tok); taMark(r, "good", "CAUSES"); taClimb(r, 3); await taWait(1800, tok);
-      await taFade(r, tok);
-    } },
-    async strikes(r, tok) { for (;;) {
-      taReset(r, 1);
-      r.pips.innerHTML = '<span class="guesspip"></span><span class="guesspip"></span><span class="guesspip"></span>';
-      const pips = r.pips.children;
-      taLay(r, "ESUCA", { newAt: 2 }); await taWait(1000, tok);
-      await taSolve(r, "SUCAE", tok); taMark(r, "warn", "Not a word · 2 strikes left"); pips[2].classList.add("spent"); await taWait(1400, tok);
-      await taSolve(r, "ACUSE", tok); taMark(r, "warn", "Not a word · 1 strike left"); pips[1].classList.add("spent"); await taWait(1400, tok);
-      await taSolve(r, "CAUSE", tok); taMark(r, "good", "CAUSE"); taClimb(r, 2); await taWait(1800, tok);
-      await taFade(r, tok);
-    } },
-  };
-  function playTutScene(kind) {
-    taTok.dead = true;
-    const el = $("#tut-visual");
-    el.classList.remove("fade");
-    if (kind === "tiers") {
-      el.innerHTML = '<div class="ta-center"><div class="ta-chips">' + ["T", "R", "S"].map((k, i) =>
-        '<span class="dchip ' + k + ' ta-pop" style="animation-delay:' + (i * 180) + 'ms"><span class="dchip-peaks" aria-hidden="true"><i></i><i></i><i></i></span>' +
-        DAY_TIER[k] + "</span>").join("") + "</div></div>";
-      return;
-    }
-    if (kind === "daily") {
-      el.innerHTML = '<div class="ta-center"><div class="ta-minis">' + [0, 1, 2].map((i) =>
-        '<svg class="ta-pop" style="animation-delay:' + (i * 160) + 'ms" width="54" height="40" viewBox="0 0 54 40" aria-hidden="true">' +
-        '<polygon points="0,40 18,14 26,22 36,4 54,40" fill="var(--mtn-far)"/><circle cx="36" cy="6" r="4" fill="var(--accent)" stroke="var(--text)" stroke-width="1.5"/></svg>').join("") +
-        '</div><div class="ta-big ta-pop" style="animation-delay:520ms">3 climbs &middot; once a day</div></div>';
-      return;
-    }
-    const scene = TA_SCENES[kind];
-    if (!scene) { el.innerHTML = ""; return; }
-    const tok = taTok = { dead: false };
-    scene(taStage(el), tok).catch((e) => { if (e !== TA_STOP) console.error(e); });
-  }
-  let tutStep = 0;
-  let tutFrom = "home"; // "home" | "start" — where to return when done
-  const tutDeck = TUTORIAL;
-  function showTutorial(opts) {
-    tutStep = 0;
-    tutFrom = (opts && opts.from) || "home";
-    renderTut();
-    show("tutorial");
-  }
-  function renderTut(dir) {
-    const s = tutDeck[tutStep];
-    playTutScene(s.visual);
-    $("#tut-h").textContent = s.h;
-    $("#tut-p").textContent = s.p;
-    const dots = $("#tut-dots");
-    dots.innerHTML = "";
-    tutDeck.forEach((_, i) => {
-      const d = document.createElement("span");
-      d.className = "tut-dot" + (i === tutStep ? " on" : "");
-      dots.appendChild(d);
-    });
-    const last = tutStep === tutDeck.length - 1;
-    $("#tut-next").textContent = last ? "Start playing" : "Next";
-    $("#tut-skip").hidden = last;
-    if (dir) anim($(".tut-card"),
-      [{ opacity: 0, transform: "translateX(" + (dir * 26) + "px)" }, { opacity: 1, transform: "none" }],
-      { duration: 180, easing: "cubic-bezier(.2,.7,.3,1)" });
-  }
-  function tutNext() {
-    if (tutStep < tutDeck.length - 1) { tutStep++; renderTut(1); return; }
-    finishTutorial();
-  }
-  function tutPrev() {
-    if (tutStep > 0) { tutStep--; renderTut(-1); }
-  }
-  function finishTutorial() {
-    tutorialSeen = true;
-    if (window.MatchDB && window.MatchDB.markTutorialSeen) window.MatchDB.markTutorialSeen();
-    try { localStorage.setItem("three21.tut", "1"); } catch (e) {}
-    if (tutFrom === "start") { show("start"); return; }
-    afterNameOrTutorial();
   }
 
   function matchIsClosed(m) {
@@ -5616,7 +5724,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     dailyClimbs = null;
     dailyClimbIndices = null;
     dailyTheme = null; themeFound = [];
-    dailyRivals = []; rivalsRound = null;
+    dailyRivals = []; rivalsRound = null; lastPassPoints = 0;
     playerName = storedName || "";
     opponentName = "";
     matchMeta = null;
@@ -5690,16 +5798,26 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     return d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
   }
 
-  // Daily is always Easy · 3 Strikes, so the order is fixed: most words, then
-  // (themed days) most theme words found, then fewest wrong words, then fastest
-  // solve, then whoever finished first. Keep in sync with tools/stats/finalize.mjs.
+  // Daily leaderboard: most points (words + theme-word bonus points), then the
+  // fastest solving time, then whoever finished first. Keep in sync with
+  // tools/stats/finalize.mjs.
+  // A daily score: a point per word, plus a bonus point per theme word found.
+  const entrantPoints = (e) => (e.total || 0) + (e.themeWords || 0);
   function dailyCmp(a, b) {
+    return (entrantPoints(b) - entrantPoints(a)) ||
+      ((a.solveMs || 0) - (b.solveMs || 0)) ||
+      ((a.finishedAt || 0) - (b.finishedAt || 0));
+  }
+  // Days before NEW_RULES_DAY: most words, then theme words, fewest strikes, time.
+  function oldDailyCmp(a, b) {
     return ((b.total || 0) - (a.total || 0)) ||
       ((b.themeWords || 0) - (a.themeWords || 0)) ||
       ((a.strikes || 0) - (b.strikes || 0)) ||
       ((a.solveMs || 0) - (b.solveMs || 0)) ||
       ((a.finishedAt || 0) - (b.finishedAt || 0));
   }
+  const cmpForDay = (key) => (newRulesOn(dayBase(key)) ? dailyCmp : oldDailyCmp);
+  const scoreForDay = (key, e) => (newRulesOn(dayBase(key)) ? entrantPoints(e) : (e.total || 0));
 
   function dailyRow(rank, e, isMe) {
     const row = document.createElement("div");
@@ -5707,45 +5825,18 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     const r = document.createElement("div");
     r.className = "lb-rank";
     r.textContent = rank == null ? "·" : rank;
-    const nmwrap = document.createElement("div");
-    nmwrap.className = "lb-namewrap";
-    const nmrow = document.createElement("div");
-    nmrow.className = "lb-namerow";
+    // Just the player, their points and their time. Everything else (theme
+    // words, the no-hint badge, their words) is in the row's tap-to-expand.
     const nm = document.createElement("div");
     nm.className = "lb-name";
-    nm.textContent = (e.name || "?") + (isMe ? " (you)" : "");
-    nmrow.appendChild(nm);
-    // Strict === false, not just falsy: entries from before this field
-    // existed have hintUsed undefined, and we genuinely don't know whether
-    // they used one — only an explicit false earns the badge.
-    if (e.hintUsed === false) {
-      const star = document.createElement("span");
-      star.className = "lb-star";
-      star.title = "Completed without using a hint";
-      star.textContent = "★";
-      nmrow.appendChild(star);
-    }
-    nmwrap.appendChild(nmrow);
-    const meta = document.createElement("div");
-    meta.className = "lb-meta";
-    const st = e.strikes || 0;
-    meta.textContent = (st === 0 ? "clean" : st + (st === 1 ? " wrong word" : " wrong words")) +
-      " · " + fmtDuration(e.solveMs);
-    // Themed day: theme words found, the first tiebreaker after words.
-    let themeEl = null;
-    if (boardTheme) {
-      const tw = themeEl = document.createElement("div");
-      tw.className = "lb-theme" + ((e.themeWords || 0) === boardTheme.climbs.length ? " all" : "");
-      tw.textContent = boardTheme.theme.emoji + " " + (e.themeWords || 0) + "/" + boardTheme.climbs.length;
-      tw.title = "Theme words found";
-    }
-    nmwrap.appendChild(meta);
+    nm.textContent = shownName(e.name) + (isMe ? " (you)" : "");
     const sc = document.createElement("div");
     sc.className = "lb-score";
-    sc.textContent = e.total || 0;
-    row.appendChild(r); row.appendChild(nmwrap);
-    if (themeEl) row.appendChild(themeEl);
-    row.appendChild(sc);
+    sc.textContent = newRules(boardTheme) ? entrantPoints(e) : (e.total || 0);
+    const tm = document.createElement("div");
+    tm.className = "lb-time";
+    tm.textContent = fmtDuration(e.solveMs);
+    row.appendChild(r); row.appendChild(nm); row.appendChild(sc); row.appendChild(tm);
     // Tap a finisher's row to expand their words, climb by climb (themed days flag the theme words).
     row.addEventListener("click", () => toggleLbDetail(row, e, boardTheme));
     return row;
@@ -5798,12 +5889,12 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
       d.innerHTML = "<i></i><i></i><i></i>";
       return d;
     };
-    const tw = mode === "daily" && dailyTheme ? themeFound[round - 1] : null;
+    const themed = mode === "daily" && dailyTheme;
     words.forEach((w, i) => {
       const s = document.createElement("span");
       s.textContent = w;
       if (i === words.length - 1) s.className = "wordtrail-last";
-      if (w === tw) s.classList.add("wordtrail-theme");
+      if (themed && isThemeWord(dailyTheme, round - 1, w.toLowerCase())) s.classList.add("wordtrail-theme");
       trail.appendChild(s);
       trail.appendChild(dots());
     });
@@ -5896,11 +5987,42 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     const i = dayNumber(base) - dayNumber(CAL.start);
     const d = i >= 0 ? CAL.days[i] : null;
     const t = d ? {
-      index: i, id: d.t, theme: CAL.themes[d.t], tier: d.k, star: !!d.s,
+      index: i, base: base, id: d.t, theme: CAL.themes[d.t], tier: d.k, star: !!d.s,
       climbs: d.c.map((c) => ({ c: c, a: addedLetters(c) })), words: d.w,
     } : null;
     themedCache.set(base, t);
     return t;
+  }
+  // v0.10.0 scoring starts with the Oct 2 daily, for every player in every time
+  // zone: from then on every theme word on the theme's list is a bonus point and
+  // the board ranks by points. Earlier days keep their old rules (the calendar's
+  // theme word, at most one per climb, ranked by words first) so a day's board
+  // never mixes the two.
+  const NEW_RULES_DAY = "2026-10-02";
+  const newRulesOn = (base) => !!base && base >= NEW_RULES_DAY;
+  const newRules = (t) => !!t && newRulesOn(t.base);
+  // Is w a theme word? Anything on the theme's list (theme-words.js) counts,
+  // on any rung, plus the calendar's own theme words for climb i.
+  const themeSets = {};
+  function themeSet(id) {
+    if (!themeSets[id]) themeSets[id] = new Set(String((window.THEME_WORDS || {})[id] || "").split(" ").filter(Boolean));
+    return themeSets[id];
+  }
+  function isThemeWord(t, i, w) {
+    return !!(t && w) && ((newRules(t) && themeSet(t.id).has(w)) || ((t.words && t.words[i]) || []).includes(w));
+  }
+  // The theme words among a climb's words (each one is a bonus point; old days: the first only).
+  const themeHits = (t, i, words) => {
+    const hits = (words || []).filter((w) => isThemeWord(t, i, w));
+    return newRules(t) ? hits : hits.slice(0, 1);
+  };
+  // Bonus points so far in today's run: every theme word, every climb.
+  function themeBonusSoFar() {
+    if (!dailyTheme || !dailyClimbs) return 0;
+    let n = 0;
+    for (let i = 0; i < dailyClimbs.length; i++)
+      n += themeHits(dailyTheme, i, i === round - 1 ? currentRoundWords : roundWords[i]).length;
+    return n;
   }
   // "a food word" / "an animal word"
   function themePhrase(t) { return (/^[aeiou]/i.test(t.theme.word) ? "An " : "A ") + t.theme.word; }
@@ -5958,6 +6080,8 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     renderThemeStrip();
     show("play");
     beginStage();
+    if (round === 2 && mode === "daily" && dailyTheme)
+      coachTip("nextclimb", () => $("#themestrip .ts-chips"), "Climb 2 of " + climbRounds() + ". Each climb has its own " + dailyTheme.theme.word + ".", "", { below: true, ms: 6000 });
   }
 
   function startClimbSession() {
@@ -5994,6 +6118,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     startClimbSession();
     climbPuzzle = CLIMBS[seedIndex];
     beginClimbRound();
+    startIntro();
   }
 
   function climbNext() {
@@ -6013,13 +6138,15 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     currentRoundWords.push(g);
     renderAscentMini();
     // Theme word: only that exact word counts (CAUSE doesn't find SAUCE).
-    const foundTheme = mode === "daily" && dailyTheme && !themeFound[round - 1] &&
-      dailyTheme.words[round - 1].indexOf(g) > -1;
+    const foundTheme = mode === "daily" && dailyTheme && isThemeWord(dailyTheme, round - 1, g) &&
+      (newRules(dailyTheme) || !themeFound[round - 1]);
     if (foundTheme) {
-      themeFound[round - 1] = g;
+      if (!themeFound[round - 1]) themeFound[round - 1] = g;   // the first one names the climb's flag
       renderThemeStrip();
-      ascentToast(dailyTheme.theme.emoji + " " + capFirst(dailyTheme.theme.word.replace(/ word$/, "")) + " word! " + g.toUpperCase(), true);
-    } else if (mode === "daily") announcePasses(dailyWordsSoFar());
+      ascentToast(capFirst(dailyTheme.theme.word.replace(/ word$/, "")) + " word! " + g.toUpperCase(), true);
+      if (climbStage < climbLen() && newRules(dailyTheme))   // at the top, the climb's results screen says it instead
+        coachTip("theme", () => $("#themestrip .ts-flag.fresh"), "That's a " + dailyTheme.theme.word + ": 2 points!", "Its flag turns gold up here.", { below: true, gold: true, ms: 6000 });
+    } else if (mode === "daily") announcePasses(dailyWordsSoFar() + (newRules(dailyTheme) ? themeBonusSoFar() : 0));
     climbPrev = g;
     locked = true;
     checking = false;
@@ -6037,7 +6164,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
       msg("Nice — “" + g.toUpperCase() + "”", "good");
       FX.play("accept"); buzz([8, 24, 8]);
       fxClass($("#answer"), "fx-good"); waveAnswer();
-      setTimeout(climbNext, 750);
+      setTimeout(climbNext, 450);   // short beat, then the next letter drops in
     }
   }
 
@@ -6085,32 +6212,31 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     $("#cre-title").textContent = "Climb " + round + " of " + climbRounds();
     $("#cre-label").textContent = completed ? "Cleared" : "You cleared";
     fillChips($("#cre-words"), currentRoundWords);
-    if (themed && themeFound[round - 1]) {
-      const chip = [...$("#cre-words").children].find((c) => (c.dataset.word || c.textContent).toLowerCase() === themeFound[round - 1]);
-      if (chip) chip.classList.add("tw");
-    }
+    const hits = themed ? themeHits(dailyTheme, round - 1, currentRoundWords) : [];
+    [...$("#cre-words").children].forEach((c) => { if (hits.includes((c.dataset.word || c.textContent).toLowerCase())) c.classList.add("tw"); });
     $("#cre-count").textContent = completed ? "all " + climbLen() + " words" : got + " of " + climbLen() + " words";
     // Theme word: found, or which word it was (and what they played on that rung).
     const tr = $("#cre-theme");
     tr.hidden = !themed;
     if (themed) {
       const r = themeRevealFor(round - 1, currentRoundWords);
-      const em = dailyTheme.theme.emoji, kind = dailyTheme.theme.word;
-      tr.className = "theme-reveal " + (themeFound[round - 1] ? "got" : "miss");
+      const kind = dailyTheme.theme.word;
+      tr.className = "theme-reveal " + (hits.length ? "got" : "miss");
       tr.replaceChildren();
       const b = document.createElement("b");
-      if (themeFound[round - 1]) {
-        b.textContent = themeFound[round - 1].toUpperCase();
-        tr.append(em + " " + capFirst(kind) + " found: ", b, " ✓");
+      if (hits.length) {
+        b.textContent = hits.map((w) => w.toUpperCase()).join(", ");
+        tr.append(capFirst(kind) + (hits.length > 1 ? "s" : "") + " found: ", b,
+          newRules(dailyTheme) ? " ✓ +" + hits.length + " bonus point" + (hits.length > 1 ? "s" : "") : " ✓");
       } else if (r.played && r.played !== r.word) {
         const you = document.createElement("span");
         you.className = "you";
         you.textContent = r.played.toUpperCase();
         b.textContent = r.word.toUpperCase();
-        tr.append(em + " You played ", you, ". The " + kind + " was ", b, ".");
+        tr.append("You played ", you, ". The " + kind + " was ", b, ".");
       } else {
         b.textContent = r.word.toUpperCase();
-        tr.append(em + " The " + kind + " was ", b, ".");
+        tr.append("The " + kind + " was ", b, ".");
       }
     }
     const showEx = !completed;
@@ -6134,22 +6260,31 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     const el = $("#themestrip");
     if (mode !== "daily" || !dailyTheme) { el.hidden = true; return; }
     el.hidden = false;
+    el.classList.add("tappable");
+    el.title = "What's the theme?";
     el.replaceChildren();
-    const lab = document.createElement("span");
-    lab.className = "ts-lab";
-    lab.textContent = dailyTheme.theme.emoji + " " + dailyTheme.theme.name.toUpperCase();
-    el.appendChild(lab);
+    const k = document.createElement("span");
+    k.className = "ts-k";
+    k.textContent = "Today's theme";
+    const name = document.createElement("span");
+    name.className = "ts-name";
+    name.textContent = dailyTheme.theme.name;
+    const chips = document.createElement("div");
+    chips.className = "ts-chips";
+    el.append(k, name, chips);
     const labels = [];
     for (let j = 0; j < dailyClimbs.length; j++) {
       const f = document.createElement("span");
       const got = themeFound[j];
       const missed = !got && j < round - 1;
-      f.className = "ts-flag" + (got ? " got" + (j === round - 1 ? " fresh" : "") : missed ? " miss" : "");
+      const now = j === round - 1;
+      f.className = "ts-flag" + (got ? " got" + (now ? " fresh" : "") : missed ? " miss" : now ? " now" : "");
       f.innerHTML = TS_FLAG;
-      const w = got ? got : missed ? themeRevealFor(j, roundWords[j] || []).word : "?";
-      f.append(w.toUpperCase());
-      labels.push(got ? "found " + got : missed ? "missed" : "not found yet");
-      el.appendChild(f);
+      const more = got ? themeHits(dailyTheme, j, now ? currentRoundWords : roundWords[j]).length - 1 : 0;
+      const w = got ? got.toUpperCase() + (more > 0 ? " +" + more : "") : missed ? themeRevealFor(j, roundWords[j] || []).word.toUpperCase() : "Climb " + (j + 1);
+      f.append(w);
+      labels.push("climb " + (j + 1) + (got ? ": found " + got : missed ? ": missed" : now ? ": playing now" : ""));
+      chips.appendChild(f);
     }
     el.setAttribute("aria-label", "Today's theme: " + dailyTheme.theme.name + ". " + labels.join(", "));
   }
@@ -6178,15 +6313,19 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
       if (!entrants || mode !== "daily" || dailyDay !== day) return;
       const myUid = window.MatchDB.uid;
       dailyRivals = entrants.filter((e) => e.uid !== myUid)
-        .map((e) => ({ name: (e.name || "Someone").trim() || "Someone", total: e.total || 0 }));
+        .map((e) => ({ name: shownName((e.name || "").trim(), "Someone"), total: scoreForDay(day, e) }));
     });
   }
 
-  // "You beat Priya" the moment your word count moves past an earlier
-  // finisher's. Beating is final: scores only go up. Drawing level isn't
-  // announced — a tie still goes to fewer wrong words, then speed.
-  function announcePasses(total) {
-    const beat = dailyRivals.filter((r) => r.total === total - 1).map((r) => r.name);
+  // "You beat Priya" the moment your points move past an earlier finisher's
+  // (a theme word can jump you two at once). Beating is final: scores only go
+  // up. Drawing level isn't announced — a tie still goes to the faster time.
+  let lastPassPoints = 0;
+  function announcePasses(points) {
+    const prev = lastPassPoints;
+    lastPassPoints = points;
+    if (points <= prev) return;
+    const beat = dailyRivals.filter((r) => r.total >= prev && r.total < points).map((r) => r.name);
     const names = (arr) => arr.length <= 3 ? arr.join(", ").replace(/, ([^,]*)$/, " and $1") : arr.slice(0, 2).join(", ") + " +" + (arr.length - 2);
     if (beat.length) ascentToast("You beat " + names(beat));
   }
@@ -6228,7 +6367,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     // (only its glow shows), clears the peaks around the end of climb 1, and
     // finishes high in the sky behind the timer — overflow:visible on the SVG
     // lets it rise past the strip's top edge into the ::before sky.
-    const sunY = 58 - climberFrac * 153;
+    const sunY = 58 - climberFrac * 50;   // rises, but stays clear of the climb
     $("#ascentSun").setAttribute("cy", sunY);
     $("#ascentSunGlow").setAttribute("cy", sunY);
     $("#ascentSun").setAttribute("opacity", 0.55 + climberFrac * 0.45);
@@ -6385,6 +6524,168 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     try { return localStorage.getItem("three21.dev") === "1"; } catch (e) { return false; }
   }
 
+  // ---- Today's theme card ----
+  // An example per theme: an ordinary word (1 point) and the same letters
+  // spelling a theme word (2 points). Neither word of any pair is ever in a
+  // daily climb, so the example spoils nothing.
+  const THEME_CARD_KEY = "three21.themeCardDay";
+  const THEME_EXAMPLES = {
+    ocean: ["reef", "free"], food: ["peach", "cheap"], sports: ["skate", "steak"], weather: ["frost", "forts"],
+    animals: ["wolf", "flow"], music: ["verse", "sever"], space: ["mars", "arms"], garden: ["petal", "plate"],
+    travel: ["depart", "parted"], home: ["lamp", "palm"], clothing: ["robe", "bore"], treasure: ["coins", "icons"],
+    colors: ["lime", "mile"], art: ["draw", "ward"], jobs: ["baker", "break"], school: ["grade", "raged"],
+    party: ["feast", "fates"], holidays: ["tinsel", "enlist"], spooky: ["bats", "stab"], royalty: ["regal", "large"],
+    feelings: ["tense", "teens"], body: ["elbow", "below"], road: ["detour", "routed"], fire: ["spark", "parks"],
+    games: ["dice", "iced"], farm: ["field", "filed"], mountains: ["slope", "poles"], time: ["dawn", "wand"],
+    numbers: ["dozen", "zoned"], family: ["aunt", "tuna"], movies: ["cast", "cats"], science: ["atom", "moat"],
+    money: ["dues", "used"], tools: ["lever", "revel"], mystery: ["prints", "sprint"],
+  };
+  let themeCardOpenAt = 0;
+  function themeCardExample(t) {
+    const ex = THEME_EXAMPLES[t.id];
+    return ex ? { word: ex[0], decoy: ex[1] } : null;   // a new theme without one: plain labels instead
+  }
+  function themeCardShown(day) {
+    try { return localStorage.getItem(THEME_CARD_KEY) === dayBase(day); } catch (e) { return false; }
+  }
+  function openThemeCard() {
+    if (!dailyTheme || themeCardOpenAt) return;
+    try { localStorage.setItem(THEME_CARD_KEY, dayBase(dailyDay)); } catch (e) {}
+    $("#tc-name").textContent = dailyTheme.theme.name;
+    const ex = themeCardExample(dailyTheme);
+    const legend = $("#tc-legend");
+    legend.replaceChildren();
+    const keyRow = (word, label, pts, gold) => {
+      let lead;
+      if (word) {
+        lead = document.createElement("div");
+        lead.className = "tc-word";
+        lead.setAttribute("aria-label", word);
+        word.split("").forEach((ch) => { const t = document.createElement("span"); t.className = "tc-sw" + (gold ? " gold" : " plain"); t.textContent = ch; lead.appendChild(t); });
+      } else {   // a theme without an example: just say it
+        lead = document.createElement("span");
+        lead.className = "tc-plain";
+        lead.textContent = label;
+      }
+      const p = document.createElement("span");
+      p.className = "tc-pts" + (gold ? " g" : "");
+      p.textContent = pts;
+      legend.append(lead, p);
+    };
+    keyRow(ex && ex.decoy, "Any word", "1 point", false);
+    keyRow(ex && ex.word, "On-theme word", "2 points", true);
+    $("#tc-ex-lab").hidden = !ex;
+    themeCardOpenAt = Date.now();
+    pauseDailyTimer();            // the clock (and this word's solve time) waits for the card
+    $("#theme-card").hidden = false;
+    setTimeout(() => $("#btn-theme-card").focus(), 50);
+  }
+  function closeThemeCard() {
+    if (!themeCardOpenAt) return;
+    if (stageShownAt) stageShownAt += Date.now() - themeCardOpenAt;
+    themeCardOpenAt = 0;
+    $("#theme-card").hidden = true;
+    if (dailySessionActive && !document.hidden) startDailyTimer();
+    stageTips();
+  }
+  $("#btn-theme-card").addEventListener("click", closeThemeCard);
+
+  // ---- How to play card ----
+  // First Play for a new player: this card, then today's theme card, then the
+  // game (with one-time tips). The clock waits while either card is open.
+  let howtoOpenAt = 0, howtoInGame = false;
+  const TIPS_KEY = "three21.tips", TIPS_ON_KEY = "three21.tipsOn";
+  function openHowto(inGame) {
+    howtoInGame = !!inGame;
+    $("#btn-howto-go").textContent = inGame ? "Let's climb" : "Got it";
+    if (inGame) {
+      howtoOpenAt = Date.now();
+      pauseDailyTimer();
+      try { localStorage.setItem(TIPS_ON_KEY, "1"); } catch (e) {}   // a new player: tips on for their first game
+    }
+    $("#howto-card").hidden = false;
+    setTimeout(() => $("#btn-howto-go").focus(), 50);
+  }
+  function closeHowto() {
+    if ($("#howto-card").hidden) return;
+    $("#howto-card").hidden = true;
+    $("#rules-sheet").hidden = true;
+    tutorialSeen = true;
+    if (window.MatchDB && window.MatchDB.markTutorialSeen) window.MatchDB.markTutorialSeen();
+    try { localStorage.setItem("three21.tut", "1"); } catch (e) {}
+    if (!howtoInGame) return;
+    if (stageShownAt && howtoOpenAt) stageShownAt += Date.now() - howtoOpenAt;
+    howtoOpenAt = 0;
+    if (dailySessionActive && !document.hidden) startDailyTimer();
+    if (mode === "daily" && newRules(dailyTheme) && !themeCardShown(dailyDay)) openThemeCard();
+    else stageTips();
+  }
+  // Before the first word of a session: the How to play card for a new player,
+  // otherwise today's theme card (once a day).
+  function startIntro() {
+    if (!tutorialSeen) { openHowto(true); return; }
+    if (mode === "daily" && newRules(dailyTheme) && !themeCardShown(dailyDay)) openThemeCard();
+  }
+  $("#btn-howto-go").addEventListener("click", closeHowto);
+  $("#btn-howto-rules").addEventListener("click", () => { $("#rules-sheet").hidden = false; setTimeout(() => $("#btn-rules-close").focus(), 50); });
+  $("#btn-rules-close").addEventListener("click", () => { $("#rules-sheet").hidden = true; $("#btn-howto-go").focus(); });
+
+  // ---- One-time tips in a new player's first game ----
+  // Each shows once (remembered on this device), points at the thing it's
+  // about, and goes away on the next tap (or by itself for the info ones).
+  let tipsSeen;
+  try { tipsSeen = new Set(JSON.parse(localStorage.getItem(TIPS_KEY) || "[]")); } catch (e) { tipsSeen = new Set(); }
+  let coachId = null, coachAt = 0, coachT = null, coachPending = null, stuckT = null;
+  const tipsOn = () => { try { return localStorage.getItem(TIPS_ON_KEY) === "1"; } catch (e) { return false; } };
+  function coachTip(id, anchor, text, sub, opts) {
+    opts = opts || {};
+    if (!tipsOn() || tipsSeen.has(id) || !isClimb() || screens.play.hidden) return;
+    if (themeCardOpenAt || howtoOpenAt || !$("#forfeit-confirm").hidden) return;
+    if (coachId && Date.now() - coachAt < 2500) { coachPending = [id, anchor, text, sub, opts]; return; }   // one at a time
+    const a = typeof anchor === "function" ? anchor() : anchor;
+    if (!a || !a.getClientRects().length) return;
+    tipsSeen.add(id);
+    try { localStorage.setItem(TIPS_KEY, JSON.stringify([...tipsSeen])); } catch (e) {}
+    const el = $("#coach");
+    $("#coach-t").textContent = text;
+    $("#coach-s").textContent = sub || "";
+    el.className = "coach " + (opts.below ? "up" : "down") + (opts.gold ? " gold" : "");
+    el.hidden = false;
+    const r = a.getBoundingClientRect(), w = el.offsetWidth, hgt = el.offsetHeight;
+    const left = Math.max(12, Math.min(window.innerWidth - w - 12, r.left + r.width / 2 - w / 2));
+    el.style.left = left + "px";
+    el.style.top = (opts.below ? r.bottom + 10 : r.top - hgt - 10) + "px";
+    el.style.setProperty("--ax", Math.max(14, Math.min(w - 14, r.left + r.width / 2 - left)) + "px");
+    coachId = id; coachAt = Date.now();
+    clearTimeout(coachT);
+    if (opts.ms) coachT = setTimeout(() => hideCoach(id), opts.ms);
+  }
+  function hideCoach(id) {
+    if (!coachId || (id && coachId !== id)) return;
+    $("#coach").hidden = true;
+    coachId = null;
+    clearTimeout(coachT);
+    if (coachPending) { const p = coachPending; coachPending = null; setTimeout(() => coachTip.apply(null, p), 250); }
+  }
+  document.addEventListener("pointerdown", () => { if (coachId && Date.now() - coachAt > 300) hideCoach(); }, true);
+  document.addEventListener("keydown", () => { if (coachId && Date.now() - coachAt > 300) hideCoach(); }, true);
+  window.addEventListener("resize", () => hideCoach());
+  // Called as each word starts (and when a card closes): the first word, or a fresh letter.
+  function stageTips() {
+    if (!isClimb() || screens.play.hidden) return;
+    if (coachId === "tap" || coachId === "enter") hideCoach();   // done with those: a new word is up
+    clearTimeout(stuckT);
+    if (tipsOn() && !tipsSeen.has("stuck")) stuckT = setTimeout(() => {
+      if (screens.play.hidden || locked || document.hidden) return;
+      const hintOk = mode === "daily" && !$("#btn-hint").hidden && !hintUsed;
+      coachTip("stuck", $("#btn-shuffle"), hintOk ? "Stuck? Shuffle the letters, or use your hint." : "Stuck? Try shuffling the letters.",
+        hintOk ? "You get one hint a day." : "", { ms: 8000 });
+    }, 45000);
+    if (stage === 1) coachTip("tap", $("#tray"), "Tap the letters to spell a word", "or drag them into place");
+    else setTimeout(() => coachTip("newletter", () => $("#tray .tile.new"), "A new letter dropped in. Use every letter!", "", { below: true, ms: 6000 }), 700);
+  }
+  $("#themestrip").addEventListener("click", () => { if (mode === "daily" && dailyTheme && !screens.play.hidden) openThemeCard(); });
+
   function startDailySession() {
     if (!dictReady || !CLIMBS.length) { setTimeout(startDailySession, 100); return; }
     clearResume();
@@ -6401,6 +6702,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     if (!isDev()) window.MatchDB.track("daily_start", { day: dailyDay });
     climbPuzzle = dailyClimbs[0];
     beginClimbRound();
+    startIntro();
   }
 
   async function submitDailyResult(totalRungs) {
@@ -6424,7 +6726,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
         name: storedName || playerName || "Player",
         total: total, strikes: sessionStrikes, solveMs: solveMs, roundWords: roundWords,
         hintUsed: hintUsed,
-        ...(dailyTheme ? { themeWords: themeFound.filter(Boolean).length, max: dailyMax(), theme: dailyTheme.id } : {}),
+        ...(dailyTheme ? { themeWords: themeBonusSoFar(), max: dailyMax(), theme: dailyTheme.id } : {}),
       });
       await window.MatchDB.bumpStreak(dailyDay, prevDay);
       const p = await window.MatchDB.getPlayer();
@@ -6433,7 +6735,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     } catch (e) {}
     // Profile + trophies: today counts right away (final place comes tomorrow).
     setTodayResult(Object.assign({ t: total, s: sessionStrikes, ms: solveMs, h: hintUsed, at: Date.now() },
-      dailyTheme ? { m: dailyMax(), th: themeFound.filter(Boolean).length, tf: themeFound.slice(),
+      dailyTheme ? { m: dailyMax(), th: themeBonusSoFar(), tf: themeFound.slice(),
         tp: dailyClimbs.map((_, i) => themeRevealFor(i, roundWords[i] || []).played) } : {}));
     checkTrophies();
     clearResume();
@@ -6441,23 +6743,59 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     if (totalRungs >= dailyMax() * 2 / 3) setTimeout(() => confetti({ big: totalRungs >= dailyMax() * 0.88 }), 350);
   }
 
+  // Right after your daily, your own row opens so you can see where your
+  // points came from, and (the first few times) a tip points at everyone else.
+  const TAP_TIP_KEY = "three21.tapTipShown", TAP_TIP_TIMES = 3;
+  let tapTipOn = false;
   function renderDailyBoard(entrants, dayKey, opts) {
     opts = opts || {};
     const myUid = window.MatchDB && window.MatchDB.uid;
-    const done = entrants.slice().sort(dailyCmp);
+    const done = entrants.slice().sort(cmpForDay(dayKey));
+    $("#daily-board-head .h-score").textContent = newRulesOn(dayBase(dayKey)) ? "Points" : "Words";
     const list = $("#daily-board-list");
+    // A live board re-renders as people finish: keep whichever row was open.
+    const openDetail = list.querySelector(".lb-detail");
+    let openUid = openDetail && openDetail.previousElementSibling ? openDetail.previousElementSibling.dataset.uid : null;
+    if (opts.justFinished && !opts._juiced && myUid) {
+      openUid = myUid;
+      let shown = 0;
+      try { shown = +localStorage.getItem(TAP_TIP_KEY) || 0; } catch (err) {}
+      tapTipOn = done.length > 1 && shown < TAP_TIP_TIMES;
+      if (tapTipOn) try { localStorage.setItem(TAP_TIP_KEY, shown + 1); } catch (err) {}
+    }
     list.innerHTML = "";
+    $("#daily-board-head").hidden = !done.length;
     if (!done.length) {
       list.innerHTML = "<p class='note'>No one's finished this one yet.</p>";
     } else {
       done.forEach((e, i) => {
         const row = dailyRow(i + 1, e, e.uid === myUid);
         row.dataset.total = e.total || 0;
-        row.addEventListener("click", () => setBoardFocus(boardFocus === (e.total || 0) ? null : (e.total || 0)));
+        row.dataset.uid = e.uid || "";
+        row.addEventListener("click", () => {
+          setBoardFocus(boardFocusUid === row.dataset.uid ? null : (e.total || 0), row.dataset.uid);
+          if (tapTipOn) { tapTipOn = false; const tip = $("#daily-board-mtn .lb-tip"); if (tip) tip.remove(); }
+        });
         list.appendChild(row);
       });
+      const openRow = openUid && list.querySelector('.lb-row[data-uid="' + CSS.escape(openUid) + '"]');
+      if (openRow) {
+        toggleLbDetail(openRow, done.find((e) => e.uid === openUid), boardTheme);
+        // Just finished: scroll the list (not the page) so your row sits at the top.
+        if (opts.justFinished && !opts._juiced) requestAnimationFrame(() => {
+          list.scrollTop += openRow.getBoundingClientRect().top - list.getBoundingClientRect().top - 2;
+        });
+      }
     }
     renderBoardMountain(done, myUid);
+    // The tip floats over the foot of the mountain, pointing down at the list
+    // (your open row can fill the list, so it can't live in there).
+    if (tapTipOn && done.length) {
+      const tip = document.createElement("div");
+      tip.className = "lb-tip";
+      tip.textContent = "Tap any player to see their words";
+      $("#daily-board-mtn").appendChild(tip);
+    }
     const mine = done.findIndex((e) => e.uid === myUid);
     let foot = done.length + (done.length === 1 ? " player" : " players");
     if (mine >= 0) foot += " · you're " + ordinal(mine + 1);
@@ -6537,7 +6875,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
       if (!spots.has(t)) spots.set(t, []);
       spots.get(t).push(e);
     });
-    const initial = (e) => ([...String(e.name || "?").trim()][0] || "?").toUpperCase();
+    const initial = (e) => ([...shownName(String(e.name || "").trim())][0] || "?").toUpperCase();
     // Swallowtail pennant off a pole. `left` flies it the other way so it
     // clears a flag planted one word further up the trail.
     const pennant = (g, x, y, label, mine, w, left) => {
@@ -6565,14 +6903,16 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
       vis.forEach((e, i) => pennant(g, p.x, p.y - H + i * 7, initial(e), isMine(e), 9, left));
       if (extra) pennant(g, p.x, p.y - H + vis.length * 7, "+" + extra, hasMe && !vis.some(isMine), 11, left);
       svgEl("rect", { x: left ? p.x - 13 : p.x - 3, y: p.y - H - 2, width: 16, height: H + 5, fill: "transparent" }, g);
-      g.addEventListener("click", (ev) => { ev.stopPropagation(); setBoardFocus(boardFocus === t ? null : t); });
+      g.addEventListener("click", (ev) => { ev.stopPropagation(); setBoardFocus(boardFocus === t && !boardFocusUid ? null : t); });
     });
     applyBoardFocus(done, myUid);
   }
 
   let boardLastDone = {}; // {done, myUid} from the last render, for the callout's names
-  function setBoardFocus(t) {
+  let boardFocusUid = null; // set when a row was tapped: light only that player's row
+  function setBoardFocus(t, uid) {
     boardFocus = t;
+    boardFocusUid = t == null ? null : (uid || null);
     applyBoardFocus();
   }
   function applyBoardFocus(done, myUid) {
@@ -6586,7 +6926,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     wrap.querySelectorAll(".bflag").forEach((f) => f.classList.toggle("hl", +f.dataset.total === boardFocus));
     let first = null;
     document.querySelectorAll("#daily-board-list .lb-row").forEach((r) => {
-      const on = boardFocus != null && +r.dataset.total === boardFocus;
+      const on = boardFocus != null && (boardFocusUid ? r.dataset.uid === boardFocusUid : +r.dataset.total === boardFocus);
       r.classList.toggle("spot", on);
       if (on && !first) first = r;
     });
@@ -6599,7 +6939,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     // Callout above the pole: where it is + who's there.
     const { done: all, myUid: me } = boardLastDone;
     const people = (all || []).filter((e) => Math.min(boardMax, e.total || 0) === boardFocus);
-    const names = people.map((e) => (e.uid === me ? "you" : (e.name || "?")));
+    const names = people.map((e) => (e.uid === me ? "you" : shownName(e.name)));
     const c = document.createElement("div");
     c.className = "board-callout";
     const head = document.createElement("b");
@@ -6633,8 +6973,8 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     boardMax = dayMaxFor(dayKey);
     $("#daily-board-title").textContent = isToday ? "Today's climb" : dateLabel(dayKey);
     $("#daily-board-sub").textContent = (boardTheme
-      ? boardTheme.theme.emoji + " " + boardTheme.theme.name + " · " + DAY_TIER[boardTheme.tier] + " · " + boardMax + " words"
-      : "3 climbs · score is words solved") + (isToday ? " · " + dailyResetText() : "");
+      ? boardTheme.theme.name + " · " + DAY_TIER[boardTheme.tier] + " · " + boardMax + " words" + (newRules(boardTheme) ? " + theme bonus" : "")
+      : "3 climbs · a point per word") + (isToday ? " · " + dailyResetText() : "");
 
     const pill = $("#daily-board-streak");
     if (pill) {
@@ -6723,8 +7063,6 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     box.hidden = !t;
     if (!t) return;
     box.classList.toggle("after", !!playedToday);   // peaks a little smaller once played
-    $("#tt-emoji").textContent = t.theme.emoji;
-    $("#tt-name").textContent = t.theme.name.toUpperCase();
     // After playing (this device knows which theme words were found): flags + what was missed.
     const r = playedToday && result && result.base === dayBase(dailyKeyOf()) && Array.isArray(result.tf) ? result : null;
     const flags = t.climbs.map((p, i) => {
@@ -6879,8 +7217,9 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
       t.words.forEach((ws, i) => { const b = document.createElement("b"); b.textContent = ws[0].toUpperCase(); tw.append(i ? ", " : "", b); });
     }
     if (r) {
-      el("p", "cal-note you", "You got " + (r.t || 0) + " of " + (r.m || words) + " words" +
-        (r.th != null ? " · " + t.theme.emoji + " " + r.th + "/" + t.climbs.length : "") +
+      el("p", "cal-note you", (r.th != null
+          ? "You scored " + ((r.t || 0) + r.th) + " points: " + (r.t || 0) + " words + " + r.th + " " + t.theme.emoji + " bonus"
+          : "You got " + (r.t || 0) + " of " + (r.m || words) + " words") +
         (r.r && r.n ? " · " + ordinal(r.r) + " of " + r.n : ""));
     } else if (calSel < today) {
       el("p", "cal-note", "You didn't play this one.");
@@ -6936,7 +7275,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   }
 
   // Play goes straight into today's climb — no separate intro/confirm screen
-  // (the tutorial covers the rules; the home Play button is unmistakably the
+  // (How to play and the theme card cover the rules; the home Play button is unmistakably the
   // daily). Already played → today's board; mid-run → resume.
   let dailyPlayBusy = false; // ignore extra taps while the server check below is in flight
   async function dailyPlayClick() {
@@ -7206,7 +7545,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     nmwrap.className = "lb-namewrap";
     const nm = document.createElement("div");
     nm.className = "lb-name";
-    nm.textContent = (e.name || "?") + (isMe ? " (you)" : "") + (e.late && e.done ? " · for fun" : "");
+    nm.textContent = shownName(e.name) + (isMe ? " (you)" : "") + (e.late && e.done ? " · for fun" : "");
     nmwrap.appendChild(nm);
     if (e.done && normFormat(format) === "guesses" && typeof e.strikes === "number") {
       const meta = document.createElement("div");
@@ -7227,15 +7566,15 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     return row;
   }
 
-  // Which rung of climb i is the theme rung for these words, and did they find it?
-  // (Any of the climb's theme words counts.)
-  function themeRung(theme, i, words) {
+  // Climb i's theme words for these words: every rung that's a theme word
+  // (found), or, if none, the calendar's theme rung (missed).
+  function themeRungs(theme, i, words) {
+    const found = [];
+    (words || []).forEach((w, rung) => { if (isThemeWord(theme, i, w)) found.push({ rung: rung, found: true, word: w }); });
+    if (found.length) return found;
     const tws = (theme.words && theme.words[i]) || [];
-    if (!tws.length) return null;
-    const hit = words.findIndex((w) => tws.includes(w));
-    if (hit >= 0) return { rung: hit, found: true, word: words[hit] };
-    const rung = theme.climbs[i].c.indexOf(tws[0]);
-    return rung >= 0 ? { rung: rung, found: false, word: tws[0] } : null;
+    const rung = tws.length ? theme.climbs[i].c.indexOf(tws[0]) : -1;
+    return rung >= 0 ? [{ rung: rung, found: false, word: tws[0] }] : [];
   }
   function themeFlagSvg(found, cls) {
     const ns = "http://www.w3.org/2000/svg";
@@ -7255,10 +7594,14 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   function themeFlagStrip(theme, wordsByRound) {
     const box = document.createElement("div");
     box.className = "lb-flags";
-    const marks = theme.climbs.map((_, i) => themeRung(theme, i, wordsByRound[i] || []) || { found: false, word: theme.words[i][0] });
+    const marks = [].concat(...theme.climbs.map((_, i) => {
+      const r = themeRungs(theme, i, wordsByRound[i] || []);
+      return r.length ? r : [{ found: false, word: theme.words[i][0] }];
+    }));
+    const n = marks.filter((m) => m.found).length;
     const lab = document.createElement("div");
     lab.className = "lb-flags-lab";
-    lab.textContent = theme.theme.emoji + " " + theme.theme.name + " · " + marks.filter((m) => m.found).length + " of " + marks.length + " theme words";
+    lab.textContent = theme.theme.name + " · " + n + " theme word" + (n === 1 ? "" : "s");
     const rowEl = document.createElement("div");
     rowEl.className = "lb-flags-row";
     marks.forEach((m) => {
@@ -7427,7 +7770,29 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   $("#btn-return").addEventListener("click", returnAll);
   $("#btn-shuffle").addEventListener("click", doShuffle);
   $("#btn-hint").addEventListener("click", useHint);
-  $("#btn-endround").addEventListener("click", endRound);
+  $("#btn-endround").addEventListener("click", () => { if (isClimb()) openForfeit(); else endRound(); });
+  function openForfeit() {
+    if (locked || checking || screens.play.hidden) return;
+    const n = currentRoundWords.length;
+    const body = $("#ff-body");
+    body.replaceChildren();
+    const last = mode === "daily" && round >= climbRounds();
+    const which = mode === "daily" ? "climb " + round : "this climb";
+    if (n) {
+      const b = document.createElement("b");
+      b.textContent = wordsLabel(n);
+      body.append("You keep the ", b, " you've climbed, but you can't come back to " + which + ".");
+    } else {
+      body.append("You haven't climbed any words yet, and you can't come back to " + which + ".");
+    }
+    if (mode === "daily" && !last) body.append(" Then it's on to the next one.");
+    $("#forfeit-confirm").hidden = false;
+    setTimeout(() => $("#btn-ff-keep").focus(), 50);
+  }
+  function closeForfeit() { $("#forfeit-confirm").hidden = true; }
+  $("#btn-ff-keep").addEventListener("click", closeForfeit);
+  $("#btn-ff-go").addEventListener("click", () => { closeForfeit(); endRound(); });
+  $("#forfeit-confirm").addEventListener("click", (e) => { if (e.target.id === "forfeit-confirm") closeForfeit(); });
   $("#btn-start").addEventListener("click", startSession);
 
   // Quit to menu (shown during play) — two taps so a stray tap can't drop the game.
@@ -7451,9 +7816,12 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   $("#btn-start-resume").addEventListener("click", resumeGame);
 
   document.addEventListener("keydown", (e) => {
-    if (!screens.tutorial.hidden && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
-      e.preventDefault();
-      e.key === "ArrowRight" ? tutNext() : tutPrev();
+    if (!$("#rules-sheet").hidden && (e.key === "Enter" || e.key === "Escape")) { e.preventDefault(); $("#btn-rules-close").click(); return; }
+    if (!$("#howto-card").hidden && (e.key === "Enter" || e.key === "Escape")) { e.preventDefault(); closeHowto(); return; }
+    if (themeCardOpenAt && (e.key === "Enter" || e.key === "Escape")) { e.preventDefault(); closeThemeCard(); return; }
+    if (!$("#forfeit-confirm").hidden) {
+      if (e.key === "Escape" || (e.key === "Enter" && document.activeElement && document.activeElement.id !== "btn-ff-go")) { e.preventDefault(); closeForfeit(); }
+      if (e.key === "Enter" && document.activeElement && document.activeElement.id === "btn-ff-go") { e.preventDefault(); closeForfeit(); endRound(); }
       return;
     }
     if (e.key !== "Enter") return;
@@ -7462,8 +7830,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     else if (!screens.over.hidden) { e.preventDefault(); startSession(); }
     else if (!screens.climbintro.hidden && !$("#btn-climb-start").disabled) { e.preventDefault(); startClimb(); }
     else if (!screens.climbover.hidden) { e.preventDefault(); startClimb(); }
-    else if (!screens.climbroundend.hidden) { e.preventDefault(); climbRoundContinue(); }
-    else if (!screens.tutorial.hidden) { e.preventDefault(); tutNext(); }
+    else if (!screens.climbroundend.hidden) { e.preventDefault(); climbRoundEndContinue(); }
     else if (!screens.start.hidden && !$("#btn-start").disabled) { e.preventDefault(); startSession(); }
   });
 
@@ -7665,25 +8032,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
     if (e.key === "Enter") { e.preventDefault(); nameContinue(); }
   });
 
-  $("#tut-next").addEventListener("click", tutNext);
-  $("#tut-skip").addEventListener("click", finishTutorial);
-
-  // Swipe anywhere on the tutorial screen: left = next card, right = back.
   (function () {
-    let sx = 0, sy = 0, tracking = false;
-    document.addEventListener("pointerdown", (e) => {
-      const onBtn = e.target && e.target.closest && e.target.closest("button");
-      if (screens.tutorial.hidden || onBtn) { tracking = false; return; }
-      sx = e.clientX; sy = e.clientY; tracking = true;
-    });
-    document.addEventListener("pointerup", (e) => {
-      if (!tracking) return;
-      tracking = false;
-      const dx = e.clientX - sx, dy = e.clientY - sy;
-      if (Math.abs(dx) < 40 || Math.abs(dx) <= Math.abs(dy)) return;
-      dx < 0 ? tutNext() : tutPrev();
-    });
-    document.addEventListener("pointercancel", () => { tracking = false; });
     // No screen scrolls the page (iOS ignores touch-action / overscroll-behavior
     // in older Safari and the PWA shell) — block every touch-drag except inside
     // the one element that scrolls itself, the leaderboard list.
@@ -7693,8 +8042,8 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
       if (e.cancelable) e.preventDefault();
     }, { passive: false });
   })();
-  $("#btn-home-howto").addEventListener("click", () => showTutorial({ from: "home" }));
-  $("#btn-start-howto").addEventListener("click", () => showTutorial({ from: "start" }));
+  $("#btn-home-howto").addEventListener("click", () => openHowto(false));
+  $("#btn-start-howto").addEventListener("click", () => openHowto(false));
 
   // Invite friends — a panel with the game link to copy, plus the native share
   // sheet where the browser supports it.
@@ -8079,6 +8428,17 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   // Lives here, inside the page, because the page is always fetched fresh
   // (sw.js caches other files cache-first, so a notes file could go stale).
   const PATCH_NOTES = [
+    { v: "0.10.0", date: "2026-10-02", title: "Bonus points",
+      notes: [
+        ["new", "Words that fit the day's theme are worth a bonus point. Every theme word counts, and a climb can have more than one."],
+        ["new", "Today's theme pops up when you start the daily, with an example of how theme words score."],
+        ["new", "How to play is now one short card, plus quick tips during your first game."],
+        ["new", "Usernames can have spaces."],
+        ["imp", "The theme sits at the top while you play, with a flag for each climb."],
+        ["imp", "Ties go to the fastest time. Wrong guesses no longer affect your rank."],
+        ["imp", "Leaderboard rows show just rank, player, points and time. Tap anyone to see their words. Your own row opens when you finish."],
+        ["imp", "New letters drop in from above, the moon moved out of the way, and \"End climb\" is now \"Forfeit climb\" and asks first."],
+      ] },
     { v: "0.9.1", date: "2026-10-01", title: "Good to know",
       notes: [
         ["imp", "Tap a player on the leaderboard to see the day's theme words as flags, gold for the ones they found and grey for the ones they missed. A little flag also marks where the theme word was in each climb."],
@@ -8640,7 +9000,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
         const d = document.createElement("b"); d.textContent = baseLabel(base);
         info.appendChild(d);
         if (!e) { info.append(" · didn't play"); return; }
-        info.append(" · " + (e.t || 0) + "/" + entryMax(e) + " words · " +
+        info.append(" · " + (e.th != null ? ((e.t || 0) + e.th) + " points (" + (e.t || 0) + " words + " + e.th + " bonus)" : (e.t || 0) + "/" + entryMax(e) + " words") + " · " +
           (e.r ? "finished " + ordinalOf(e.r) + " of " + e.n : "final place after today") +
           (e.ms ? " · " + fmtDuration(e.ms) : "") + (e.h ? "" : " · ★ no hint"));
       });
