@@ -782,8 +782,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
      tiebreak), +N past three. See renderBoardMountain(). */
   #screen-daily-board { gap: 12px; }
   .board-mtn { position: relative; width: 100%; }
-  /* Feather the scene into the page top and bottom (on the SVG, not the
-     wrapper, so the callout above a flag is never faded). */
+  /* Feather the scene into the page top and bottom. */
   .board-mtn svg {
     display: block; width: 100%; height: auto;
     -webkit-mask-image: linear-gradient(transparent, #000 14%, #000 80%, transparent);
@@ -791,13 +790,6 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   }
   .board-mtn .bflag { cursor: pointer; transition: opacity .2s; }
   .board-mtn.focus .bflag:not(.hl) { opacity: .28; }
-  .board-callout {
-    position: absolute; transform: translate(-50%, -100%); z-index: 2;
-    background: var(--surface); border: 1px solid var(--accent); border-radius: 9px;
-    padding: 5px 9px; font-size: 0.72rem; line-height: 1.35; text-align: left;
-    width: max-content; max-width: 90%; pointer-events: none; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
-  }
-  .board-callout b { display: block; color: var(--accent); font-size: 0.62rem; letter-spacing: 0.1em; }
   /* The mountain takes ~150px, so the list gives some back to stay scroll-free. */
   #screen-daily-board .board-mtn svg { max-height: 120px; }
   #screen-daily-board .lb-list { max-height: max(120px, min(54vh, calc(100vh - 500px))); } /* room for the reminder button */
@@ -1678,8 +1670,6 @@ $1{ display: flex; gap: 8px; width: 100%; }
   @media (max-width: 491px) { #screen-daily-board .board-mtn { width: calc(100% + 32px); margin: 0 -16px; } }
   #screen-daily-board .board-mtn svg > g[fill="#fff"] { display: none; }
   #screen-daily-board .board-mtn path[fill="var(--accent)"] + text { fill: var(--rd-bg); }
-  #screen-daily-board .board-callout { background: var(--rd-sheet); border-color: var(--rd-ink); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18); }
-  #screen-daily-board .board-callout b { color: var(--rd-climb); }
   #screen-daily-board .lb-tip { background: var(--rd-ink); color: var(--rd-bg); }
   #screen-daily-board .lb-tip::after { border-top-color: var(--rd-ink); }
   #screen-daily-board .lb-head { padding: 4px 4px 6px; border-bottom: 1.5px solid var(--rd-ink); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.1em; }
@@ -7405,7 +7395,6 @@ $1{ display: flex; gap: 8px; width: 100%; }
     applyBoardFocus(done, myUid);
   }
 
-  let boardLastDone = {}; // {done, myUid} from the last render, for the callout's names
   let boardFocusUid = null; // set when a row was tapped: light only that player's row
   function setBoardFocus(t, uid) {
     boardFocus = t;
@@ -7413,10 +7402,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     applyBoardFocus();
   }
   function applyBoardFocus(done, myUid) {
-    if (done) boardLastDone = { done: done, myUid: myUid };
     const wrap = $("#daily-board-mtn");
-    const old = wrap.querySelector(".board-callout");
-    if (old) old.remove();
     const has = boardFocus != null && wrap.querySelector('.bflag[data-total="' + boardFocus + '"]');
     if (!has) boardFocus = null;
     wrap.classList.toggle("focus", boardFocus != null);
@@ -7433,23 +7419,6 @@ $1{ display: flex; gap: 8px; width: 100%; }
     if (first && (first.offsetTop < list.scrollTop || first.offsetTop + first.offsetHeight > list.scrollTop + list.clientHeight)) {
       list.scrollTop = first.offsetTop - list.offsetTop - 4;
     }
-    // Callout above the pole: where it is + who's there.
-    const { done: all, myUid: me } = boardLastDone;
-    const people = (all || []).filter((e) => Math.min(boardMax, e.total || 0) === boardFocus);
-    const names = people.map((e) => (e.uid === me ? "you" : shownName(e.name)));
-    const c = document.createElement("div");
-    c.className = "board-callout";
-    const head = document.createElement("b");
-    head.textContent = boardFocus >= boardMax ? "SUMMIT · " + boardMax + " OF " + boardMax : "WORD " + boardFocus + " OF " + boardMax;
-    c.appendChild(head);
-    c.appendChild(document.createTextNode(names.length > 4 ? names.slice(0, 4).join(", ") + " +" + (names.length - 4) + " more" : names.join(", ")));
-    wrap.appendChild(c);
-    const flag = wrap.querySelector('.bflag[data-total="' + boardFocus + '"]');
-    const fb = flag.getBoundingClientRect(), wb = wrap.getBoundingClientRect();
-    const half = c.offsetWidth / 2 + 4;
-    const cx = Math.min(Math.max(fb.left + fb.width / 2 - wb.left, half), wb.width - half);
-    c.style.left = cx + "px";
-    c.style.top = (fb.top - wb.top - 4) + "px"; // may rise over the subtitle — it's a temporary overlay
   }
   // Tapping anywhere else on the board clears the highlight.
   document.addEventListener("click", (ev) => {
@@ -9682,7 +9651,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
   // dictionary definition, a player's name or a drawing.
   const CLB_RE = /\b[Cc]limbs?\b/;
   const CLB_SKIP = ".clb, .brand-k, .chips, .tile, .wordtrail, .missed-word, .def, .chip-popover, .lb-flags, .lb-name, " +
-    ".board-callout, .ascent-toast, #pf-name, .whoami, .hts-stage, .hts-key, .tc-legend, .beta-sheet, .beta-pill, svg, script, style, textarea, input, select";
+    ".ascent-toast, #pf-name, .whoami, .hts-stage, .hts-key, .tc-legend, .beta-sheet, .beta-pill, svg, script, style, textarea, input, select";
   function clbWrapText(node) {
     const p = node.parentElement;
     if (!p || !CLB_RE.test(node.data) || p.closest(CLB_SKIP)) return;
