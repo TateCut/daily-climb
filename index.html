@@ -1683,7 +1683,12 @@ $1{ display: flex; gap: 8px; width: 100%; }
   #screen-daily-board .lb-tip { background: var(--rd-ink); color: var(--rd-bg); }
   #screen-daily-board .lb-tip::after { border-top-color: var(--rd-ink); }
   #screen-daily-board .lb-head { padding: 4px 4px 6px; border-bottom: 1.5px solid var(--rd-ink); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.1em; }
-  #screen-daily-board .lb-list { gap: 0; margin-top: -10px; max-height: max(140px, calc(100vh - 440px)); max-height: max(140px, calc(100dvh - 440px)); }
+  /* The board fills the screen exactly: everything keeps its size and the player list takes
+     what's left, scrolling inside itself (no fixed guesses, so nothing falls off the bottom). */
+  body:has(#screen-daily-board:not([hidden])) { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); }
+  #screen-daily-board { height: calc(100vh - 26px); height: calc(100dvh - 26px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
+  #screen-daily-board > * { flex-shrink: 0; }
+  #screen-daily-board .lb-list, html.standalone #screen-daily-board .lb-list { flex: 0 1 auto; min-height: 96px; max-height: none; gap: 0; margin-top: -10px; }
   #daily-board-foot:empty { display: none; }
   #screen-daily-board .lb-row { padding: 11px 4px; border: 0; border-bottom: 1px solid var(--rd-line); border-radius: 0; background: none; font-size: 0.98rem; }
   #screen-daily-board .lb-row.me { background: var(--rd-tint); border-radius: 8px; border-bottom-color: transparent; }
