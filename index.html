@@ -6970,10 +6970,53 @@ $1{ display: flex; gap: 8px; width: 100%; }
     money: ["dues", "used"], tools: ["lever", "revel"], mystery: ["prints", "sprint"],
   };
   let themeCardOpenAt = 0;
+  // The theme card's example pair must never give away part of that day's puzzle (a Mountains
+  // day's SLOPE when SLOPES is a rung). The curated pair is used when it's safe; otherwise the
+  // safest common pair from the theme's own list (a theme word + an everyday anagram of it).
+  // No safe pair: null, and the card shows plain labels instead.
   function themeCardExample(t) {
+    const words = dayWords(t);
     const ex = THEME_EXAMPLES[t.id];
-    return ex ? { word: ex[0], decoy: ex[1] } : null;   // a new theme without one: plain labels instead
+    if (ex && !spoils(ex[0], words) && !spoils(ex[1], words)) return { word: ex[0], decoy: ex[1] };
+    return dictReady ? autoExample(t, words) : null;
   }
+  // Every word that works anywhere in a day's Climbs: each rung, plus every anagram of its letters.
+  const dayWordsCache = new Map();
+  function dayWords(t) {
+    if (dayWordsCache.has(t.base)) return dayWordsCache.get(t.base);
+    const set = new Set();
+    t.climbs.forEach((p) => p.c.forEach((rung) => { set.add(rung); (ANA.get(sortStr(rung)) || []).forEach((w) => set.add(w)); }));
+    if (dictReady) dayWordsCache.set(t.base, set);   // before the dictionary loads it only knows the rungs
+    return set;
+  }
+  // A shown word spoils the day if it, or a close form of it (SLOPE / SLOPES / SLOPED, POLE / POLES), works in a Climb.
+  function spoils(word, words) {
+    for (const v of words) {
+      const short = v.length <= word.length ? v : word, long = short === v ? word : v;
+      if (short.length >= 3 && long.startsWith(short) && long.length - short.length <= 3) return true;
+    }
+    return false;
+  }
+  function autoExample(t, words) {
+    const theme = themeSet(t.id);
+    let best = null, bestRank = Infinity;
+    theme.forEach((w) => {
+      if (w.length < 4 || w.length > 6 || !FREQ.has(w) || spoils(w, words)) return;
+      (ANA.get(sortStr(w)) || []).forEach((d) => {
+        if (d === w || theme.has(d) || !FREQ.has(d) || nameIsBlocked(d) || spoils(d, words)) return;
+        const rank = Math.max(FREQ.get(w), FREQ.get(d));   // both words as everyday as possible
+        if (rank < bestRank) { best = { word: w, decoy: d }; bestRank = rank; }
+      });
+    });
+    return best;
+  }
+  // Beta: check every scheduled day's example pair at once.
+  if (window.DC_BETA && window.DC_BETA_TOOLS) window.DC_BETA_TOOLS.exampleReport = () => (CAL ? CAL.days : []).map((_, i) => {
+    const t = themedDay(shiftDayKey(CAL.start, i));
+    const ex = THEME_EXAMPLES[t.id], pick = themeCardExample(t);
+    return { day: t.base, theme: t.id, curated: ex ? ex.join("/") : "-", shown: pick ? pick.word + "/" + pick.decoy : "plain labels",
+      swapped: !pick || !ex || pick.word !== ex[0] || pick.decoy !== ex[1] };
+  });
   function themeCardShown(day) {
     if (themeCardOff()) return true;   // opted out: it still opens from the theme box, just never on its own
     try { return localStorage.getItem(THEME_CARD_KEY) === dayBase(day); } catch (e) { return false; }
