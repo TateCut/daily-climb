@@ -3925,24 +3925,66 @@ $1{ display: flex; gap: 8px; width: 100%; }
   // the verb and won't match, so it's left alone.
   const SELF_REF_DEF = /^(?:(?:the |an? )?act(?:ion)?(?: or action)? of(?: one who| something that)?|(?:one|(?:a|the) person|someone|something) (?:who|that))\s+([a-z]+)\.?\s*$/i;
 
-  async function fetchDefinition(word, _chaining) {
+  // A definition that only names another word: an inflection ("present participle of parcel",
+  // "plural of ...") or an alternative spelling ("Alternative form of parcelling"). Shown as-is
+  // it explains nothing, so fetchDefinition follows it to the word it names.
+  const INFLECT_DEF = /\b(?:plural|(?:present |past )?participle|(?:simple )?past(?: tense)?|third-person singular[a-z -]*|comparative|superlative|gerund|inflection) of\b/i;
+  const XREF_TARGET = /\bof\s+([a-z][a-z'-]*)/i;
+
+  // GRAYER -> GRAY, HAPPIER -> HAPPY, BAKED -> BAKE / BAK, RACES -> RACE... a few likely roots, most likely first.
+  function rootGuesses(w) {
+    const out = [];
+    const add = (b) => { if (b.length >= 3 && b !== w && out.indexOf(b) < 0) out.push(b); };
+    if (/ier$|iest$|ies$|ied$/.test(w)) add(w.replace(/(ier|iest|ies|ied)$/, "y"));
+    if (/(er|est)$/.test(w)) { const b = w.replace(/(er|est)$/, ""); add(b); add(b + "e"); }
+    if (/ed$/.test(w)) { const b = w.slice(0, -2); add(b + "e"); add(b); }
+    if (/ing$/.test(w)) { const b = w.slice(0, -3); add(b); add(b + "e"); }
+    if (/es$/.test(w)) add(w.slice(0, -2));
+    if (/s$/.test(w)) add(w.slice(0, -1));
+    return out.slice(0, 3);
+  }
+
+  async function fetchDefinition(word, _depth) {
+    const depth = _depth || 0;
     try {
       const data = await datamuseSpell(word);
       const defs = data && data[0] && data[0].defs;
       if (!defs || !defs.length) return null;
-      const raw = defs.find((d) => !defIsXref(d)) || defs[0];
+      const pointsAway = (d) => defIsXref(d) || INFLECT_DEF.test(d);
+      const real = defs.find((d) => !pointsAway(d));
+      const raw = real || defs[0];
       const tab = raw.indexOf("\t");
       let pos = "", text = raw;
       if (tab > -1) { pos = raw.slice(0, tab); text = raw.slice(tab + 1); }
+      const bracket = (/\[([^\]]+)\]\s*$/.exec(text) || [])[1];   // Datamuse sometimes glosses the target here
       text = text.replace(/\s*\[[^\]]*\]\s*$/, "").trim();
       if (!text) return null;
 
-      if (!_chaining) {
+      // Only pointers: follow to the word they name (a couple of hops at most:
+      // PARCELING -> PARCELLING), else use the gloss Datamuse tucked in brackets.
+      if (!real) {
+        const target = ((XREF_TARGET.exec(text) || [])[1] || data[0].defHeadword || "").toLowerCase();
+        if (target && target !== word && depth < 3) {
+          const t = await fetchDefinition(target, depth + 1);
+          if (t) return { pos: t.pos, text: t.text, chainedFrom: t.chainedFrom || target };
+        }
+        if (bracket) return { pos: POS_NAMES[pos] !== undefined ? POS_NAMES[pos] : pos, text: bracket.trim(), chainedFrom: target || undefined };
+        // Nothing to follow (GRAYER is only "A surname"): try the word without a common ending.
+        if (depth === 0) {
+          for (const base of rootGuesses(word)) {
+            const b = await fetchDefinition(base, 1);
+            if (b) return { pos: b.pos, text: b.text, chainedFrom: b.chainedFrom || base };
+          }
+        }
+        if (defs.every((d) => defIsXref(d))) return null;   // only names / pointers: say nothing rather than mislead
+      }
+
+      if (depth === 0) {
         const m = SELF_REF_DEF.exec(text);
         if (m) {
           const base = m[1].replace(/s$/, ""); // "abets" -> "abet"
           if (base !== word) {
-            const baseDef = await fetchDefinition(base, true);
+            const baseDef = await fetchDefinition(base, 1);
             if (baseDef) return { pos: baseDef.pos, text: baseDef.text, chainedFrom: base };
           }
         }
