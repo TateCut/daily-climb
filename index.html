@@ -2987,6 +2987,13 @@ $1{ display: flex; gap: 8px; width: 100%; }
     watchEntrants: function () { return noop; },
     watchMyMatches: function (cb) { setTimeout(function () { cb([]); }, 30); return noop; },
     getDailyEntrant: async function (day) { return mine(day); },
+    saveDailyProgress: async function (day, p) {
+      db.progress = db.progress || {};
+      var d = Object.assign({}, (db.progress[day] || {}), p, { updatedAt: new Date().toISOString() });
+      if (d.started) d.startedAt = d.updatedAt;
+      delete d.started;
+      db.progress[day] = d; save();
+    },
     submitDaily: async function (day, r) {
       db.dailies[day] = Object.assign({ uid: UID, name: r.name || "Player", total: r.total || 0, strikes: r.strikes || 0, solveMs: r.solveMs || 0,
         hintUsed: !!r.hintUsed, roundWords: r.roundWords || [], finishedAt: Date.now() },
@@ -3076,6 +3083,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
       "<button type='button' id='beta-fakes'>" + (db.noFakes ? "Show" : "Hide") + " pretend players</button>" +
       "<button type='button' id='beta-reset'>Reset (fresh test player)</button>" +
       "<button type='button' id='beta-signup'>Try the sign-up screens</button>" +
+      "<button type='button' id='beta-progress'>Show my progress record</button><pre id='beta-progress-out' style='display:none;margin:0;max-height:180px;overflow:auto;font-size:11px;white-space:pre-wrap;color:#c9c3d6'></pre>" +
       "<button type='button' id='beta-whatsnew'>Show the Routes \"What's new\" again</button>";
     document.body.append(pill, sheet);
     sheet.querySelector("#beta-day").value = day || today;
@@ -3088,6 +3096,13 @@ $1{ display: flex; gap: 8px; width: 100%; }
     sheet.querySelector("#beta-fakes").addEventListener("click", window.DC_BETA_TOOLS.toggleFakes);
     sheet.querySelector("#beta-reset").addEventListener("click", window.DC_BETA_TOOLS.resetAll);
     sheet.querySelector("#beta-signup").addEventListener("click", window.DC_BETA_TOOLS.signupTest);
+    sheet.querySelector("#beta-progress").addEventListener("click", function () {
+      var out = sheet.querySelector("#beta-progress-out"), all = db.progress || {};
+      // the most recent record (replays save under the day plus "-r1", "-r2"...)
+      var d = Object.keys(all).sort(function (a, b) { return String(all[b].updatedAt).localeCompare(String(all[a].updatedAt)); })[0];
+      out.style.display = "block";
+      out.textContent = d ? d + "\n" + JSON.stringify(all[d], null, 1) : "No record yet. Start a daily, then look again.";
+    });
     sheet.querySelector("#beta-whatsnew").addEventListener("click", function () { sheet.hidden = true; if (window.DC_showWhatsNew) window.DC_showWhatsNew(); });
   });
 })();
@@ -3636,6 +3651,15 @@ $1{ display: flex; gap: 8px; width: 100%; }
         // Themed days: theme words found (a bonus point each) and the day's most words.
         ...(r.themeWords != null ? { themeWords: r.themeWords, max: r.max, theme: r.theme } : {}),
       });
+    },
+    // dailies/{day}/progress/{uid} — where a player has got to in today's daily, updated as they
+    // play (so a start that never finishes still shows how far it went). Owner-only in the rules.
+    async saveDailyProgress(day, p) {
+      if (!uid) return;
+      const d = Object.assign({}, p, { roundWords: wrapRoundWords(p.roundWords), updatedAt: serverTimestamp() });
+      if (d.started) d.startedAt = serverTimestamp();
+      delete d.started;
+      try { await setDoc(doc(db, "dailies", day, "progress", uid), d, { merge: true }); } catch (e) {}
     },
     async getDailyBoard(day) {
       try {
@@ -6776,6 +6800,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     solved++;
     currentRoundWords.push(g);
     renderAscentMini();
+    saveDailyProgress();
     // Theme word: only that exact word counts (CAUSE doesn't find SAUCE).
     const foundTheme = mode === "daily" && dailyTheme && isThemeWord(dailyTheme, round - 1, g) &&
       (newRules(dailyTheme) || !themeFound[round - 1]);
@@ -6829,6 +6854,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     defToken++;
     roundWords[round - 1] = currentRoundWords.slice();
     pauseDailyTimer();   // the clock waits on the between-Climbs screen
+    saveDailyProgress({ climbDone: round });   // incl. a Climb ended early or out of strikes
     if (!completed) FX.play("over");
 
     // A climb beaten during the Daily counts in Adventure Mode too — same seed.
@@ -6951,6 +6977,19 @@ $1{ display: flex; gap: 8px; width: 100%; }
   // today (earlier climbs + this one, out of dailyMax()), and the sun rises with it.
   // Lives on the live play screen (called from beginClimbRound + climbAccept),
   // not the between-rounds recap — the climb moves as you solve.
+  // Where you've got to in today's daily, saved as you go (dailies/{day}/progress/{uid}).
+  function saveDailyProgress(extra) {
+    if (mode !== "daily" || isDev() || !dailyDay || !window.MatchDB || !window.MatchDB.saveDailyProgress) return;
+    const words = [];
+    for (let i = 0; i < round - 1; i++) words.push((roundWords[i] || []).slice());
+    words.push(currentRoundWords.slice());
+    window.MatchDB.saveDailyProgress(dailyDay, Object.assign({
+      name: storedName || playerName || "Player",
+      climb: round, step: currentRoundWords.length,
+      points: dailyWordsSoFar() + (dailyTheme && newRules(dailyTheme) ? themeBonusSoFar() : 0),
+      strikes: sessionStrikes, solveMs: Math.round(solveMs || 0), roundWords: words, finished: false,
+    }, extra || {}));
+  }
   function dailyWordsSoFar() {
     const wordsIn = (i) => (roundWords[i] ? roundWords[i].length : 0);
     let priorTotal = 0;
@@ -7550,6 +7589,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     if (!isDev()) window.MatchDB.track("daily_start", { day: dailyDay });
     climbPuzzle = dailyClimbs[0];
     beginClimbRound();
+    saveDailyProgress({ started: true });
     startIntro();
   }
 
@@ -7567,6 +7607,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
       return;
     }
     window.MatchDB.track("daily_finish", { rungs: totalRungs, strikes: sessionStrikes });
+    saveDailyProgress({ finished: true });
     const total = totalRungs;
     const prevDay = shiftDayKey(dailyDay, -1);
     try {
