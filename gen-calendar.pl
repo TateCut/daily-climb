@@ -8,6 +8,8 @@ binmode STDOUT, ':encoding(UTF-8)';
 # !! The LIVE calendar is played from 2026-09-29 and was patched in place for
 # !! v0.5.0 (4-letter starts, cut words). Re-running this rebuilds EVERY day,
 # !! past ones included. To extend the calendar, append new days instead.
+# !! After any rebuild or extension, run fix-traps.pl (removes theme-word traps
+# !! from future days) and verify-calendar.pl.
 # Builds daily-calendar.js: the themed daily, one entry per day from START.
 # Each day = one theme + three climbs whose peaks rise (non-decreasing, last
 # higher than first, at most one 7-letter climb), each climb holding a theme

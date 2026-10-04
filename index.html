@@ -134,7 +134,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
      list that can overflow (the leaderboard) scrolls inside itself instead. */
   html, body { overflow: hidden; overscroll-behavior: none; }
   /* The few inner scrollers draw their bar in the theme's line color. */
-  .lb-list, .collection-grid, .def, .patch-list, .pf-scroll { scrollbar-color: var(--line) transparent; scrollbar-width: thin; }
+  .lb-list, .lb-routes, .rt-pop, .collection-grid, .def, .patch-list, .pf-scroll { scrollbar-color: var(--line) transparent; scrollbar-width: thin; }
   /* Tutorial is a fixed card — kill touch-panning so a swipe is never stolen. */
   h1 {
     margin: 0 0 22px;
@@ -1528,6 +1528,9 @@ $1{ display: flex; gap: 8px; width: 100%; }
   .theme-reveal.got .tr-words b { padding: 4px 12px; border-radius: 999px; background: var(--rd-gold); color: var(--rd-gold-ink); font-size: 0.95rem; letter-spacing: 0.04em; }
   .tr-pts { margin-top: 2px; padding: 3px 12px; border-radius: 999px; background: var(--rd-ink); color: var(--rd-bg); font-weight: 800; font-size: 0.9rem; }
   @keyframes tr-cheer { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: none; } }
+  .theme-reveal.miss { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px; text-align: center; border: 0; border-radius: 14px; background: var(--rd-card); }
+  .theme-reveal.miss .you { color: var(--rd-ink); }
+  .tr-cheer { font-family: var(--slab); font-size: 1.35rem; font-weight: 700; line-height: 1.1; color: var(--rd-ink); }
   @media (prefers-reduced-motion: reduce) { .theme-reveal.got { animation: none; } }
   /* ===== How to Play: the bottom sheet ===== */
   .hts-veil { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, 0.45); display: flex; align-items: flex-end; justify-content: center; animation: tc-fade .25s ease-out; }
@@ -1664,7 +1667,133 @@ $1{ display: flex; gap: 8px; width: 100%; }
   .lbsum { display: flex; flex-direction: column; align-items: center; gap: 1px; margin-top: -2px; }
   .lbsum[hidden] { display: none; }
   .lbsum-you { font-family: var(--slab); font-size: 1.6rem; font-weight: 700; line-height: 1.2; }
-  .lbsum-sub { font-size: 0.85rem; color: var(--rd-muted); }
+  .lb-tabs { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; border: 1.5px solid var(--rd-ink); border-radius: 999px; }
+  .lb-tabs[hidden] { display: none; }
+  .lb-tabs button { height: 34px; border: 0; border-radius: 999px; background: none; color: var(--rd-ink); font: inherit; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
+  .lb-tabs button.on { background: var(--rd-ink); color: var(--rd-bg); }
+  .lb-tabs button:focus-visible, .lb-routes-pill:focus-visible { outline: 2px solid var(--rd-climb); outline-offset: 2px; }
+  #screen-daily-board.routes :is(#daily-board-theme, #daily-board-sum, #daily-board-mtn, #daily-board-head, #daily-board-list, #daily-board-foot, #btn-reminder) { display: none !important; }
+  .lb-routes { width: 100%; flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 12px; text-align: left; }
+  .lb-routes[hidden] { display: none; }
+  .lb-routes-climbs { display: flex; justify-content: center; gap: 6px; }
+  .lb-routes-pill { padding: 5px 12px; border-radius: 999px; border: 0; box-shadow: inset 0 0 0 1.5px var(--rd-line); background: none; color: var(--rd-muted); font: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer; }
+  .lb-routes-pill.on { box-shadow: inset 0 0 0 1.5px var(--rd-ink); color: var(--rd-ink); }
+  .lb-routes-steps { display: flex; flex-direction: column; gap: 12px; }
+  .rt-step { display: flex; flex-direction: column; gap: 6px; }
+  .rt-head { display: flex; justify-content: space-between; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--rd-muted); }
+  .rt-words { display: flex; flex-wrap: wrap; gap: 6px; }
+  .rt-w { display: flex; flex-direction: column; align-items: stretch; gap: 3px; min-width: 4.6rem; padding: 7px 10px 8px; border: 0; border-radius: 9px;
+    background: var(--rd-card); color: var(--rd-ink); font: inherit; text-align: left; cursor: pointer; }
+  .rt-w b { font-size: 0.88rem; letter-spacing: 0.04em; }
+  .rt-w i { font-style: normal; font-size: 0.74rem; color: var(--rd-muted); font-variant-numeric: tabular-nums; }
+  .rt-track { display: block; height: 4px; margin-top: 2px; border-radius: 4px; background: color-mix(in srgb, var(--rd-ink) 10%, transparent); overflow: hidden; }
+  .rt-fill { display: block; height: 100%; border-radius: 4px; background: var(--rd-climb); }
+  .rt-w:focus-visible { outline: 2px solid var(--rd-climb); outline-offset: 2px; }
+  .rt-w.open { background: color-mix(in srgb, var(--rd-ink) 8%, var(--rd-card)); }
+  .rt-pop { position: fixed; z-index: 70; width: min(240px, calc(100vw - 20px)); max-height: 230px; overflow-y: auto; overscroll-behavior: contain;
+    padding: 10px 12px 8px; border-radius: 12px; border: 1px solid var(--rd-line); background: var(--rd-sheet); color: var(--rd-ink);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22); text-align: left; animation: tc-fade .15s ease-out; }
+  .rt-pop[hidden] { display: none; }
+  .rt-pop b { display: block; margin-bottom: 4px; font-size: 0.7rem; letter-spacing: 0.08em; color: var(--rd-muted); }
+  .rt-pop ul { margin: 0; padding: 0; list-style: none; }
+  .rt-pop li { display: flex; align-items: baseline; gap: 10px; padding: 6px 0; font-size: 0.92rem; font-weight: 600; border-top: 1px solid var(--rd-line); }
+  .rt-pop .rk { width: 1.6rem; flex: none; text-align: right; font-size: 0.8rem; font-weight: 700; color: var(--rd-muted); font-variant-numeric: tabular-nums; }
+  .rt-pop li.you .rk { color: var(--rd-climb); }
+  .rt-pop li:first-child { border-top: 0; }
+  .rt-pop li.you { color: var(--rd-climb); }
+  .rt-w.tw { background: var(--rd-gold); color: var(--rd-gold-ink); }
+  .rt-w.tw i { color: rgba(18, 18, 18, 0.72); }
+  .rt-w.tw .rt-track { background: rgba(18, 18, 18, 0.16); }
+  .rt-w.tw .rt-fill { background: var(--rd-gold-ink); }
+  .rt-w.tw.open { background: color-mix(in srgb, #121212 10%, var(--rd-gold)); }
+  .rt-w.you { box-shadow: inset 0 0 0 2px var(--rd-ink); }
+  .rt-w.zero { opacity: 0.5; }
+  .rt-w.tw.zero { opacity: 0.7; }
+  .rt-flag { display: inline-flex; margin-right: 5px; vertical-align: -1px; }
+  .rt-flag svg { width: 8px; height: 11px; }
+  /* What's new: a one-time full-screen intro to Routes, with a little phone acting out the trip */
+  .wn { position: fixed; inset: 0; z-index: 80; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+    padding: calc(env(safe-area-inset-top, 0px) + 16px) 24px calc(env(safe-area-inset-bottom, 0px) + 20px); background: var(--hs-bg); color: var(--hs-ink); text-align: center; }
+  .wn[hidden] { display: none; }
+  .wn.in { animation: wn-up .4s cubic-bezier(.3,.7,.3,1); }
+  @keyframes wn-up { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .wn-new { padding: 3px 9px; border-radius: 6px; background: var(--rd-gold); color: #121212; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.12em; }
+  .wn h2 { margin: 0; font-family: var(--slab); font-weight: 700; font-size: 2rem; line-height: 1; }
+  .wn-mini { position: relative; width: 186px; height: 336px; flex: none; border-radius: 22px; border: 5px solid #121212; overflow: hidden; background: var(--hs-bg); box-shadow: 0 10px 24px rgba(40, 24, 8, 0.22); }
+  @media (max-height: 620px) { .wn-mini { width: 152px; height: 275px; } .wn-mini .wn-in { transform: scale(0.473); } .wn h2 { font-size: 1.6rem; } }
+  html:not(.light) .wn-mini { border-color: #5a4a3c; }
+  .wn-in { position: absolute; left: 0; top: 0; width: 300px; height: 556px; transform: scale(0.587); transform-origin: 0 0; font-size: 14px; }
+  .wn-sc { position: absolute; inset: 0; display: flex; flex-direction: column; transition: transform .45s cubic-bezier(.3,.7,.3,1); }
+  .wn-home { background: var(--hs-bg); color: var(--hs-ink); align-items: center; padding: 30px 22px 0; gap: 10px; }
+  .wn-home svg { width: 92px; margin-top: 10px; }
+  .wn-ttl { font-family: var(--slab); font-weight: 700; font-size: 2.1rem; line-height: 1; }
+  .wn-tag { font-size: 0.82rem; color: var(--hs-muted); line-height: 1.4; max-width: 24ch; }
+  .wn-play { width: 100%; margin-top: 8px; padding: 12px; border-radius: 12px; background: var(--hs-btn); color: var(--hs-btn-ink); font-weight: 700; font-size: 1.02rem; }
+  .wn-adv { width: 100%; padding: 11px 14px; border-radius: 12px; background: var(--hs-card); color: var(--hs-card-ink); text-align: left; font-weight: 700; font-size: 0.88rem; }
+  .wn-adv small { display: block; font-weight: 500; color: var(--hs-card-muted); font-size: 0.76rem; }
+  .wn-board { background: var(--rd-bg); color: var(--rd-ink); padding: 30px 16px 0; gap: 10px; text-align: left; }
+  .wn-board.off { transform: translateX(100%); }
+  .wn-bh { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; font-size: 0.85rem; font-weight: 600; }
+  .wn-bh b { font-family: var(--slab); font-weight: 500; font-size: 1.25rem; }
+  .wn-tabs { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; border: 1.5px solid var(--rd-ink); border-radius: 999px; }
+  .wn-tabs span { position: relative; z-index: 1; height: 30px; display: grid; place-items: center; font-size: 0.84rem; font-weight: 700; transition: color .3s; }
+  .wn-tabs::before { content: ""; position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 4.5px); border-radius: 999px; background: var(--rd-ink); transition: transform .35s cubic-bezier(.3,.7,.3,1); }
+  .wn-tabs span:first-child, .wn-tabs.r span:last-child { color: var(--rd-bg); }
+  .wn-tabs.r span:first-child { color: var(--rd-ink); }
+  .wn-tabs.r::before { transform: translateX(calc(100% + 3px)); }
+  .wn-p { display: flex; flex-direction: column; gap: 10px; }
+  .wn-p[hidden] { display: none; }
+  .wn-theme { border: 1px solid var(--rd-line); border-radius: 10px; overflow: hidden; text-align: center; }
+  .wn-theme i { display: block; padding: 4px 0; background: var(--rd-strip); color: var(--rd-strip-ink); font-style: normal; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.14em; }
+  .wn-theme b { display: block; padding: 5px 0 6px; font-family: var(--slab); font-size: 1.5rem; }
+  .wn-you { text-align: center; font-family: var(--slab); font-weight: 700; font-size: 1.25rem; }
+  .wn-lb div { display: grid; grid-template-columns: 26px 1fr 36px 40px; gap: 6px; padding: 8px 2px; border-top: 1px solid var(--rd-line); font-size: 0.84rem; font-variant-numeric: tabular-nums; }
+  .wn-lb div span:nth-child(n+3) { text-align: right; }
+  .wn-lb div b { color: var(--rd-muted); }
+  .wn-lb div.me { color: var(--rd-climb); font-weight: 700; }
+  .wn-pills { display: flex; justify-content: center; gap: 6px; }
+  .wn-pills > span { padding: 4px 11px; border-radius: 999px; box-shadow: inset 0 0 0 1.5px var(--rd-line); color: var(--rd-muted); font-size: 0.76rem; font-weight: 700; }
+  .wn-pills > span:first-child { box-shadow: inset 0 0 0 1.5px var(--rd-ink); color: var(--rd-ink); }
+  .wn-step { display: flex; flex-direction: column; gap: 5px; }
+  .wn-sh { display: flex; justify-content: space-between; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--rd-muted); }
+  .wn-ws { display: flex; flex-wrap: wrap; gap: 5px; }
+  .wn-w { display: flex; flex-direction: column; gap: 2px; min-width: 4.3rem; padding: 6px 9px 7px; border-radius: 9px; background: var(--rd-card); color: var(--rd-ink); }
+  .wn-w b { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; letter-spacing: 0.04em; }
+  .wn-w b svg { width: 7px; height: 10px; }
+  .wn-w i { font-style: normal; font-size: 0.68rem; color: var(--rd-muted); }
+  .wn-tr { display: block; height: 4px; border-radius: 4px; background: color-mix(in srgb, var(--rd-ink) 10%, transparent); overflow: hidden; }
+  .wn-fl { display: block; height: 100%; width: 0; border-radius: 4px; background: var(--rd-climb); transition: width .9s cubic-bezier(.3,.7,.3,1); }
+  .wn-grow .wn-fl { width: var(--p); }
+  .wn-w.tw { background: var(--rd-gold); color: var(--rd-gold-ink); }
+  .wn-w.tw i { color: rgba(18, 18, 18, 0.72); }
+  .wn-w.tw .wn-tr { background: rgba(18, 18, 18, 0.16); }
+  .wn-w.tw .wn-fl { background: var(--rd-gold-ink); }
+  .wn-w.you { box-shadow: inset 0 0 0 2px var(--rd-ink); }
+  .wn-w.zero { opacity: 0.5; }
+  .wn-w.tw.open { background: color-mix(in srgb, #121212 10%, var(--rd-gold)); }
+  .wn-pop { position: absolute; z-index: 5; width: 178px; padding: 8px 10px 6px; border-radius: 12px; border: 1px solid var(--rd-line); background: var(--rd-sheet); color: var(--rd-ink);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22); opacity: 0; transform: scale(.97); transition: opacity .2s, transform .2s; }
+  .wn-pop.show { opacity: 1; transform: none; }
+  .wn-pop b { display: block; margin-bottom: 2px; font-size: 0.6rem; letter-spacing: 0.08em; color: var(--rd-muted); }
+  .wn-pop div { display: flex; gap: 8px; padding: 5px 0; border-top: 1px solid var(--rd-line); font-size: 0.8rem; font-weight: 600; }
+  .wn-pop div:first-of-type { border-top: 0; }
+  .wn-pop div em { width: 1.2rem; text-align: right; font-style: normal; font-size: 0.72rem; color: var(--rd-muted); }
+  .wn-pop div.me, .wn-pop div.me em { color: var(--rd-climb); }
+  .wn-fg { position: absolute; z-index: 30; left: 150px; top: 520px; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; background: rgba(18, 18, 18, 0.28);
+    border: 2px solid rgba(255, 255, 255, 0.95); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); opacity: 0; transition: left .7s cubic-bezier(.4,0,.2,1), top .7s cubic-bezier(.4,0,.2,1), opacity .3s, transform .15s; }
+  .wn-fg.on { opacity: 1; }
+  .wn-fg.down { transform: scale(.78); }
+  .wn-beats { display: flex; gap: 6px; }
+  .wn-beats i { width: 22px; height: 4px; border-radius: 4px; background: color-mix(in srgb, var(--hs-ink) 22%, transparent); transition: background .3s; }
+  .wn-beats i.on { background: var(--hs-ink); }
+  .wn-cap { min-height: 2.9em; margin: 0; display: flex; align-items: center; justify-content: center; width: 100%; max-width: 25ch; text-wrap: balance; will-change: opacity; transform: translateZ(0); font-size: 1rem; font-weight: 600; line-height: 1.35; transition: opacity .25s; }
+  .wn-cap.fade { opacity: 0; }
+  .wn button.primary { width: min(100%, 320px); }
+  @media (prefers-reduced-motion: reduce) { .wn *, .wn *::before { transition-duration: .01s !important; } .wn.in { animation: none; } }
+  .lb-theme { width: 100%; border: 1px solid var(--rd-line); border-radius: 10px; overflow: hidden; text-align: center; }
+  .lb-theme[hidden] { display: none; }
+  .lb-theme-k { padding: 5px 0; background: var(--rd-strip); color: var(--rd-strip-ink); font-size: 0.66rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
+  .lb-theme-n { padding: 7px 0 8px; font-family: var(--slab); font-weight: 700; font-size: 1.75rem; line-height: 1.1; }
   /* The mountain: a band of sky, edge to edge on a phone. */
   #screen-daily-board .board-mtn svg { max-height: none; -webkit-mask-image: none; mask-image: none; background: linear-gradient(var(--rd-sky1), var(--rd-sky2)); }
   @media (max-width: 491px) { #screen-daily-board .board-mtn { width: calc(100% + 32px); margin: 0 -16px; } }
@@ -1827,6 +1956,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     --rd-ink: var(--hs-ink); --rd-muted: var(--hs-muted); --rd-card: var(--hs-card); --rd-line: var(--hs-line); --rd-climb: var(--hs-climb);
     --rd-btn: var(--hs-btn); --rd-btn-ink: var(--hs-btn-ink); color: var(--hs-ink); }
   :is(#screen-welcome, #screen-name, #screen-emoji, #screen-signin, #screen-restore, #screen-calendar, #screen-profile, #screen-trophies, #screen-patch-notes, #screen-invite, #screen-collection) .clb { color: var(--hs-climb); }
+  :is(#screen-welcome, #screen-name, #screen-emoji, #screen-signin, #screen-restore, #screen-calendar, #screen-profile, #screen-trophies, #screen-patch-notes, #screen-invite, #screen-collection) button.primary .clb { color: var(--rd-climb-inv); }
   /* Menu pages: white cards on the apricot, no outlines (like the home screen's cards). */
   :is(#screen-profile, #screen-trophies, #screen-patch-notes, #screen-collection) :is(.pf-card, .pf-stat, .tr-fam, .patch-ver:not(.latest), .collection-tile:not(.beaten)) { border-color: transparent; }
   #screen-invite .nameinput, #screen-invite input { border: 0; background: var(--hs-card); color: var(--hs-card-ink); }
@@ -1907,11 +2037,10 @@ $1{ display: flex; gap: 8px; width: 100%; }
         <button class="linkbtn" id="btn-have-profile" type="button">I already play</button>
       </div>
       <div class="uname-done" id="uname-done" hidden>
-        <div class="ucheck" aria-hidden="true">✓</div>
         <h2 class="uname-done-title" id="uname-done-title"></h2>
         <p class="lede">Your streak and progress are saved to your username. To sign in on another phone, or in the Home Screen app, use this recovery code (it's also in your Profile):</p>
         <p class="ucodebig" id="uname-done-code"></p>
-        <button class="primary" id="uname-done-go" type="button">Play</button>
+        <button class="primary" id="uname-done-go" type="button">Start <span class="clb">Climbing</span></button>
       </div>
     </section>
 
@@ -1938,11 +2067,10 @@ $1{ display: flex; gap: 8px; width: 100%; }
         <button class="linkbtn" id="em-back" type="button">&lsaquo; Back</button>
       </div>
       <div class="uname-done" id="emoji-done" hidden>
-        <div class="ucheck" aria-hidden="true">✓</div>
         <h2 class="uname-done-title" id="em-done-title"></h2>
         <p class="em-secret" id="em-done-emoji"></p>
         <p class="lede">Remember these. With your username, they get you back in on any phone, browser or the Home Screen app. They're also in your Profile.</p>
-        <button class="primary" id="em-done-go" type="button">Play</button>
+        <button class="primary" id="em-done-go" type="button">Start <span class="clb">Climbing</span></button>
       </div>
     </section>
 
@@ -2004,11 +2132,10 @@ $1{ display: flex; gap: 8px; width: 100%; }
         <button class="linkbtn" id="restore-back" type="button">&lsaquo; Back</button>
       </div>
       <div class="uname-done" id="restore-done" hidden>
-        <div class="ucheck" aria-hidden="true">✓</div>
         <h2 class="uname-done-title" id="restore-done-title"></h2>
         <div class="restore-stats" id="restore-stats"></div>
         <p class="lede">Everything's right where you left it.</p>
-        <button class="primary" id="restore-done-go" type="button">Play</button>
+        <button class="primary" id="restore-done-go" type="button">Back to <span class="clb">Climbing</span></button>
       </div>
     </section>
 
@@ -2223,11 +2350,19 @@ $1{ display: flex; gap: 8px; width: 100%; }
     <!-- DAILY CLIMB: leaderboard -->
     <section id="screen-daily-board" hidden>
       <div class="scr-head"><button class="backpill" id="btn-daily-board-home" type="button"><span class="bp-ch" aria-hidden="true">&lsaquo;</span>Home</button><h2 class="scr-ttl" id="daily-board-title">Daily Climb</h2><span class="dailycard-streak" id="daily-board-streak" hidden></span></div>
+      <div class="lb-tabs" id="daily-board-tabs" role="tablist" aria-label="Leaderboard view" hidden>
+        <button type="button" role="tab" data-tab="standings">Standings</button><button type="button" role="tab" data-tab="routes">Routes</button>
+      </div>
       <p class="note" id="daily-board-sub"></p>
-      <div class="lbsum" id="daily-board-sum" hidden><div class="lbsum-you" id="daily-board-you"></div><div class="lbsum-sub" id="daily-board-you-sub"></div></div>
+      <div class="lb-theme" id="daily-board-theme" hidden><div class="lb-theme-k">Theme</div><div class="lb-theme-n" id="daily-board-theme-name"></div></div>
+      <div class="lbsum" id="daily-board-sum" hidden><div class="lbsum-you" id="daily-board-you"></div></div>
       <div class="board-mtn" id="daily-board-mtn" hidden></div>
       <div class="lb-head" id="daily-board-head" hidden><span class="h-rank">Rank</span><span class="h-name">Player</span><span class="h-score">Points</span><span class="h-time">Time</span></div>
       <div class="lb-list" id="daily-board-list"></div>
+      <div class="lb-routes" id="daily-board-routes" hidden>
+        <div class="lb-routes-climbs" id="routes-climbs"></div>
+        <div class="lb-routes-steps" id="routes-steps"></div>
+      </div>
       <p class="note" id="daily-board-foot"></p>
       <button class="reminder-cta" id="btn-reminder" type="button" hidden></button>
       <div class="homelinks">
@@ -2492,7 +2627,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
       <p class="lede" id="cre-sub" hidden>A word that would have worked:</p>
       <p class="missed-word" id="cre-word" hidden></p>
       <p class="def" id="cre-def" hidden></p>
-      <button class="primary" id="btn-cre-next" type="button">Next climb</button>
+      <button class="primary" id="btn-cre-next" type="button">Keep <span class="clb">Climbing</span>!</button>
     </section>
 
     <!-- ADVENTURE MODE: every climb, pick one you haven't beaten -->
@@ -2592,10 +2727,9 @@ $1{ display: flex; gap: 8px; width: 100%; }
       </div>
     </div>
     <div class="claim-done" id="claim-done" hidden>
-      <div class="ucheck" aria-hidden="true">✓</div>
       <h3 id="claim-done-title"></h3>
       <p class="install-sub">Your streak is safe. Lost the app? Email your username to <span class="uemail">tate.cutcliffe@gmail.com</span> for your recovery code.</p>
-      <div class="install-actions"><button class="primary" id="btn-claim-done" type="button">Done</button></div>
+      <div class="install-actions"><button class="primary" id="btn-claim-done" type="button">Back to <span class="clb">Climbing</span></button></div>
     </div>
   </div>
   <!-- Trophy details (tap a trophy) — same sheet frame as the others. -->
@@ -2644,6 +2778,16 @@ $1{ display: flex; gap: 8px; width: 100%; }
       </div>
     </div>
   </div>
+  <!-- Routes: who played a word (opens next to the tapped word) -->
+  <div class="wn" id="whatsnew" role="dialog" aria-modal="true" aria-labelledby="wn-title" hidden>
+    <span class="wn-new">NEW</span>
+    <h2 id="wn-title">Meet Routes</h2>
+    <div class="wn-mini" aria-hidden="true"><div class="wn-in" id="wn-film"></div></div>
+    <div class="wn-beats" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <p class="wn-cap" id="wn-cap" aria-live="polite"></p>
+    <button class="primary" id="btn-wn-done" type="button">Got it</button>
+  </div>
+  <div class="rt-pop" id="rt-pop" role="dialog" aria-labelledby="rt-pop-title" hidden><b id="rt-pop-title"></b><ul id="rt-pop-list"></ul></div>
   <!-- A one-time tip in a new player's first game -->
   <div class="coach" id="coach" role="status" aria-live="polite" hidden><span id="coach-t"></span><small id="coach-s"></small></div>
   <!-- Forfeit a climb? -->
@@ -2652,7 +2796,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
       <h3 id="ff-title">Forfeit this <span class="clb">Climb</span>?</h3>
       <p id="ff-body"></p>
       <div class="ff-actions">
-        <button class="primary" id="btn-ff-keep" type="button">Keep climbing</button>
+        <button class="primary" id="btn-ff-keep" type="button">Keep <span class="clb">Climbing</span></button>
         <button class="ghost ff-go" id="btn-ff-go" type="button">Forfeit <span class="clb">Climb</span></button>
       </div>
     </div>
@@ -2668,7 +2812,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
       </div>
       <p class="tc-foot">Every <span class="clb">Climb</span> has at least one word related to the theme.</p>
       <label class="tc-opt"><input type="checkbox" id="tc-off"> I understand, don't show again</label>
-      <button class="primary" id="btn-theme-card" type="button">Start climbing</button>
+      <button class="primary" id="btn-theme-card" type="button">Start <span class="clb">Climbing</span></button>
     </div>
   </div>
   <!-- Trophy unlocked! (queued; shown on home / board / profile screens) -->
@@ -2735,6 +2879,22 @@ $1{ display: flex; gap: 8px; width: 100%; }
     save();
   }
   var player = function () { return db.player || (db.player = {}); };
+  // Pretend players' word choices: every word that fits a rung (everyday ones when there are any).
+  var fakeAna = null, fakeEveryday = null;
+  function fakeOptions(word) {
+    if (!fakeAna) {
+      fakeAna = {}; fakeEveryday = {};
+      var raw = window.THREE21_WORDS || [], fr = window.THREE21_FREQ || [];
+      if (!Array.isArray(raw)) raw = String(raw).split(/\s+/);
+      if (!Array.isArray(fr)) fr = String(fr).split(/\s+/);
+      fr.forEach(function (w) { fakeEveryday[w] = 1; });
+      raw.forEach(function (w) { if (w.length < 4) return; var k = w.split("").sort().join(""); (fakeAna[k] = fakeAna[k] || []).push(w); });
+    }
+    var all = fakeAna[word.split("").sort().join("")] || [word];
+    var common = all.filter(function (w) { return fakeEveryday[w]; });
+    return common.length ? common : all;
+  }
+  function fakeCheap(p, w) { return !!p && (w === p + "s" || (/e$/.test(p) && (w === p + "d" || w === p + "r" || w === p + "n"))); }
   var copy = function (o) { return o ? JSON.parse(JSON.stringify(o)) : null; };
   var fail = function (code) { return Object.assign(new Error(code), { code: code }); };
   var nameKey = function (n) { return String(n).trim().toLowerCase().replace(/ +/g, "."); };   // same as the live MatchDB
@@ -2760,8 +2920,14 @@ $1{ display: flex; gap: 8px; width: 100%; }
         hintUsed: r() < 0.5, roundWords: [], finishedAt: now - Math.floor(r() * 36e6) };
       if (info.ladders) {
         e.roundWords = info.ladders.map(function (ladder) {
-          var x = r(), drop = x < 0.6 ? 0 : x < 0.85 ? 1 : 2;
-          return ladder.slice(0, Math.max(1, ladder.length - drop));
+          var x = r(), drop = x < 0.6 ? 0 : x < 0.85 ? 1 : 2, prev = null;
+          // like real players: usually the main answer, sometimes another word that fits (never just prev + s)
+          return ladder.slice(0, Math.max(1, ladder.length - drop)).map(function (ref) {
+            var opts = fakeOptions(ref).filter(function (w) { return !fakeCheap(prev, w); });
+            var pick = opts.indexOf(ref) >= 0 && r() < 0.55 ? ref : (opts[Math.floor(r() * opts.length)] || ref);
+            prev = pick;
+            return pick;
+          });
         });
         e.total = e.roundWords.reduce(function (a, w) { return a + w.length; }, 0);
         var list = String((window.THEME_WORDS || {})[info.theme] || "").split(" ");
@@ -2909,7 +3075,8 @@ $1{ display: flex; gap: 8px; width: 100%; }
       "<button type='button' id='beta-light'>Switch light / dark mode</button>" +
       "<button type='button' id='beta-fakes'>" + (db.noFakes ? "Show" : "Hide") + " pretend players</button>" +
       "<button type='button' id='beta-reset'>Reset (fresh test player)</button>" +
-      "<button type='button' id='beta-signup'>Try the sign-up screens</button>";
+      "<button type='button' id='beta-signup'>Try the sign-up screens</button>" +
+      "<button type='button' id='beta-whatsnew'>Show the Routes \"What's new\" again</button>";
     document.body.append(pill, sheet);
     sheet.querySelector("#beta-day").value = day || today;
     pill.addEventListener("click", function () { sheet.hidden = !sheet.hidden; });
@@ -2921,6 +3088,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     sheet.querySelector("#beta-fakes").addEventListener("click", window.DC_BETA_TOOLS.toggleFakes);
     sheet.querySelector("#beta-reset").addEventListener("click", window.DC_BETA_TOOLS.resetAll);
     sheet.querySelector("#beta-signup").addEventListener("click", window.DC_BETA_TOOLS.signupTest);
+    sheet.querySelector("#beta-whatsnew").addEventListener("click", function () { sheet.hidden = true; if (window.DC_showWhatsNew) window.DC_showWhatsNew(); });
   });
 })();
 </script>
@@ -4311,10 +4479,12 @@ $1{ display: flex; gap: 8px; width: 100%; }
   function show(name) {
     if (updateWaiting && !BUSY_SCREENS.has(name)) setTimeout(applyUpdateWhenCalm, 300);
     hideChipPopover(); // never leave a word definition floating over the next screen
+    if (!$("#rt-pop").hidden) hideRoutePop(); // ...or a Routes "who played it" pop-up
     hideInstallSheet(); // ...or the Add to Home Screen how-to
     hideReminderSheet(); // ...or the daily reminder sheet
     hideClaimSheet(); // ...or the claim-a-username sheet
     hideTrophySheet(); hideTrophyPop(); // ...or trophy overlays
+    if (name !== "home") closeWhatsNew(); else setTimeout(maybeWhatsNew, 1200); // the one-time Routes intro
     coachPending = null; hideCoach(); if (name !== "play") clearTimeout(stuckT); // ...or a first-game tip
     if (!$("#difficulty-sheet").hidden) hideDifficultySheet(); // ...or the Trail/Ridge/Summit explainer
     setTimeout(() => drainTrophyQueue(), 450); // queued "Trophy unlocked!" pops wait for a calm screen
@@ -4424,7 +4594,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
       matchSeed = seedForDay(dailyDay);
       let mine = null;
       if (dbReady()) { try { mine = await window.MatchDB.getDailyEntrant(dailyDay); } catch (e) {} }
-      if (mine) { clearResume(); showDailyBoard(dailyDay, { live: true }); return; }
+      if (mine) { clearResume(); showDailyBoard(dailyDay, { live: true, finished: true }); return; }
       loadDailyPuzzles(dailyDay);
       themeFound = Array.isArray(s.themeFound) ? s.themeFound.slice() : [null, null, null];
       climbPuzzle = dailyClimbs[round - 1];
@@ -4527,8 +4697,26 @@ $1{ display: flex; gap: 8px; width: 100%; }
     }
     if (hiddenAt && stageShownAt && !themeCardOpenAt && !howtoOpenAt) stageShownAt += Date.now() - hiddenAt;
     hiddenAt = 0;
-    if (dailySessionActive && !themeCardOpenAt && !howtoOpenAt) startDailyTimer();
+    lastBeat = Date.now();
+    if (dailySessionActive && !themeCardOpenAt && !howtoOpenAt && !screens.play.hidden) startDailyTimer();
   });
+  // Some phones pause the page without ever saying it went away: a call answered from
+  // the banner, a screen that locks in the Home Screen app. Nothing runs while it's
+  // paused, so a once-a-second heartbeat notices the gap afterwards and takes it off
+  // both clocks, the same as time spent hidden.
+  let lastBeat = Date.now();
+  function heartbeat() {
+    const now = Date.now(), gap = now - lastBeat;
+    lastBeat = now;
+    if (gap < 4000 || document.hidden || hiddenAt) return;   // normal tick, or the hidden path handles it
+    const away = gap - 1000;
+    if (stageShownAt && !themeCardOpenAt && !howtoOpenAt) stageShownAt += away;
+    if (dailyTimerRunning) { dailyTimerStartedAt += away; renderDailyTimer(); }
+  }
+  setInterval(heartbeat, 1000);
+  window.addEventListener("focus", heartbeat);
+  window.addEventListener("pageshow", heartbeat);
+  document.addEventListener("resume", heartbeat);
   // One word's share of the leaderboard time. Capped as a backstop in case a
   // phone ever suspends the game without saying it went away.
   const MAX_WORD_MS = 15 * 60 * 1000;
@@ -5730,7 +5918,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
   function emojiDone(title, picked) {
     $("#em-done-title").textContent = title;
     $("#em-done-emoji").textContent = picked.join(" ");
-    $("#em-done-go").textContent = emojiFlow.mode === "create" ? "Play" : "Done";
+    $("#em-done-go").innerHTML = emojiFlow.mode === "create" ? 'Start <span class="clb">Climbing</span>' : "Done";   // "Done" when changing them from the Profile
     $("#emoji-pick").hidden = true;
     $("#emoji-done").hidden = false;
     $("#em-done-go").focus();
@@ -6640,6 +6828,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     clearDropTarget();
     defToken++;
     roundWords[round - 1] = currentRoundWords.slice();
+    pauseDailyTimer();   // the clock waits on the between-Climbs screen
     if (!completed) FX.play("over");
 
     // A climb beaten during the Daily counts in Adventure Mode too — same seed.
@@ -6691,15 +6880,20 @@ $1{ display: flex; gap: 8px; width: 100%; }
           pts.textContent = "+" + hits.length + (hits.length > 1 ? " points" : " point");
           tr.append(pts);
         }
-      } else if (r.played && r.played !== r.word) {
-        const you = document.createElement("span");
-        you.className = "you";
-        you.textContent = r.played.toUpperCase();
-        b.textContent = r.word.toUpperCase();
-        tr.append("You played ", you, ". The theme word was ", b, ".");
       } else {
+        const line = document.createElement("span");
+        line.className = "tr-line";
         b.textContent = r.word.toUpperCase();
-        tr.append("The theme word was ", b, ".");
+        if (r.played && r.played !== r.word) {
+          const you = document.createElement("span");
+          you.className = "you";
+          you.textContent = r.played.toUpperCase();
+          line.append("You played ", you, ". The theme word was ", b, ".");
+        } else line.append("The theme word was ", b, ".");
+        const cheer = document.createElement("span");
+        cheer.className = "tr-cheer";
+        cheer.textContent = isLastRound ? "Get it tomorrow!" : "Get the next one!";
+        tr.append(line, cheer);
       }
     }
     const showEx = !completed;
@@ -6711,7 +6905,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
       $("#cre-word").textContent = ex ? ex.toUpperCase() : "";
       if (ex) showDefinition(ex, $("#cre-def"));
     }
-    $("#btn-cre-next").textContent = isLastRound ? "See results" : "Climb " + (round + 1) + " of " + climbRounds();
+    $("#btn-cre-next").innerHTML = isLastRound ? "See results" : 'Keep <span class="clb">Climbing</span>!';
     saveRoundBreak(round + 1);
     show("climbroundend");
   }
@@ -6856,6 +7050,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     round++;
     climbPuzzle = dailyClimbs[round - 1];
     beginClimbRound();
+    if (dailySessionActive && !document.hidden) startDailyTimer();
   }
 
   function climbSessionDone() {
@@ -7200,9 +7395,84 @@ $1{ display: flex; gap: 8px; width: 100%; }
   // Before the first word of a session: the How to play card for a new player,
   // otherwise today's theme card (once a day).
   function startIntro() {
-    if (!tutorialSeen) { openHowto(true); return; }
+    if (!tutorialSeen) { markWhatsNewSeen(); openHowto(true); return; }   // new players find Routes on their own board
     if (mode === "daily" && newRules(dailyTheme) && !themeCardShown(dailyDay)) openThemeCard();
   }
+  // ---- What's new: Routes ----
+  // Once per device, on the home screen, for players who already play: a full-screen card
+  // where a little phone acts out the trip (home, leaderboard, the Routes tab, tap a word).
+  // The example is Oct 1's first Climb (Tools), long since played, with made-up players.
+  const WN_KEY = "dc.new.routes";
+  const WN_CAPS = ["After your daily, open the leaderboard", "Tap <b>Routes</b> at the top", "Every word that fit each step, and how many players picked it", "Tap a word to see who played it"];
+  let wnTok = 0;
+  function markWhatsNewSeen() { try { localStorage.setItem(WN_KEY, "1"); } catch (e) {} }
+  function whatsNewSeen() { try { return localStorage.getItem(WN_KEY) === "1"; } catch (e) { return true; } }
+  function maybeWhatsNew() {
+    if (whatsNewSeen() || !tutorialSeen || updateWaiting || screens.home.hidden) return;
+    if (!$("#howto-card").hidden || !$("#trophy-pop").hidden || anySheetOpen() || !$("#difficulty-sheet").hidden) return;
+    openWhatsNew();
+  }
+  function wnFilm() {
+    const steps = [[["hear", 58], ["hare", 42, "you"], ["rhea", 0]], [["heart", 67, "you"], ["earth", 33], ["hater", 0]],
+      [["threat", 75, "you"], ["hatter", 25]], [["ratchet", 58, "you tw"], ["chatter", 42]]];
+    const tile = ([w, p, c = ""]) => '<span class="wn-w ' + c + (p ? "" : " zero") + '" data-w="' + w + '"><b>' + (c.includes("tw") ? TS_FLAG : "") + w.toUpperCase() +
+      '</b><i>' + p + '%</i><span class="wn-tr"><span class="wn-fl" style="--p:' + p + '%"></span></span></span>';
+    const rows = [[1, "summitsam", 19, "4:12"], [2, "Juniper", 18, "5:03"], [3, "You", 17, "5:41", 1], [4, "pebble", 17, "6:20"], [5, "trailmix", 16, "4:58"], [6, "Bex", 15, "7:45"]];
+    const who = [[1, "summitsam"], [2, "Juniper"], [3, "You", 1], [5, "trailmix"], [6, "Bex"], [8, "goatfoot"], [11, "Nico"]];
+    return '<div class="wn-sc wn-home">' + $(".hs-logo").outerHTML + '<div class="wn-ttl">Daily <span class="clb">Climb</span></div>' +
+      '<div class="wn-tag"><span class="clb">Climb</span> one word at a time and find the day\x27s theme.</div><div class="wn-play">See today\x27s results</div>' +
+      '<div class="wn-adv">Adventure Mode<small>Can you beat every <span class="clb">Climb</span>?</small></div></div>' +
+      '<div class="wn-sc wn-board off"><div class="wn-bh"><span>&lsaquo; Home</span><b>Daily <span class="clb">Climb</span></b><span></span></div>' +
+      '<div class="wn-tabs"><span>Standings</span><span>Routes</span></div>' +
+      '<div class="wn-p wn-st"><div class="wn-theme"><i>THEME</i><b>Tools</b></div><div class="wn-you">You finished 3rd</div><div class="wn-lb">' +
+      rows.map(([r, n, p, t, me]) => '<div' + (me ? ' class="me"' : "") + "><b>" + r + "</b><span>" + n + "</span><span>" + p + "</span><span>" + t + "</span></div>").join("") + "</div></div>" +
+      '<div class="wn-p wn-rt" hidden><div class="wn-pills"><span>' + [1, 2, 3].map((n) => "<span class=\x27clb\x27>Climb</span> " + n).join("</span><span>") + "</span></div>" +
+      steps.map((st, k) => '<div class="wn-step"><div class="wn-sh"><span>Step ' + (k + 1) + "</span><span>12 of 12 players</span></div><div class=\"wn-ws\">" + st.map(tile).join("") + "</div></div>").join("") +
+      '</div><div class="wn-pop"><b>RATCHET · 7 PLAYERS</b>' + who.map(([r, n, me]) => "<div" + (me ? ' class="me"' : "") + "><em>" + r + "</em>" + n + "</div>").join("") + "</div></div>" +
+      '<div class="wn-fg"></div>';
+  }
+  function openWhatsNew() {
+    markWhatsNewSeen();
+    const film = $("#wn-film");
+    film.innerHTML = wnFilm();
+    const box = $("#whatsnew");
+    box.hidden = false;
+    box.classList.remove("in"); void box.offsetWidth; box.classList.add("in");
+    setTimeout(() => $("#btn-wn-done").focus({ preventScroll: true }), 60);
+    runWhatsNew(++wnTok).catch(() => {});
+  }
+  function closeWhatsNew() {
+    if ($("#whatsnew").hidden) return;
+    wnTok++;
+    $("#whatsnew").hidden = true;
+    $("#wn-film").replaceChildren();
+  }
+  async function runWhatsNew(tok) {
+    const S = (ms) => new Promise((ok, no) => setTimeout(() => (tok === wnTok ? ok() : no(0)), ms));
+    const film = $("#wn-film"), board = film.querySelector(".wn-board"), fg = film.querySelector(".wn-fg"), cap = $("#wn-cap");
+    const beats = [...document.querySelectorAll("#whatsnew .wn-beats i")], pop = film.querySelector(".wn-pop");
+    const at = (el) => { let x = 0, y = 0, n = el; while (n && n !== film) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; } fg.style.left = x + el.offsetWidth / 2 + "px"; fg.style.top = y + el.offsetHeight / 2 + "px"; };
+    const tap = async () => { fg.classList.add("down"); await S(260); fg.classList.remove("down"); };
+    const say = async (i) => { cap.classList.add("fade"); await S(220); cap.innerHTML = "<span>" + WN_CAPS[i] + "</span>"; beats.forEach((b, j) => b.classList.toggle("on", j <= i)); cap.classList.remove("fade"); };
+    const tabs = (on) => { board.querySelector(".wn-tabs").classList.toggle("r", on); board.querySelector(".wn-st").hidden = on; board.querySelector(".wn-rt").hidden = !on; };
+    for (;;) {
+      board.classList.add("off"); tabs(false); board.querySelector(".wn-rt").classList.remove("wn-grow"); pop.classList.remove("show");
+      film.querySelectorAll(".open").forEach((x) => x.classList.remove("open"));
+      fg.classList.remove("on"); fg.style.left = "150px"; fg.style.top = "520px";
+      await say(0); await S(700);
+      fg.classList.add("on"); at(film.querySelector(".wn-play")); await S(900); await tap(); await S(150);
+      board.classList.remove("off"); await S(1100);
+      await say(1); at(board.querySelector(".wn-tabs span:last-child")); await S(900); await tap(); tabs(true); await S(500);
+      await say(2); fg.classList.remove("on"); await S(200); board.querySelector(".wn-rt").classList.add("wn-grow"); await S(2800);
+      await say(3); const rat = board.querySelector('[data-w="ratchet"]'); fg.classList.add("on"); at(rat); await S(900); await tap();
+      rat.classList.add("open");
+      let x = 0, y = 0, n = rat; while (n && n !== board) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
+      pop.style.left = Math.min(x, board.offsetWidth - 196) + "px"; pop.style.bottom = board.offsetHeight - y + 6 + "px";
+      pop.classList.add("show"); await S(600); fg.classList.remove("on"); await S(3000);
+    }
+  }
+  $("#btn-wn-done").addEventListener("click", closeWhatsNew);
+  window.DC_showWhatsNew = () => { if (screens.home.hidden) goHome(); setTimeout(openWhatsNew, 300); };   // beta: see it again
   $("#btn-howto-go").addEventListener("click", () => { if (howtoStep < 2) showHowtoStep(howtoStep + 1); else closeHowto(); });
   $("#btn-howto-back").addEventListener("click", () => showHowtoStep(howtoStep - 1));
   $("#btn-howto-x").addEventListener("click", closeHowto);
@@ -7366,6 +7636,8 @@ $1{ display: flex; gap: 8px; width: 100%; }
       }
     }
     renderBoardMountain(done, myUid);
+    routesData = { done: done, myUid: myUid };
+    renderRoutes();
     // The tip floats over the foot of the mountain, pointing down at the list
     // (your open row can fill the list, so it can't live in there).
     if (tapTipOn && done.length) {
@@ -7388,8 +7660,6 @@ $1{ display: flex; gap: 8px; width: 100%; }
       const me = done[mine];
       const pts = newRules(boardTheme) ? entrantPoints(me) : (me.total || 0);
       $("#daily-board-you").textContent = "You finished " + ordinal(mine + 1);
-      $("#daily-board-you-sub").textContent = "of " + done.length + (done.length === 1 ? " player" : " players") + " · " +
-        pts + (newRules(boardTheme) ? (pts === 1 ? " point" : " points") : (pts === 1 ? " word" : " words")) + " · " + fmtDuration(me.solveMs);
       $("#daily-board-foot").textContent = "";
     }
 
@@ -7422,6 +7692,119 @@ $1{ display: flex; gap: 8px; width: 100%; }
           { duration: 380, easing: "cubic-bezier(.2,.8,.25,1.5)" }); }, 500);
       }
     }
+  }
+
+  // ---- Routes: every way up each Climb, and how many players took each word ----
+  // Each step lists the words that fit (everyday ones, theme words, and any rarer word
+  // somebody played), sorted by how many of the players who reached that step chose it.
+  let routesData = null;      // { done, myUid } from the board's last render
+  let boardRouteClimb = 0;    // which Climb the routes view shows
+  let routeOpen = null;       // "step|word" whose players are showing in the pop-up
+  function setBoardTab(tab) {
+    $("#screen-daily-board").classList.toggle("routes", tab === "routes");
+    $("#daily-board-routes").hidden = tab !== "routes";
+    $("#daily-board-tabs").querySelectorAll("button").forEach((b) => {
+      const on = b.dataset.tab === tab;
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-selected", String(on));
+    });
+    if (tab === "routes") renderRoutes();
+  }
+  $("#daily-board-tabs").addEventListener("click", (e) => { const b = e.target.closest("button[data-tab]"); if (b) setBoardTab(b.dataset.tab); });
+  // Tap a word: a small scrollable pop-up next to it lists who played it, in leaderboard
+  // order with each player's place; tap anywhere else to close.
+  function showRoutePop(chip, word, names) {
+    const pop = $("#rt-pop");
+    $("#rt-pop-title").textContent = word.toUpperCase() + " · " + (names.length ? names.length + (names.length === 1 ? " player" : " players") : "nobody played it");
+    $("#rt-pop-list").replaceChildren(...names.map((p) => {
+      const li = document.createElement("li");
+      if (p.you) li.className = "you";
+      const rk = document.createElement("span"); rk.className = "rk"; rk.textContent = p.rank;
+      li.append(rk, p.name);
+      return li;
+    }));
+    pop.hidden = false;
+    pop.scrollTop = 0;
+    // beside the word: below it if there's room, otherwise above; kept on screen
+    const r = chip.getBoundingClientRect(), pw = pop.offsetWidth, ph = pop.offsetHeight, m = 10;
+    const left = Math.min(Math.max(r.left, m), innerWidth - pw - m);
+    const top = r.bottom + 6 + ph <= innerHeight - m ? r.bottom + 6 : Math.max(m, r.top - 6 - ph);
+    pop.style.left = left + "px";
+    pop.style.top = top + "px";
+  }
+  function hideRoutePop() {
+    routeOpen = null;
+    $("#rt-pop").hidden = true;
+    document.querySelectorAll(".rt-w.open").forEach((x) => { x.classList.remove("open"); x.setAttribute("aria-expanded", "false"); });
+  }
+  document.addEventListener("click", (e) => { if (!$("#rt-pop").hidden && !e.target.closest("#rt-pop")) hideRoutePop(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#rt-pop").hidden) hideRoutePop(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#whatsnew").hidden) closeWhatsNew(); });
+  $("#daily-board-routes").addEventListener("scroll", () => { if (!$("#rt-pop").hidden) hideRoutePop(); });
+  function renderRoutes() {
+    if (!$("#rt-pop").hidden) hideRoutePop();   // a live update redraws the words: close any pop-up
+    if ($("#daily-board-routes").hidden || !boardTheme) return;
+    const done = routesData ? routesData.done : [], myUid = routesData ? routesData.myUid : null;
+    const pills = $("#routes-climbs");
+    pills.replaceChildren(...boardTheme.climbs.map((_, i) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "lb-routes-pill" + (i === boardRouteClimb ? " on" : "");
+      b.textContent = "Climb " + (i + 1);
+      b.addEventListener("click", () => { boardRouteClimb = i; renderRoutes(); });
+      return b;
+    }));
+    const i = boardRouteClimb, ladder = boardTheme.climbs[i].c;
+    const me = done.find((e) => e.uid === myUid);
+    const runs = done.map((e) => (e.roundWords || [])[i] || []);
+    const box = $("#routes-steps");
+    box.replaceChildren(...ladder.map((rung, k) => {
+      const counts = {}, who = {}; let reached = 0;
+      runs.forEach((r, n) => {
+        if (!r[k]) return;
+        reached++; counts[r[k]] = (counts[r[k]] || 0) + 1;
+        // done is in leaderboard order, so each word's players come out leader first
+        (who[r[k]] = who[r[k]] || []).push({ rank: n + 1, name: done[n].uid === myUid ? "You" : shownName(done[n].name), you: done[n].uid === myUid });
+      });
+      const words = (ANA.get(sortStr(rung)) || [rung]).filter((w) => FREQ.has(w) || counts[w] || isThemeWord(boardTheme, i, w))
+        .sort((a, b) => (counts[b] || 0) - (counts[a] || 0) || a.localeCompare(b));
+      const step = document.createElement("div");
+      step.className = "rt-step";
+      const head = document.createElement("div");
+      head.className = "rt-head";
+      const l = document.createElement("span"); l.textContent = "Step " + (k + 1);
+      const r = document.createElement("span"); r.textContent = reached + " of " + done.length + (done.length === 1 ? " player" : " players");
+      head.append(l, r);
+      const row = document.createElement("div");
+      row.className = "rt-words";
+      words.forEach((w) => {
+        const pct = reached ? Math.round(100 * (counts[w] || 0) / reached) : 0;
+        const key = k + "|" + w, open = routeOpen === key;
+        const c = document.createElement("button");
+        c.type = "button";
+        c.className = "rt-w" + (isThemeWord(boardTheme, i, w) ? " tw" : "") + (me && (me.roundWords || [])[i] && me.roundWords[i][k] === w ? " you" : "") + (counts[w] ? "" : " zero") + (open ? " open" : "");
+        c.setAttribute("aria-expanded", String(open));
+        const b = document.createElement("b");
+        if (isThemeWord(boardTheme, i, w)) { const fl = document.createElement("span"); fl.className = "rt-flag"; fl.innerHTML = TS_FLAG; b.appendChild(fl); }
+        b.append(w.toUpperCase());
+        const p = document.createElement("i"); p.textContent = pct + "%";
+        // the share as a small track inside the tile, clear of the tile's edge
+        const track = document.createElement("span"); track.className = "rt-track";
+        const fill = document.createElement("span"); fill.className = "rt-fill"; fill.style.width = pct + "%";
+        track.appendChild(fill);
+        c.append(b, p, track);
+        c.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          if (routeOpen === key) { hideRoutePop(); return; }
+          document.querySelectorAll(".rt-w.open").forEach((x) => { x.classList.remove("open"); x.setAttribute("aria-expanded", "false"); });
+          routeOpen = key; c.classList.add("open"); c.setAttribute("aria-expanded", "true");
+          showRoutePop(c, w, who[w] || []);
+        });
+        row.appendChild(c);
+      });
+      step.append(head, row);
+      return step;
+    }));
   }
 
   // ---- Board mountain: a flag for every finisher at the word they reached ----
@@ -7530,8 +7913,14 @@ $1{ display: flex; gap: 8px; width: 100%; }
 
   function showDailyBoard(dayKey, opts) {
     opts = opts || {};
+    // No back door to today's board (the calendar, yesterday's board): until you've finished
+    // today's daily, it sends you to play it instead. dailyPlayClick shows the board after all
+    // if you finished on another device.
+    if (dayKey === dailyKeyOf() && !isDev() && myDailyLastDay !== dailyKeyOf() && !opts.justFinished && !opts.finished) { dailyPlayClick(); return; }
     teardownDailyWatch();
     boardFocus = null;
+    routesData = null; boardRouteClimb = 0;
+    setBoardTab("standings");
     $("#daily-board-mtn").hidden = true;
     const today = dailyKeyOf();
     const yst = shiftDayKey(today, -1);
@@ -7543,8 +7932,11 @@ $1{ display: flex; gap: 8px; width: 100%; }
     sub.replaceChildren();
     const dayLine = document.createElement("b");
     dayLine.textContent = dateLabel(dayKey) + (boardTheme ? " · " + DAY_TIER[boardTheme.tier] + " day" : "");
-    sub.append(dayLine, document.createElement("br"),
-      (boardTheme ? "Theme: " + boardTheme.theme.name : "3 Climbs · a point per word") + (isToday ? " · " + dailyResetText() : ""));
+    sub.append(dayLine);
+    if (!boardTheme) sub.append(document.createElement("br"), "3 Climbs · a point per word");
+    $("#daily-board-theme").hidden = !boardTheme;
+    $("#daily-board-tabs").hidden = !boardTheme;   // routes need the day's ladders (themed days)
+    if (boardTheme) $("#daily-board-theme-name").textContent = boardTheme.theme.name;
     $("#daily-board-sum").hidden = true;
 
     const pill = $("#daily-board-streak");
@@ -7556,8 +7948,10 @@ $1{ display: flex; gap: 8px; width: 100%; }
     const flip = $("#btn-daily-board-flip");
     if (flip) {
       flip.hidden = false;
-      flip.textContent = isToday ? "See yesterday's board" : "See today's board";
-      flip.onclick = isToday ? () => showDailyBoard(yst) : () => showDailyBoard(today, { live: true });
+      const todayDone = isDev() || myDailyLastDay === today;
+      if (isToday) { flip.textContent = "See yesterday's board"; flip.onclick = () => showDailyBoard(yst); }
+      else if (todayDone) { flip.textContent = "See today's board"; flip.onclick = () => showDailyBoard(today, { live: true }); }
+      else { flip.innerHTML = 'Play today\x27s <span class="clb">Climb</span>'; flip.onclick = dailyPlayClick; }
     }
     $("#daily-board-list").innerHTML = "<p class='note'>Loading…</p>";
     $("#daily-board-foot").textContent = "";
@@ -7842,7 +8236,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     try {
       if (dbReady()) { try { mine = await window.MatchDB.getDailyEntrant(today); } catch (e) {} }
     } finally { dailyPlayBusy = false; }
-    if (mine) { showDailyBoard(today, { live: true }); return; }
+    if (mine) { showDailyBoard(today, { live: true, finished: true }); return; }
     startDailySession();
   }
   $("#btn-daily-play").addEventListener("click", dailyPlayClick);
@@ -8591,10 +8985,10 @@ $1{ display: flex; gap: 8px; width: 100%; }
   (function () {
     // No screen scrolls the page (iOS ignores touch-action / overscroll-behavior
     // in older Safari and the PWA shell) — block every touch-drag except inside
-    // the one element that scrolls itself, the leaderboard list.
+    // the few elements that scroll themselves (leaderboard list, Routes and its pop-up, ...).
     document.addEventListener("touchmove", (e) => {
       const t = e.target;
-      if (t && t.closest && (t.closest(".lb-list") || t.closest(".collection-grid") || t.closest(".def") || t.closest(".patch-list") || t.closest(".pf-scroll"))) return;
+      if (t && t.closest && t.closest(".lb-list, .lb-routes, .rt-pop, .collection-grid, .def, .patch-list, .pf-scroll")) return;
       if (e.cancelable) e.preventDefault();
     }, { passive: false });
   })();
@@ -9007,6 +9401,14 @@ $1{ display: flex; gap: 8px; width: 100%; }
   // Lives here, inside the page, because the page is always fetched fresh
   // (sw.js caches other files cache-first, so a notes file could go stale).
   const PATCH_NOTES = [
+    { v: "0.12.0", date: "2026-10-04", title: "Climb Routes",
+      notes: [
+        ["new", "Routes on the leaderboard: after you finish, see every word that fit each step of each Climb and how many players picked it. Tap a word to see who played it."],
+        ["new", "Today's theme now sits at the top of the leaderboard."],
+        ["imp", "Your time now pauses between Climbs, and time while your phone is asleep or you're on a call no longer counts."],
+        ["imp", "Upcoming puzzles have been reworked so a word choice can never block a theme word."],
+        ["fix", "No more peeking at today's leaderboard from the calendar before you've played."],
+      ] },
     { v: "0.11.0", date: "2026-10-02", title: "A fresh look",
       notes: [
         ["new", "A fresh look: cleaner screens, new fonts and a new logo. The game now opens in light mode; tap the moon for dark mode."],
@@ -9362,7 +9764,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
   const TROPHY_POP_SCREENS = ["home", "dailyboard", "profile", "trophies", "collectionover", "climbover"];
   const anySheetOpen = () => ["#install-sheet", "#reminder-sheet", "#claim-sheet", "#trophy-sheet"].some((s) => !$(s).hidden);
   function drainTrophyQueue() {
-    if (!trophyQueue.length || !$("#trophy-pop").hidden || anySheetOpen()) return;
+    if (!trophyQueue.length || !$("#trophy-pop").hidden || anySheetOpen() || !$("#whatsnew").hidden) return;
     if (TROPHY_POP_SCREENS.indexOf(currentScreen()) < 0) return; // never mid-climb
     showTrophyPop(trophyQueue.shift());
   }
@@ -9752,7 +10154,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
   // dictionary definition, a player's name or a drawing.
   const CLB_RE = /\b[Cc]limbs?\b/;
   const CLB_SKIP = ".clb, .brand-k, .chips, .tile, .wordtrail, .missed-word, .def, .chip-popover, .lb-flags, .lb-name, " +
-    ".ascent-toast, #pf-name, .whoami, .hts-stage, .hts-key, .tc-legend, .beta-sheet, .beta-pill, svg, script, style, textarea, input, select";
+    ".ascent-toast, .rt-pop, #pf-name, .whoami, .hts-stage, .hts-key, .tc-legend, .beta-sheet, .beta-pill, svg, script, style, textarea, input, select";
   function clbWrapText(node) {
     const p = node.parentElement;
     if (!p || !CLB_RE.test(node.data) || p.closest(CLB_SKIP)) return;
