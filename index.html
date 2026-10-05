@@ -4981,9 +4981,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
 
   function useHint() {
     if (hintUsed || !guessMode() || locked || checking) return;
-    const ex = isClimb()
-      ? (climbPuzzle && climbPuzzle.c[climbStage - 1])
-      : exampleWord(poolKey());
+    const ex = isClimb() ? climbHintWord() : exampleWord(poolKey());
     if (!ex) return;
     const reveal = ex.length >= 5 ? ex.slice(0, 2) : ex.slice(0, 1);
     hintUsed = true;
@@ -6869,6 +6867,15 @@ $1{ display: flex; gap: 8px; width: 100%; }
     }
   }
 
+  // How everyday a word is: its FREQ rank, else (TSARS, STIES) its singular's rank behind
+  // every FREQ word, else last.
+  function everydayRank(w) {
+    if (FREQ.has(w)) return FREQ.get(w);
+    const stem = w.replace(/(es|s|ed|d)$/, "");
+    if (stem !== w && FREQ.has(stem)) return 1e6 + FREQ.get(stem);
+    if (/s$/.test(w) && FREQ.has(w.slice(0, -1))) return 1e6 + FREQ.get(w.slice(0, -1));
+    return Infinity;
+  }
   // The most common valid word for the current pool that isn't an inflection of
   // what the player last played — i.e. a word that would actually have counted.
   function climbExample() {
@@ -6876,10 +6883,27 @@ $1{ display: flex; gap: 8px; width: 100%; }
     let best = null, bestRank = Infinity;
     for (const w of arr) {
       if (isInflectionOf(w, climbPrev)) continue;
-      const r = FREQ.has(w) ? FREQ.get(w) : Infinity;
+      const r = everydayRank(w);
       if (best === null || r < bestRank) { best = w; bestRank = r; }
     }
     return best || (climbPuzzle && climbPuzzle.c[climbStage - 1]) || null;
+  }
+  // The hint's word: one the player can actually play after their last word (STAR blocks
+  // STARS, so after STAR it's TSARS), and that still leaves a way on to the next step.
+  // The puzzle's own word when it qualifies, otherwise the most everyday one that does.
+  function climbHintWord() {
+    const ref = climbPuzzle && climbPuzzle.c[climbStage - 1];
+    const next = climbPuzzle && climbPuzzle.c[climbStage];
+    const nextOpts = next ? (ANA.get(sortStr(next)) || [next]) : null;
+    const ok = (w) => !isInflectionOf(w, climbPrev) && (!nextOpts || nextOpts.some((n) => !isInflectionOf(n, w)));
+    if (ref && ok(ref)) return ref;
+    let best = null, bestRank = Infinity;
+    for (const w of ANA.get(poolKey()) || []) {
+      if (!ok(w)) continue;
+      const r = everydayRank(w);
+      if (best === null || r < bestRank) { best = w; bestRank = r; }
+    }
+    return best || climbExample();
   }
 
   // A climb (round) has ended — completed all 6 rungs, or struck out / gave up.
