@@ -1814,6 +1814,11 @@ $1{ display: flex; gap: 8px; width: 100%; }
   #screen-daily-board .lb-row.me .lb-rank { color: var(--rd-ink); }
   #screen-daily-board .lb-score { font-weight: 800; }
   #screen-daily-board .lb-time { font-size: 0.85rem; }
+  /* "Still climbing": people who've started today's daily but not finished, under the standings */
+  #screen-daily-board .lb-climb-h { text-align: left; padding: 18px 4px 6px; border-bottom: 1.5px solid var(--rd-ink); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--rd-ink); }
+  #screen-daily-board .lb-climb-h span { color: var(--rd-muted); }
+  #screen-daily-board .lb-row.climbing { cursor: default; }
+  #screen-daily-board .lb-row.climbing .lb-rank { text-align: center; }
   #daily-board-list .lb-row.spot { box-shadow: inset 3px 0 0 var(--rd-ink); }
   #daily-board-list .lb-row.me.spot { box-shadow: inset 3px 0 0 var(--rd-climb); }
   #screen-daily-board .lb-detail { padding: 10px 4px 12px; border-bottom: 1px solid var(--rd-line); text-align: left; }
@@ -3001,6 +3006,23 @@ $1{ display: flex; gap: 8px; width: 100%; }
       save();
     },
     getDailyBoard: async function (day) { var m = mine(day); return fakeBoard(day).concat(m ? [m] : []); },
+    saveDailyLive: async function (day, p) {
+      db.live = db.live || {};
+      db.live[day] = { uid: UID, name: p.name || "Player", climb: p.climb || 1, points: p.points || 0, finished: !!p.finished, at: Date.now() };
+      save();
+    },
+    getDailyLive: async function (day) {
+      var own = (db.live || {})[day], out = own ? [own] : [];
+      if (db.noFakes) return out;
+      var r = seeded("live" + day), info = dayInfo(day), lens = info.ladders ? info.ladders.map(function (l) { return l.length; }) : [6, 6, 6];
+      ["Jennifer", "Sam O.", "Ali"].forEach(function (n, i) {
+        var climb = 3 - i, pts = 0;
+        for (var c = 0; c < climb - 1; c++) pts += lens[c] - Math.floor(r() * 2);
+        pts += 1 + Math.floor(r() * (lens[climb - 1] - 1));
+        out.push({ uid: "fake-live-" + i, name: n, climb: climb, points: pts, finished: false, at: Date.now() - Math.floor(r() * 50) * 60000 });
+      });
+      return out;
+    },
     watchDailyBoard: function (day, cb) { setTimeout(function () { var m = mine(day); cb(fakeBoard(day).concat(m ? [m] : [])); }, 60); return noop; },
     bumpStreak: async function (day, prevDay) {
       var p = player();
@@ -3660,6 +3682,21 @@ $1{ display: flex; gap: 8px; width: 100%; }
       if (d.started) d.startedAt = serverTimestamp();
       delete d.started;
       try { await setDoc(doc(db, "dailies", day, "progress", uid), d, { merge: true }); } catch (e) {}
+    },
+    // dailies/{day}/live/{uid} — the public part: name, which Climb, points so far. No words,
+    // so anyone can read it (the leaderboard's "Still climbing" list).
+    async saveDailyLive(day, p) {
+      if (!uid) return;
+      try {
+        await setDoc(doc(db, "dailies", day, "live", uid), { name: p.name || "Player", climb: p.climb || 1, points: p.points || 0, finished: !!p.finished, updatedAt: serverTimestamp() });
+      } catch (e) {}
+    },
+    async getDailyLive(day) {
+      try {
+        const es = await getDocs(collection(db, "dailies", day, "live"));
+        return es.docs.map((d) => { const x = d.data(); return { uid: d.id, name: x.name, climb: x.climb || 1, points: x.points || 0, finished: !!x.finished,
+          at: x.updatedAt && x.updatedAt.toMillis ? x.updatedAt.toMillis() : Date.now() }; });
+      } catch (e) { return null; }
     },
     async getDailyBoard(day) {
       try {
@@ -6933,6 +6970,9 @@ $1{ display: flex; gap: 8px; width: 100%; }
     }
     $("#btn-cre-next").innerHTML = isLastRound ? "See results" : 'Keep <span class="clb">Climbing</span>!';
     saveRoundBreak(round + 1);
+    // Last Climb: post the result now, so closing the app on this screen doesn't lose it.
+    // "See results" then just opens the board.
+    if (isLastRound && mode === "daily" && !isDev()) { pauseDailyTimer(); dailySessionActive = false; postDailyResult(); }
     show("climbroundend");
   }
 
@@ -6983,12 +7023,14 @@ $1{ display: flex; gap: 8px; width: 100%; }
     const words = [];
     for (let i = 0; i < round - 1; i++) words.push((roundWords[i] || []).slice());
     words.push(currentRoundWords.slice());
-    window.MatchDB.saveDailyProgress(dailyDay, Object.assign({
+    const rec = Object.assign({
       name: storedName || playerName || "Player",
       climb: round, step: currentRoundWords.length,
       points: dailyWordsSoFar() + (dailyTheme && newRules(dailyTheme) ? themeBonusSoFar() : 0),
       strikes: sessionStrikes, solveMs: Math.round(solveMs || 0), roundWords: words, finished: false,
-    }, extra || {}));
+    }, extra || {});
+    window.MatchDB.saveDailyProgress(dailyDay, rec);
+    if (window.MatchDB.saveDailyLive) window.MatchDB.saveDailyLive(dailyDay, rec);   // the word-free public note
   }
   function dailyWordsSoFar() {
     const wordsIn = (i) => (roundWords[i] ? roundWords[i].length : 0);
@@ -7582,6 +7624,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     matchSeed = seedForDay(dailyDay);
     loadDailyPuzzles(dailyDay);
     themeFound = [null, null, null];
+    dailyPost = null;
     startClimbSession();
     dailyElapsedMs = 0;
     dailySessionActive = true;
@@ -7591,6 +7634,42 @@ $1{ display: flex; gap: 8px; width: 100%; }
     beginClimbRound();
     saveDailyProgress({ started: true });
     startIntro();
+  }
+
+  // Saves today's result: the leaderboard entry, the streak, the profile's day. Runs once per
+  // run (the second call gets the same promise): at the end of the last Climb, and again from
+  // "See results" (which waits for it), or from a resume that picks up after the last Climb.
+  let dailyPost = null;
+  function postDailyResult() {
+    if (dailyPost && dailyPost.day === dailyDay) return dailyPost.p;
+    const day = dailyDay;
+    const totalRungs = roundWords.reduce((a, w) => a + w.length, 0);
+    const p = (async () => {
+      window.MatchDB.track("daily_finish", { rungs: totalRungs, strikes: sessionStrikes });
+      saveDailyProgress({ finished: true });
+      const prevDay = shiftDayKey(day, -1);
+      let ok = false;
+      try {
+        await window.MatchDB.submitDaily(day, {
+          name: storedName || playerName || "Player",
+          total: totalRungs, strikes: sessionStrikes, solveMs: solveMs, roundWords: roundWords,
+          hintUsed: hintUsed,
+          ...(dailyTheme ? { themeWords: themeBonusSoFar(), max: dailyMax(), theme: dailyTheme.id } : {}),
+        });
+        await window.MatchDB.bumpStreak(day, prevDay);
+        ok = true;
+        const pl = await window.MatchDB.getPlayer();
+        if (pl) { myDailyStreak = pl.dailyStreak || 0; myDailyLastDay = pl.dailyLastDay || null; myPlayer = pl; }
+        cacheProfile();
+      } catch (e) {}
+      // Profile + trophies: today counts right away (final place comes tomorrow).
+      setTodayResult(Object.assign({ t: totalRungs, s: sessionStrikes, ms: solveMs, h: hintUsed, at: Date.now() },
+        dailyTheme ? { m: dailyMax(), th: themeBonusSoFar(), tf: themeFound.slice(),
+          tp: dailyClimbs.map((_, i) => themeRevealFor(i, roundWords[i] || []).played) } : {}));
+      if (ok) clearResume();   // posted: nothing left to resume (if it failed, a resume tries again)
+    })();
+    dailyPost = { day: day, p: p };
+    return p;
   }
 
   async function submitDailyResult(totalRungs) {
@@ -7606,26 +7685,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
       if (totalRungs >= dailyMax() * 2 / 3) setTimeout(() => confetti({ big: totalRungs >= dailyMax() * 0.88 }), 350);
       return;
     }
-    window.MatchDB.track("daily_finish", { rungs: totalRungs, strikes: sessionStrikes });
-    saveDailyProgress({ finished: true });
-    const total = totalRungs;
-    const prevDay = shiftDayKey(dailyDay, -1);
-    try {
-      await window.MatchDB.submitDaily(dailyDay, {
-        name: storedName || playerName || "Player",
-        total: total, strikes: sessionStrikes, solveMs: solveMs, roundWords: roundWords,
-        hintUsed: hintUsed,
-        ...(dailyTheme ? { themeWords: themeBonusSoFar(), max: dailyMax(), theme: dailyTheme.id } : {}),
-      });
-      await window.MatchDB.bumpStreak(dailyDay, prevDay);
-      const p = await window.MatchDB.getPlayer();
-      if (p) { myDailyStreak = p.dailyStreak || 0; myDailyLastDay = p.dailyLastDay || null; myPlayer = p; }
-      cacheProfile();
-    } catch (e) {}
-    // Profile + trophies: today counts right away (final place comes tomorrow).
-    setTodayResult(Object.assign({ t: total, s: sessionStrikes, ms: solveMs, h: hintUsed, at: Date.now() },
-      dailyTheme ? { m: dailyMax(), th: themeBonusSoFar(), tf: themeFound.slice(),
-        tp: dailyClimbs.map((_, i) => themeRevealFor(i, roundWords[i] || []).played) } : {}));
+    await postDailyResult();
     checkTrophies();
     clearResume();
     showDailyBoard(dailyDay, { live: true, justFinished: true });
@@ -7678,6 +7738,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     }
     renderBoardMountain(done, myUid);
     routesData = { done: done, myUid: myUid };
+    renderStillClimbing();
     renderRoutes();
     // The tip floats over the foot of the mountain, pointing down at the list
     // (your open row can fill the list, so it can't live in there).
@@ -7733,6 +7794,47 @@ $1{ display: flex; gap: 8px; width: 100%; }
           { duration: 380, easing: "cubic-bezier(.2,.8,.25,1.5)" }); }, 500);
       }
     }
+  }
+
+  // ---- Still climbing: who's started today's daily but not finished ----
+  // Read from dailies/{day}/live (name, which Climb, points so far; never words) once when the
+  // board opens, and again at most once a minute as the live board updates. Anyone already on
+  // the standings, or with no new word in 3 hours, is left out. Today's board only.
+  let climbingBoard = { day: null, list: null, at: 0 };
+  const CLIMBING_STALE_MS = 3 * 3600 * 1000;
+  function renderStillClimbing() {
+    const day = climbingBoard.day, list = $("#daily-board-list");
+    if (!day || day !== dailyKeyOf() || !dbReady() || !window.MatchDB.getDailyLive) return;
+    if (Date.now() - climbingBoard.at > 60000) {
+      climbingBoard.at = Date.now();
+      window.MatchDB.getDailyLive(day).then((rows) => {
+        if (climbingBoard.day !== day || !rows) return;
+        climbingBoard.list = rows;
+        renderStillClimbing();
+      });
+    }
+    list.querySelectorAll(".lb-climb-h, .lb-row.climbing").forEach((el) => el.remove());
+    if (!climbingBoard.list || !routesData) return;
+    const doneUids = new Set(routesData.done.map((e) => e.uid));
+    const now = Date.now();
+    const going = climbingBoard.list.filter((p) => !p.finished && !doneUids.has(p.uid) && now - p.at < CLIMBING_STALE_MS)
+      .sort((a, b) => b.points - a.points || a.climb - b.climb);
+    if (!going.length) return;
+    if (!routesData.done.length) list.innerHTML = "";   // drop "No one's finished this one yet."
+    const head = document.createElement("div");
+    head.className = "lb-climb-h";
+    head.append("Still climbing ");
+    const n = document.createElement("span"); n.textContent = "· " + going.length;
+    head.appendChild(n);
+    list.appendChild(head);
+    const myUid = window.MatchDB.uid;
+    going.forEach((p) => {
+      const row = document.createElement("div");
+      row.className = "lb-row climbing";
+      const cells = [["lb-rank", "–"], ["lb-name", shownName(p.name) + (p.uid === myUid ? " (you)" : "")], ["lb-score", p.points], ["lb-time", "Climb " + p.climb]];
+      cells.forEach(([cls, text]) => { const c = document.createElement("div"); c.className = cls; c.textContent = text; row.appendChild(c); });
+      list.appendChild(row);
+    });
   }
 
   // ---- Routes: every way up each Climb, and how many players took each word ----
@@ -7961,6 +8063,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     teardownDailyWatch();
     boardFocus = null;
     routesData = null; boardRouteClimb = 0;
+    climbingBoard = { day: dayKey, list: null, at: 0 };
     setBoardTab("standings");
     $("#daily-board-mtn").hidden = true;
     const today = dailyKeyOf();
@@ -9442,6 +9545,11 @@ $1{ display: flex; gap: 8px; width: 100%; }
   // Lives here, inside the page, because the page is always fetched fresh
   // (sw.js caches other files cache-first, so a notes file could go stale).
   const PATCH_NOTES = [
+    { v: "0.12.1", date: "2026-10-05", title: "Still climbing",
+      notes: [
+        ["new", "The leaderboard now shows who's still climbing: everyone who has started today's daily but hasn't finished, with their points so far and which Climb they're on."],
+        ["fix", "Your score now posts the moment you finish your last Climb, even if you close the game before tapping \"See results\"."],
+      ] },
     { v: "0.12.0", date: "2026-10-04", title: "Climb Routes",
       notes: [
         ["new", "Routes on the leaderboard: after you finish, see every word that fit each step of each Climb and how many players picked it. Tap a word to see who played it."],
