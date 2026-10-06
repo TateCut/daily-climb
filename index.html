@@ -6933,7 +6933,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     const arr = ANA.get(poolKey()) || [];
     let best = null, bestRank = Infinity;
     for (const w of arr) {
-      if (isInflectionOf(w, climbPrev)) continue;
+      if (isInflectionOf(w, climbPrev) || nameIsBlocked(w)) continue;
       const r = everydayRank(w);
       if (best === null || r < bestRank) { best = w; bestRank = r; }
     }
@@ -6946,7 +6946,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     const ref = climbPuzzle && climbPuzzle.c[climbStage - 1];
     const next = climbPuzzle && climbPuzzle.c[climbStage];
     const nextOpts = next ? (ANA.get(sortStr(next)) || [next]) : null;
-    const ok = (w) => !isInflectionOf(w, climbPrev) && (!nextOpts || nextOpts.some((n) => !isInflectionOf(n, w)));
+    const ok = (w) => !isInflectionOf(w, climbPrev) && !nameIsBlocked(w) && (!nextOpts || nextOpts.some((n) => !isInflectionOf(n, w)));
     if (ref && ok(ref)) return ref;
     let best = null, bestRank = Infinity;
     for (const w of ANA.get(poolKey()) || []) {
@@ -7985,7 +7985,8 @@ $1{ display: flex; gap: 8px; width: 100%; }
         // done is in leaderboard order, so each word's players come out leader first
         (who[r[k]] = who[r[k]] || []).push({ rank: n + 1, name: done[n].uid === myUid ? "You" : shownName(done[n].name), you: done[n].uid === myUid });
       });
-      const words = (ANA.get(sortStr(rung)) || [rung]).filter((w) => FREQ.has(w) || counts[w] || isThemeWord(boardTheme, i, w))
+      // (never a swear word, even if someone played one: the name filter's list)
+      const words = (ANA.get(sortStr(rung)) || [rung]).filter((w) => (FREQ.has(w) || counts[w] || isThemeWord(boardTheme, i, w)) && !nameIsBlocked(w))
         .sort((a, b) => (counts[b] || 0) - (counts[a] || 0) || a.localeCompare(b));
       const step = document.createElement("div");
       step.className = "rt-step";
