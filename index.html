@@ -130,9 +130,9 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
   body:has(#screen-profile:not([hidden])) h1,
   body:has(#screen-trophies:not([hidden])) .brandmark,
   body:has(#screen-trophies:not([hidden])) h1 { display: none; }
-  /* No page scroll anywhere — every screen is sized to fit the viewport. The one
-     list that can overflow (the leaderboard) scrolls inside itself instead. */
-  html, body { overflow: hidden; overscroll-behavior: none; }
+  /* Pages scroll like any page (and bounce at the ends, so a swipe always answers "that's
+     everything"). The game screen stays locked: dragging tiles must never move the page. */
+  html.noscroll, html.noscroll body { overflow: hidden; overscroll-behavior: none; }
   /* The few inner scrollers draw their bar in the theme's line color. */
   .lb-list, .lb-routes, .rt-pop, .collection-grid, .def, .patch-list, .pf-scroll { scrollbar-color: var(--line) transparent; scrollbar-width: thin; }
   /* Tutorial is a fixed card — kill touch-panning so a swipe is never stolen. */
@@ -1673,7 +1673,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
   .lb-tabs button.on { background: var(--rd-ink); color: var(--rd-bg); }
   .lb-tabs button:focus-visible, .lb-routes-pill:focus-visible { outline: 2px solid var(--rd-climb); outline-offset: 2px; }
   #screen-daily-board.routes :is(#daily-board-theme, #daily-board-sum, #daily-board-mtn, #daily-board-head, #daily-board-list, #daily-board-foot, #btn-reminder) { display: none !important; }
-  .lb-routes { width: 100%; flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 12px; text-align: left; }
+  .lb-routes { width: 100%; flex: none; overflow: visible; display: flex; flex-direction: column; gap: 12px; text-align: left; }
   .lb-routes[hidden] { display: none; }
   .lb-routes-climbs { display: flex; justify-content: center; gap: 6px; }
   .lb-routes-pill { padding: 5px 12px; border-radius: 999px; border: 0; box-shadow: inset 0 0 0 1.5px var(--rd-line); background: none; color: var(--rd-muted); font: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer; }
@@ -1802,12 +1802,11 @@ $1{ display: flex; gap: 8px; width: 100%; }
   #screen-daily-board .lb-tip { background: var(--rd-ink); color: var(--rd-bg); }
   #screen-daily-board .lb-tip::after { border-top-color: var(--rd-ink); }
   #screen-daily-board .lb-head { padding: 4px 4px 6px; border-bottom: 1.5px solid var(--rd-ink); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.1em; }
-  /* The board fills the screen exactly: everything keeps its size and the player list takes
-     what's left, scrolling inside itself (no fixed guesses, so nothing falls off the bottom). */
+  /* The board is one page: the theme and mountain scroll away with the standings (or Routes),
+     so the list gets the whole screen. */
   body:has(#screen-daily-board:not([hidden])) { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); }
-  #screen-daily-board { height: calc(100vh - 26px); height: calc(100dvh - 26px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
   #screen-daily-board > * { flex-shrink: 0; }
-  #screen-daily-board .lb-list, html.standalone #screen-daily-board .lb-list { flex: 0 1 auto; min-height: 96px; max-height: none; gap: 0; margin-top: -10px; }
+  #screen-daily-board .lb-list, html.standalone #screen-daily-board .lb-list { flex: none; min-height: 0; max-height: none; overflow: visible; gap: 0; margin-top: -10px; }
   #daily-board-foot:empty { display: none; }
   #screen-daily-board .lb-row { padding: 11px 4px; border: 0; border-bottom: 1px solid var(--rd-line); border-radius: 0; background: none; font-size: 0.98rem; }
   #screen-daily-board .lb-row.me { background: var(--rd-tint); border-radius: 8px; border-bottom-color: transparent; }
@@ -4537,6 +4536,8 @@ $1{ display: flex; gap: 8px; width: 100%; }
   setInterval(() => { if (!document.hidden) checkForUpdate(); }, 10 * 60 * 1000);
   setTimeout(checkForUpdate, 4000); // catches a page that loaded just before a new version went up
 
+  // Screens where the page never scrolls (tiles are dragged there); every other screen scrolls.
+  const LOCKED_SCREENS = new Set(["play", "loading"]);
   function show(name) {
     if (updateWaiting && !BUSY_SCREENS.has(name)) setTimeout(applyUpdateWhenCalm, 300);
     hideChipPopover(); // never leave a word definition floating over the next screen
@@ -4552,6 +4553,8 @@ $1{ display: flex; gap: 8px; width: 100%; }
     const el = screens[name];
     const arriving = el && el.hidden;
     for (const k in screens) screens[k].hidden = k !== name;
+    document.documentElement.classList.toggle("noscroll", LOCKED_SCREENS.has(name));
+    if (arriving) window.scrollTo(0, 0);
     const dailyRun = mode === "daily" && (name === "play" || name === "climbroundend");
     $("#daily-timer").hidden = !dailyRun;
     $("#pnav-time").hidden = mode !== "daily";
@@ -7756,7 +7759,8 @@ $1{ display: flex; gap: 8px; width: 100%; }
         toggleLbDetail(openRow, done.find((e) => e.uid === openUid), boardTheme);
         // Just finished: scroll the list (not the page) so your row sits at the top.
         if (opts.justFinished && !opts._juiced) requestAnimationFrame(() => {
-          list.scrollTop += openRow.getBoundingClientRect().top - list.getBoundingClientRect().top - 2;
+          const r = openRow.getBoundingClientRect();
+          if (r.bottom > innerHeight - 20) window.scrollBy({ top: r.top - innerHeight * 0.35, behavior: "smooth" });
         });
       }
     }
@@ -7907,7 +7911,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
   document.addEventListener("click", (e) => { if (!$("#rt-pop").hidden && !e.target.closest("#rt-pop")) hideRoutePop(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#rt-pop").hidden) hideRoutePop(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#whatsnew").hidden) closeWhatsNew(); });
-  $("#daily-board-routes").addEventListener("scroll", () => { if (!$("#rt-pop").hidden) hideRoutePop(); });
+  addEventListener("scroll", () => { if (!$("#rt-pop").hidden) hideRoutePop(); hideChipPopover(); }, { passive: true });
   function renderRoutes() {
     if (!$("#rt-pop").hidden) hideRoutePop();   // a live update redraws the words: close any pop-up
     if ($("#daily-board-routes").hidden || !boardTheme) return;
@@ -9151,12 +9155,14 @@ $1{ display: flex; gap: 8px; width: 100%; }
   });
 
   (function () {
-    // No screen scrolls the page (iOS ignores touch-action / overscroll-behavior
-    // in older Safari and the PWA shell) — block every touch-drag except inside
-    // the few elements that scroll themselves (leaderboard list, Routes and its pop-up, ...).
+    // The game screen never scrolls, and nor does the page behind a full-screen card (iOS
+    // ignores touch-action / overscroll-behavior in older Safari and the PWA shell, so block
+    // the drag itself) — except inside the few elements that scroll themselves.
     document.addEventListener("touchmove", (e) => {
       const t = e.target;
       if (t && t.closest && t.closest(".lb-list, .lb-routes, .rt-pop, .collection-grid, .def, .patch-list, .pf-scroll")) return;
+      const overCard = t && t.closest && t.closest(".wn, .hts-veil, #theme-card, #forfeit-confirm");
+      if (!overCard && !document.documentElement.classList.contains("noscroll")) return;
       if (e.cancelable) e.preventDefault();
     }, { passive: false });
   })();
@@ -9569,6 +9575,12 @@ $1{ display: flex; gap: 8px; width: 100%; }
   // Lives here, inside the page, because the page is always fetched fresh
   // (sw.js caches other files cache-first, so a notes file could go stale).
   const PATCH_NOTES = [
+    { v: "0.12.2", date: "2026-10-06", title: "Room to scroll",
+      notes: [
+        ["imp", "The leaderboard now scrolls as one page, so you can see more players at once."],
+        ["fix", "Routes no longer cuts off the last steps of a Climb."],
+        ["imp", "Pages scroll and bounce at the end, so you always know you've seen everything."],
+      ] },
     { v: "0.12.1", date: "2026-10-05", title: "Still climbing",
       notes: [
         ["new", "The leaderboard now shows who's still climbing: everyone who has started today's daily but hasn't finished, with their points so far and which Climb they're on."],
