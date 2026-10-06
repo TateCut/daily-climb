@@ -5062,6 +5062,10 @@ $1{ display: flex; gap: 8px; width: 100%; }
       trayEl.appendChild(cell.type === "letter" ? makeTile(cell.id, firstOfStage) : slotEl());
     });
     ans.forEach((id) => ansEl.appendChild(id === null ? slotEl() : makeTile(id, false)));
+    if (drag) {   // redrawn mid-drag: follow the letter to its new tile
+      const n = document.querySelector('#tray .tile[data-id="' + drag.id + '"], #answer .tile[data-id="' + drag.id + '"]');
+      if (n) { drag.el = n; if (drag.started) n.classList.add("dragging"); } else cancelDrag();
+    }
     if (isClimb() && answerFull() && !locked && !checking) coachTip("enter", $("#btn-enter"), "All set? Press Enter");
   }
 
@@ -5198,21 +5202,60 @@ $1{ display: flex; gap: 8px; width: 100%; }
     // lifts, that function is reading the second drag's state instead. This
     // is "the floating letter" bug: a ghost tile frozen mid-air, visually
     // detached from the tray/answer it came from.
-    if (drag) return;
+    // ...unless that first drag is stuck: its finger went quiet a while ago (iOS can swallow
+    // the lift entirely, e.g. a notification, a screenshot or an app switch mid-drag). Then the
+    // new touch clears it and starts fresh instead of the board staying frozen.
+    if (drag) {
+      if (e.pointerId !== drag.pointerId && Date.now() - drag.lastAt < DRAG_STALE_MS) return;
+      cancelDrag();
+    }
     // Defensive cleanup: remove any ghost left behind by an edge case this
-    // guard doesn't cover (e.g. a mid-drag exception skipping onPointerUp),
-    // so a stray ghost can't accumulate indefinitely across drags.
+    // guard doesn't cover, so a stray ghost can't accumulate across drags.
     document.querySelectorAll(".tile.ghost").forEach((g) => g.remove());
-    const el = e.currentTarget;
-    drag = { id: id, el: el, startX: e.clientX, startY: e.clientY, pointerId: e.pointerId, started: false };
+    // (cancelDrag may have just redrawn the tiles: use the letter's current tile)
+    const el = e.currentTarget.isConnected ? e.currentTarget
+      : (document.querySelector('#tray .tile[data-id="' + id + '"], #answer .tile[data-id="' + id + '"]') || e.currentTarget);
+    drag = { id: id, el: el, startX: e.clientX, startY: e.clientY, pointerId: e.pointerId, started: false, lastAt: Date.now() };
     try { el.setPointerCapture(e.pointerId); } catch (err) {}
-    el.addEventListener("pointermove", onPointerMove);
-    el.addEventListener("pointerup", onPointerUp);
-    el.addEventListener("pointercancel", onPointerUp);
+    // On the window, not the tile: if the tile is redrawn mid-drag (or loses pointer capture),
+    // its own listeners would never hear the lift — the frozen floating letter.
+    addEventListener("pointermove", onPointerMove);
+    addEventListener("pointerup", onPointerUp);
+    addEventListener("pointercancel", onPointerUp);
   }
+  const DRAG_STALE_MS = 1500;
+  function detachDrag() {
+    removeEventListener("pointermove", onPointerMove);
+    removeEventListener("pointerup", onPointerUp);
+    removeEventListener("pointercancel", onPointerUp);
+  }
+  // Drop the drag without moving anything: the letter snaps back to where it was.
+  function cancelDrag() {
+    if (!drag) return;
+    const d = drag;
+    drag = null;
+    detachDrag();
+    try { d.el.releasePointerCapture(d.pointerId); } catch (err) {}
+    document.body.style.userSelect = "";
+    document.querySelectorAll(".tile.ghost").forEach((g) => g.remove());
+    document.querySelectorAll(".tile.dragging").forEach((t) => t.classList.remove("dragging"));
+    clearDropTarget();
+    dropTarget = null;
+    if (d.started && !screens.play.hidden) render(false);
+  }
+  // Ways a drag can end without a lift ever arriving: the app goes to the background (a call,
+  // a notification, the app switcher), the page loses focus, or a tap lands elsewhere while
+  // the dragging finger has long gone quiet.
+  document.addEventListener("visibilitychange", () => { if (document.hidden) cancelDrag(); });
+  addEventListener("blur", cancelDrag);
+  addEventListener("pagehide", cancelDrag);
+  document.addEventListener("pointerdown", (e) => {
+    if (drag && e.pointerId !== drag.pointerId && Date.now() - drag.lastAt >= DRAG_STALE_MS && !(e.target.closest && e.target.closest(".tile"))) cancelDrag();
+  }, true);
 
   function onPointerMove(e) {
-    if (!drag) return;
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    drag.lastAt = Date.now();
     const dx = e.clientX - drag.startX;
     const dy = e.clientY - drag.startY;
     if (!drag.started) {
@@ -5232,13 +5275,12 @@ $1{ display: flex; gap: 8px; width: 100%; }
     updateDropTarget(e.clientX, e.clientY);
   }
 
-  function onPointerUp() {
-    if (!drag) return;
+  function onPointerUp(e) {
+    if (!drag || (e && e.pointerId !== drag.pointerId)) return;
     const el = drag.el;
     try { el.releasePointerCapture(drag.pointerId); } catch (err) {}
-    el.removeEventListener("pointermove", onPointerMove);
-    el.removeEventListener("pointerup", onPointerUp);
-    el.removeEventListener("pointercancel", onPointerUp);
+    detachDrag();
+    if (e && e.type === "pointercancel") { cancelDrag(); return; }   // the system took the touch: snap back, move nothing
 
     const d = drag;
     drag = null;
