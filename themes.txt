@@ -34,11 +34,14 @@ scones sesame simmer spice spinach steamed strudel supper sushi tangerine taste 
 tomato turnips vegan vinegar walnuts yoghurt
 cater creams dates deli eats gelatins gratin gratins mace nectar rations savor taco tacos tastes teas peach
 
+# A line starting "+YYYY-MM-DD" adds words that only count from that day on (theme-words.js
+# THEME_WORDS_FROM), so adding a word never changes the scoring of a day already in play.
 == sports | Sports | ⚽ | sports word
 archer archers archery athletes athletic basket baskets bowling cricket croquet cycling dribble fitness
 goalie hurdles karate leagues medal medals pitcher racehorse racer racers racing rodeo rowing scored
 scores scoring skating skiing snooker sparring sport sporting sports stadium stamina tackled tackling
 teams tennis trainee trainees trainer trainers training trophies tryouts winners wrestling
++2026-10-09 cheers
 race skate train
 
 == weather | Weather | 🌦 | weather word
@@ -74,6 +77,7 @@ earth pots rose sower terraces petal
 airline airports airship hotels resort resorts roads route souvenir souvenirs streetcar tourism tourist
 tours trains transit traveled travelers traveling travelled travellers travelling travels trips voyager countries countryside
 hostel depart
++2026-10-09 host
 
 == home | Home | 🏠 | home word
 attic basement bedroom bedrooms blanket blankets blender carpet carpets cellars closet closets cushion
@@ -114,6 +118,7 @@ chapter chapters dictation equation equations grades graders history learn learn
 lesson lessons literary readers reading recital scholar science seminar spelling studies studying
 teacher teachers teaching tested writing
 question read reads grade
++2026-10-09 cheating
 
 == party | Party | 🎉 | party word
 carnival carol cheers christen congrats dance dances easter greeting greetings parades partied parties
@@ -147,6 +152,7 @@ ankles aspirin bladder bones breath breathe chest dental dentures elbows eyelids
 healing health healthy heart hearts hygiene liver medical nails nurses organ patients shoulder sternum
 surgeon thighs veins
 breathes breaths exhaling inhale organs elbow
++2026-10-09 sight heights hear
 
 == road | On the Road | 🚗 | road word
 barge braking buses carts chariot diesel driver drivers driving engine engines gasoline gondola motorcade
@@ -190,6 +196,7 @@ actor actors actress backstage camera cameras caption captions cartoon cartoons 
 filming matinee montage movies onstage scene scenes screen screens script scripts sitcom stage starred
 starring theater theaters theatre theatres video videos viewers
 action costar ratings reviews cast
++2026-10-09 takes
 
 == science | Science | 🔬 | science word
 atoms botany chemical chemist equation formula genes genetic genius laser magnet magnetism magnets methane
@@ -212,3 +219,6 @@ clippers staple lever
 arrest arrested arresting arrests clues constable forensic heist inquest inspector larceny robbing
 sergeant sheriff sherlock suspect trial trials verdict witness interrogate secretive
 liar question steal trail prints
++2026-10-09 secret secrets detective detectives clue culprit culprits motive motives alibi alibis sleuth sleuths
++2026-10-09 solve solved solving crime crimes criminal evidence strange mystery mysteries riddle riddles
++2026-10-09 puzzle puzzles hidden police suspects suspicious stolen thief thieves sneaky spies spying

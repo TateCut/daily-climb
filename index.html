@@ -6745,13 +6745,19 @@ $1{ display: flex; gap: 8px; width: 100%; }
   const newRules = (t) => !!t && newRulesOn(t.base);
   // Is w a theme word? Anything on the theme's list (theme-words.js) counts,
   // on any rung, plus the calendar's own theme words for climb i.
+  // A word added later (THEME_WORDS_FROM) only counts from its day on, so adding one never
+  // changes the scoring of a day that's already being played. base: the day (omit for all).
   const themeSets = {};
-  function themeSet(id) {
-    if (!themeSets[id]) themeSets[id] = new Set(String((window.THEME_WORDS || {})[id] || "").split(" ").filter(Boolean));
-    return themeSets[id];
+  function themeSet(id, base) {
+    const k = id + "|" + (base || "");
+    if (!themeSets[k]) {
+      const from = (window.THEME_WORDS_FROM || {})[id] || {};
+      themeSets[k] = new Set(String((window.THEME_WORDS || {})[id] || "").split(" ").filter((w) => w && (!base || !from[w] || base >= from[w])));
+    }
+    return themeSets[k];
   }
   function isThemeWord(t, i, w) {
-    return !!(t && w) && ((newRules(t) && themeSet(t.id).has(w)) || ((t.words && t.words[i]) || []).includes(w));
+    return !!(t && w) && ((newRules(t) && themeSet(t.id, t.base).has(w)) || ((t.words && t.words[i]) || []).includes(w));
   }
   // The theme words among a climb's words (each one is a bonus point; old days: the first only).
   const themeHits = (t, i, words) => {
@@ -7385,7 +7391,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     return false;
   }
   function autoExample(t, words) {
-    const theme = themeSet(t.id);
+    const theme = themeSet(t.id, t.base);
     let best = null, bestRank = Infinity;
     theme.forEach((w) => {
       if (w.length < 4 || w.length > 6 || !FREQ.has(w) || spoils(w, words)) return;

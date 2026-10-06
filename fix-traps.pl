@@ -22,6 +22,14 @@ binmode STDOUT, ':encoding(UTF-8)';
 #   perl fix-traps.pl                  dry run: writes the report only
 #   WRITE=1 perl fix-traps.pl          also rewrites daily-calendar.js
 #   FROM=2026-10-06                    first day that may change (default)
+#   DEADENDS=1                         also fix dead ends (below); REPORT=name.json for its report
+#   BLOCKED=1                          also swap climbs using a word added to climb-blocklist.txt since
+#   STRONG=theme=w1,w2,...             swap that theme's climbs whose theme words aren't among w1.. (rework a weak theme)
+#
+# A dead end: an everyday word you can play on some step (STAR) after which every everyday
+# word on the next step is blocked (STARS is just STAR + s), leaving only unusual ones (TSARS,
+# TRASS). Never impossible, but it feels it. With DEADENDS=1 those climbs are swapped too, and
+# no replacement may have a trap or a dead end.
 #
 # Shares the climb loading, difficulty and theme code with gen-calendar.pl.
 
@@ -116,6 +124,7 @@ my (%THEME, @TORDER, %HOLIDAY);
             next;
         }
         die "themes.txt: word line before any theme: $l" unless $cur;
+        $l =~ s/^\+\d{4}-\d\d-\d\d\s+//;   # "+date" words count from that day (theme-words.js); still theme words here
         for my $w (split ' ', lc $l) { next if length $w < 5;   # 4-letter theme words score in the game but don't pick climbs
 $THEME{$cur}{words}{$w} = 1; }
     }
@@ -166,6 +175,20 @@ sub traps {
         @open = grep { $rank{$_} } @open unless $ENV{ANYOPEN};   # an obscure word (MACER for CREAM) isn't a real choice
         next unless @block && @open;
         push @out, [$k + 1, $_, \@next] for @block;
+    }
+    return @out;
+}
+# [step, everyday word, [what's left on the next step]] for every dead end in a ladder
+sub deadends {
+    my ($ladder) = @_;
+    my @out;
+    for my $k (0 .. $#$ladder - 1) {
+        my @here = grep { $rank{$_} } @{ $ebk{ keyf($ladder->[$k]) } || [] };
+        my @next = @{ $ebk{ keyf($ladder->[$k + 1]) } || [] };
+        for my $p (@here) {
+            my @ok = grep { !forbidden($p, $_) } @next;
+            push @out, [$k + 1, $p, \@ok] unless grep { $rank{$_} } @ok;
+        }
     }
     return @out;
 }
@@ -255,12 +278,17 @@ my %usedAt;   # ladder -> day indices using it
 for my $i (0 .. $#days) { push @{ $usedAt{ join(',', @$_) } }, $i for @{ $days[$i]{c} }; }
 my %taken;
 my (@report, $swapped, $stuck);
+my ($strongT, %strong) = ('');
+if (($ENV{STRONG} || '') =~ /^(\w+)=(.+)$/) { $strongT = $1; %strong = map { $_ => 1 } split /,/, $2; }
 for my $i ($from .. $#days) {
     my $d = $days[$i];
     for my $j (0 .. 2) {
         my $lad = $d->{c}[$j];
         my @tr = traps($lad, themeSetFor($d->{t}, $d->{w}[$j]));
-        next unless @tr;
+        my @de = $ENV{DEADENDS} ? deadends($lad) : ();
+        my @bl = $ENV{BLOCKED} ? grep { $blocked{$_} } @$lad : ();
+        my $weak = $d->{t} eq $strongT && !grep { $strong{$_} } @{ $d->{w}[$j] || [] };
+        next unless @tr || @de || @bl || $weak;
         my $old = $byKey{ join(',', @$lad) };
         my $oldPct = $old ? $old->{pct} : 0.5;
         my %dayWords = map { my $x = $_; $x == $j ? () : map { $_ => 1 } @{ $d->{c}[$x] } } 0 .. 2;
@@ -268,14 +296,17 @@ for my $i ($from .. $#days) {
             my ($c, $hits) = @{ $_[0] }; my $key = join(',', @{ $c->{w} });
             # gen-calendar's reuse rule: a climb may come back, but never with a theme it has had,
             # and (here) never within 60 days of another use
-            @$hits && !(grep { $days[$_]{t} eq $d->{t} || abs($_ - $i) < 60 } @{ $usedAt{$key} || [] })
+            @$hits && !(grep { $days[$_]{t} eq $d->{t} || abs($_ - $i) < ($ENV{REUSEDAYS} || 60) } @{ $usedAt{$key} || [] })
               && !$taken{$key} && !(grep { $dayWords{$_} } @{ $c->{w} })
               && !traps($c->{w}, themeSetFor($d->{t}, $hits))
+              && !($ENV{DEADENDS} && deadends($c->{w}))
+              && !($d->{t} eq $strongT && !grep { $strong{$_} } @$hits)
         };
         my @c = grep { $fits->($_) } @{ $cand{ $d->{t} }{ length $lad->[-1] } || [] };
         @c = grep { $fits->($_) } newClimbs($d->{t}, length $lad->[-1]) unless @c || $ENV{NOGEN};   # option A
         my $rec = { day => dateOf($i), theme => $THEME{ $d->{t} }{name}, tier => $d->{k}, climb => $j + 1,
-                    old => $lad, oldW => $d->{w}[$j], oldSteps => stepsOf($lad, themeSetFor($d->{t}, $d->{w}[$j])), traps => [ map { { step => $_->[0], word => $_->[1], blocks => $_->[2] } } @tr ] };
+                    old => $lad, oldW => $d->{w}[$j], oldSteps => stepsOf($lad, themeSetFor($d->{t}, $d->{w}[$j])), traps => [ map { { step => $_->[0], word => $_->[1], blocks => $_->[2] } } @tr ],
+                    dead => [ map { { step => $_->[0], word => $_->[1], left => $_->[2] } } @de ], blocked => \@bl, weak => $weak ? 1 : 0 };
         if (@c) {
             my ($best) = sort { abs($a->[0]{pct} - $oldPct) <=> abs($b->[0]{pct} - $oldPct) } @c;
             $taken{ join(',', @{ $best->[0]{w} }) } = 1;
@@ -297,7 +328,7 @@ for my $i ($from .. $#days) {
 
 # ---------------- out ----------------
 my %daysHit = map { $_->{day} => 1 } @report;
-open(my $rp, '>:encoding(UTF-8)', "$DIR/../daily-climb-beta-tools/traps-report.json") or die;
+open(my $rp, '>:encoding(UTF-8)', "$DIR/../daily-climb-beta-tools/" . ($ENV{REPORT} || "traps-report.json")) or die;
 print $rp JSON::PP->new->canonical->pretty->encode({ from => $FROM, daysChecked => @days - $from, daysAffected => scalar keys %daysHit,
     climbsSwapped => $swapped || 0, climbsStuck => $stuck || 0, swaps => \@report });
 close $rp;

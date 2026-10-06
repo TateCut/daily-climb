@@ -120,6 +120,7 @@ my (%THEME, @TORDER, %HOLIDAY);
             next;
         }
         die "themes.txt: word line before any theme: $l" unless $cur;
+        $l =~ s/^\+\d{4}-\d\d-\d\d\s+//;   # "+date" words count from that day (theme-words.js); still theme words here
         for my $w (split ' ', lc $l) { die "themes.txt: '$w' is under 5 letters ($cur)" if length $w < 5; $THEME{$cur}{words}{$w} = 1; }
     }
     for (values %HOLIDAY) { die "themes.txt: holiday theme '$_' doesn't exist" unless $THEME{$_}; }

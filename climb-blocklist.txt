@@ -182,3 +182,13 @@ alan
 pooh
 romeo
 thou
+# names, offensive or British spellings, and obscure words the dead-end rebuild turned up
+christie
+sexist
+practise
+organise
+atropine
+panties
+catheter
+privates
+aortic
