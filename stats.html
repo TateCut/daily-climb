@@ -108,6 +108,7 @@
         <div class="card"><h2>Current streaks <small>top 10</small></h2><div id="streakNow"></div></div>
         <div class="card"><h2>Best streaks ever <small>top 10</small></h2><div id="streakBest"></div></div>
       </div>
+      <div class="card"><h2>Haven't finished a daily <small id="nonecount">player profiles with no finished daily</small></h2><div class="scroll" id="nonelist"><p class="note">Loading…</p></div></div>
       <div class="card"><h2>Duplicate players <small id="dupcount">same name, more than one account</small></h2><div class="scroll" id="duplist"><p class="note">Loading…</p></div></div>
       <div class="card"><h2>Dailies completed <small id="donecount">every player who has finished a daily, most first</small></h2><div class="scroll" id="donelist"><p class="note">Loading…</p></div></div>
       <div class="grid2">
@@ -259,8 +260,7 @@
     const shareTotal = sharers.reduce((a, p) => a + (p.shares.copy || 0) + (p.shares.native || 0), 0);
     const advStart = ps.filter((p) => p.adventure && p.adventure.starts);
     const advWin = ps.filter((p) => (p.adventureBeaten || []).length);
-    const played = ps.filter((p) => p.dailyLastDay);
-    $("#okpis").innerHTML = kpi(ps.length, "player profiles") + kpi(played.length, "have finished a daily") + kpi(reminders.length, "reminders on") +
+    $("#okpis").innerHTML = kpi(ps.length, "player profiles") + '<div class="kpi"><b id="kpi-finished">…</b><span>have finished a daily</span></div>' + kpi(reminders.length, "reminders on") +
       kpi(sharers.length, "have shared the link") + kpi(advWin.length, "beat an Adventure Climb") + kpi(ps.filter(live).filter((p) => p.dailyStreak > 1).length, "on a 2+ day streak");
     const top = (arr, f) => "<table><tr><th>#</th><th>Player</th><th class='num'>Days</th></tr>" + arr.map((p, i) => "<tr><td>" + (i + 1) + "</td><td>" + nm(p) + "</td><td class='num'>" + f(p) + "</td></tr>").join("") + "</table>";
     $("#streakNow").innerHTML = top(ps.filter(live).filter((p) => p.dailyStreak > 0).sort((a, b) => b.dailyStreak - a.dailyStreak).slice(0, 10), (p) => p.dailyStreak);
@@ -309,6 +309,29 @@
         '<p class="note">"Owns the name" is the account the username (and its recovery code) belongs to: that\'s the one to keep. The others are older copies, usually from before account recovery existed. Clean them up in the Firebase console by their account ID.</p>'
       : '<p class="note">No name is shared by more than one account.</p>';
   }
+  // Player profiles with no finished daily (same rule as the list: leaderboards since Sep 24), and
+  // how far any of them got: their latest progress note, if they started one.
+  async function showNotFinished(ps, tally) {
+    const none = ps.filter((p) => !tally[p.id]);
+    let names = []; try { names = await list("usernames"); } catch (x) {}
+    const owns = {}; names.forEach((u) => { owns[u.uid] = u.username || u.id; });
+    const started = {};
+    await Promise.all(days.map(async (k) => {
+      let rows = []; try { rows = await progress(k); } catch (x) {}
+      rows.forEach((r) => { if (!started[r.id] || k > started[r.id].day) started[r.id] = { day: k, climb: r.climb || 1, step: r.step || 0 }; });
+    }));
+    const short = (k) => new Date(k + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    none.sort((a, b) => (started[b.id] ? 1 : 0) - (started[a.id] ? 1 : 0) || String(a.username || a.name || "").localeCompare(String(b.username || b.name || "")));
+    const n = none.filter((p) => started[p.id]).length;
+    $("#nonecount").textContent = none.length + " profiles · " + n + " started one but didn't finish";
+    $("#nonelist").innerHTML = none.length ? "<table><tr><th>Player</th><th>Owns a username</th><th>Got as far as</th><th class='num'>Adventure</th><th>Account ID</th></tr>" +
+      none.map((p) => { const st = started[p.id], adv = (p.adventure && p.adventure.starts) || 0, won = (p.adventureBeaten || []).length;
+        return "<tr><td>" + esc(p.username || p.name || "(no name)") + "</td><td>" + (owns[p.id] ? "yes" : "<span class='tag stop'>no</span>") + "</td><td>" +
+          (st ? short(st.day) + " · Climb " + st.climb + " · word " + (st.step + 1) : "<span class='note'>never started one</span>") + "</td><td class='num'>" +
+          (adv || won ? adv + " started · " + won + " beaten" : "–") + "</td><td><code>" + esc(p.id) + "</code></td></tr>"; }).join("") + "</table>"
+      : '<p class="note">Every player profile has finished a daily.</p>';
+  }
+
   // ---- Remove a duplicate copy ----
   // Shows exactly what will go, asks you to type the name, saves a full copy of everything to
   // removedAccounts/{uid} (only you can read it), then deletes. Only offered on copies that
@@ -373,6 +396,8 @@
     const rows = Object.values(tally).sort((a, b) => b.n - a.n || b.last.localeCompare(a.last));
     const short = (k) => new Date(k + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
     showDupes(ps, tally).catch(fail);
+    $("#kpi-finished").textContent = Object.keys(tally).length;
+    showNotFinished(ps, tally).catch(fail);
     $("#donecount").textContent = rows.length + " players · " + rows.reduce((a, r) => a + r.n, 0) + " dailies finished since " + short(FIRST);
     $("#donelist").innerHTML = rows.length ? "<table><tr><th>#</th><th>Player</th><th class='num'>Dailies</th><th class='num'>First</th><th class='num'>Latest</th><th class='num'>Best streak</th></tr>" +
       rows.map((r, i) => { const p = byUid[r.id] || {}; return "<tr><td>" + (i + 1) + "</td><td>" + esc(p.username || r.name || r.id.slice(0, 6)) + "</td><td class='num'><b>" + r.n + "</b></td><td class='num'>" + short(r.first) + "</td><td class='num'>" + short(r.last) + "</td><td class='num'>" + (p.bestStreak || "–") + "</td></tr>"; }).join("") + "</table>"
