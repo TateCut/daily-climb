@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Daily Climb · Stats</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&family=Zilla+Slab:wght@500;700&display=swap">
+<script>try { if (localStorage.getItem("dc.theme") !== "dark") document.documentElement.classList.add("light"); } catch (e) { document.documentElement.classList.add("light"); }</script>
+<style>
+  /* Private stats page. Same look as the game: apricot menu colors, slab headings. */
+  :root { --bg: #2b211a; --card: #1f1915; --ink: #f8f8f8; --muted: #cdbfb2; --faint: #8f8177; --line: rgba(248, 248, 248, .16); --accent: #f0a04b; --gold: #f6c90e;
+    --good: #6fd08c; --bad: #ff8a6b; --bar: #f0a04b; --bar2: rgba(240, 160, 75, .35);
+    --slab: "Zilla Slab", Rockwell, Georgia, serif; --sans: "Libre Franklin", -apple-system, "Segoe UI", Roboto, sans-serif; color-scheme: dark; }
+  html.light { --bg: #f4d3a6; --card: #ffffff; --ink: #121212; --muted: #5a4a3c; --faint: #9a8a7c; --line: rgba(18, 18, 18, .12); --accent: #9a4204; --good: #1f8a4c; --bad: #c2410c;
+    --bar: #c25e08; --bar2: rgba(194, 94, 8, .28); color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); }
+  .page { max-width: 1040px; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 22px) 16px calc(env(safe-area-inset-bottom, 0px) + 60px); display: flex; flex-direction: column; gap: 18px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; }
+  h1 { margin: 0; font-family: var(--slab); font-size: 1.9rem; }
+  h1 span { color: var(--accent); }
+  .who { font-size: .8rem; color: var(--muted); }
+  .who code { font-size: .78rem; background: var(--card); padding: 2px 6px; border-radius: 6px; user-select: all; }
+  .tabs { display: inline-flex; padding: 3px; border: 1.5px solid var(--ink); border-radius: 999px; gap: 3px; align-self: flex-start; }
+  .tabs button { border: 0; background: none; color: var(--ink); font: inherit; font-weight: 700; font-size: .88rem; padding: 7px 16px; border-radius: 999px; cursor: pointer; }
+  .tabs button.on { background: var(--ink); color: var(--bg); }
+  .card { background: var(--card); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .card h2 { margin: 0; font-family: var(--slab); font-size: 1.2rem; }
+  .card h2 small { font-family: var(--sans); font-size: .78rem; color: var(--muted); font-weight: 500; margin-left: 6px; }
+  .daybar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .daybar button, .daybar select, .btn { font: inherit; font-size: .88rem; font-weight: 700; border: 1.5px solid var(--ink); background: none; color: var(--ink); border-radius: 999px; padding: 7px 13px; cursor: pointer; }
+  .daybar select { background: var(--card); }
+  .daybar .theme { font-family: var(--slab); font-size: 1.15rem; font-weight: 700; margin-left: 4px; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .kpi { background: var(--card); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 3px; }
+  .kpi b { font-family: var(--slab); font-size: 1.9rem; line-height: 1.05; font-variant-numeric: tabular-nums; }
+  .kpi span { font-size: .8rem; color: var(--muted); }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 14px; }
+  .funnel { display: flex; flex-direction: column; gap: 8px; }
+  .frow { display: grid; grid-template-columns: 130px 1fr 70px; gap: 10px; align-items: center; font-size: .86rem; }
+  .ftrack { height: 14px; border-radius: 7px; background: var(--line); overflow: hidden; }
+  .ffill { height: 100%; border-radius: 7px; background: var(--bar); }
+  .frow em { font-style: normal; text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: .85rem; font-variant-numeric: tabular-nums; }
+  th { text-align: left; font-size: .66rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 6px 8px; border-bottom: 1.5px solid var(--ink); }
+  td { padding: 7px 8px; border-bottom: 1px solid var(--line); }
+  td.num, th.num { text-align: right; }
+  .scroll { overflow-x: auto; }
+  .tag { font-size: .7rem; font-weight: 800; padding: 2px 7px; border-radius: 6px; }
+  .tag.done { background: var(--good); color: var(--card); }
+  .tag.stop { background: var(--line); color: var(--muted); }
+  .note { margin: 0; font-size: .82rem; color: var(--muted); line-height: 1.5; }
+  .msg { background: var(--card); border-radius: 14px; padding: 16px; line-height: 1.55; }
+  .msg pre { background: var(--bg); padding: 10px; border-radius: 8px; overflow-x: auto; font-size: .78rem; user-select: all; }
+  .trend { display: flex; align-items: flex-end; gap: 4px; height: 160px; padding-top: 8px; }
+  .trend .col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 2px; min-width: 0; height: 100%; position: relative; }
+  .trend .st { width: 100%; background: var(--bar2); border-radius: 3px 3px 0 0; position: relative; }
+  .trend .fi { position: absolute; bottom: 0; left: 0; right: 0; background: var(--bar); border-radius: 3px 3px 0 0; }
+  .trend .lb { font-size: .58rem; color: var(--faint); white-space: nowrap; }
+  .legend { display: flex; gap: 14px; font-size: .78rem; color: var(--muted); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>Daily <span>Climb</span> stats</h1>
+    <div class="who" id="who">Checking your sign-in…</div>
+  </header>
+  <div class="msg" id="gate" hidden></div>
+  <div id="app" hidden style="display:flex;flex-direction:column;gap:18px">
+    <div class="tabs" id="tabs"><button class="on" data-v="day">Day</button><button data-v="overview">Players</button><button data-v="trend">Trends</button></div>
+
+    <section id="v-day" style="display:flex;flex-direction:column;gap:14px">
+      <div class="daybar">
+        <button id="prev" aria-label="Previous day">‹</button><select id="daysel" aria-label="Day"></select><button id="next" aria-label="Next day">›</button>
+        <span class="theme" id="daytheme"></span>
+      </div>
+      <div class="kpis" id="daykpis"></div>
+      <div class="grid2">
+        <div class="card"><h2>How far people got</h2><div class="funnel" id="funnel"></div><p class="note" id="funnelnote"></p></div>
+        <div class="card"><h2>Where people stopped <small>started, didn't finish</small></h2><div id="stopped"></div></div>
+      </div>
+      <div class="card"><h2>Time <small>solving time, like the leaderboard</small></h2><div id="times"></div></div>
+      <div class="card"><h2>Players <small id="pcount"></small></h2><div class="scroll" id="plist"></div></div>
+    </section>
+
+    <section id="v-overview" hidden style="display:flex;flex-direction:column;gap:14px">
+      <div class="kpis" id="okpis"></div>
+      <div class="grid2">
+        <div class="card"><h2>Current streaks <small>top 10</small></h2><div id="streakNow"></div></div>
+        <div class="card"><h2>Best streaks ever <small>top 10</small></h2><div id="streakBest"></div></div>
+      </div>
+      <div class="grid2">
+        <div class="card"><h2>Adventure Mode</h2><div id="adv"></div></div>
+        <div class="card"><h2>Sharing &amp; reminders</h2><div id="share"></div></div>
+      </div>
+    </section>
+
+    <section id="v-trend" hidden style="display:flex;flex-direction:column;gap:14px">
+      <div class="card"><h2>Last 30 days <small>reads two lists per day</small></h2>
+        <div class="legend"><span><i style="background:var(--bar2)"></i>started</span><span><i style="background:var(--bar)"></i>finished</span></div>
+        <div class="trend" id="trend"><p class="note">Loading…</p></div>
+        <div class="scroll" id="trendtable"></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script src="firebase-config.js"></script>
+<script src="daily-calendar.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const SALT = "-r6", FIRST = "2026-09-24", NEW_RULES = "2026-10-02";
+  const MOCK = new URLSearchParams(location.search).has("mock");   // ?mock=1: pretend data, for building the page
+  const pad = (n) => String(n).padStart(2, "0");
+  const keyOf = (d) => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  const addDays = (k, n) => { const [y, m, d] = k.split("-").map(Number); return keyOf(new Date(y, m - 1, d + n, 12)); };
+  const today = keyOf(new Date());
+  const fmtMs = (ms) => { if (!ms && ms !== 0) return "–"; const s = Math.round(ms / 1000); return Math.floor(s / 60) + ":" + pad(s % 60); };
+  const median = (a) => { if (!a.length) return null; const s = a.slice().sort((x, y) => x - y); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+  const mean = (a) => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+  const unwrap = (rw) => (rw || []).map((r) => (r && r.words) || (Array.isArray(r) ? r : []));
+  const CAL = window.DAILY_CALENDAR;
+  function themeOf(day) {
+    if (!CAL) return null;
+    const [y, m, d] = day.split("-").map(Number), [y0, m0, d0] = CAL.start.split("-").map(Number);
+    const i = Math.round((new Date(y, m - 1, d, 12) - new Date(y0, m0 - 1, d0, 12)) / 864e5);
+    const e = CAL.days[i]; if (!e) return null;
+    return { name: CAL.themes[e.t] ? CAL.themes[e.t].name : e.t, emoji: CAL.themes[e.t] ? CAL.themes[e.t].emoji : "", tier: e.k, lens: e.c.map((c) => c.length) };
+  }
+
+  // ---------------- data ----------------
+  let db = null;
+  const cache = {};
+  async function list(path) {
+    if (cache[path]) return cache[path];
+    if (MOCK) return (cache[path] = mockList(path));
+    const parts = path.split("/");
+    const snap = await getDocs(collection(db, ...parts));
+    return (cache[path] = snap.docs.map((d) => Object.assign({ id: d.id }, d.data())));
+  }
+  const entrants = (day) => list("dailies/" + day + SALT + "/entrants");
+  const progress = (day) => list("dailies/" + day + SALT + "/progress");
+  const players = () => list("players");
+
+  // ---------------- pretend data (?mock=1) ----------------
+  function rnd(seed) { let s = seed; return () => { s = (s * 1103515245 + 12345) % 2147483648; return s / 2147483648; }; }
+  const NAMES = ["Wren", "Priya", "Marco", "jules", "KestrelK", "Bea", "Otis", "ridge_runner", "Nova", "Theo", "Lark", "Summit_Sam", "Jennifer", "Ali", "Mo", "tess"];
+  function mockList(path) {
+    const day = (path.match(/dailies\/([\d-]+)/) || [])[1];
+    const r = rnd([...path].reduce((a, c) => a + c.charCodeAt(0), 7));
+    if (path === "players") return NAMES.map((n, i) => ({ id: "u" + i, username: n, dailyStreak: Math.floor(r() * 12), dailyLastDay: (r() < 0.6 ? today : addDays(today, -3)) + SALT, bestStreak: 3 + Math.floor(r() * 14),
+      reminder: r() < 0.35 ? { on: true, tokens: ["x"] } : undefined, shares: r() < 0.3 ? { copy: 1 + Math.floor(r() * 3), native: Math.floor(r() * 2) } : undefined,
+      adventure: r() < 0.5 ? { starts: 1 + Math.floor(r() * 9) } : undefined, adventureBeaten: r() < 0.35 ? [1, 2, 3].slice(0, 1 + Math.floor(r() * 3)) : [], beatenSeeds: [4, 9, 12].slice(0, Math.floor(r() * 4)) }));
+    const lens = (themeOf(day) || { lens: [4, 5, 5] }).lens;
+    const out = [];
+    NAMES.forEach((n, i) => {
+      if (r() < 0.25) return;
+      const fin = r() < 0.7, climb = fin ? 3 : 1 + Math.floor(r() * 3), step = fin ? lens[2] : Math.floor(r() * lens[climb - 1]);
+      const cms = lens.map((L, k) => k < climb ? Math.round(40000 + r() * 200000) : 0);
+      if (path.endsWith("/progress")) out.push({ id: "u" + i, name: n, climb: climb, step: step, points: 5 + Math.floor(r() * 12), solveMs: cms.reduce((a, b) => a + b, 0), climbMs: cms, finished: fin, climbDone: fin ? 3 : climb - 1 });
+      else if (fin) out.push({ id: "u" + i, name: n, total: 8 + Math.floor(r() * 7), themeWords: Math.floor(r() * 4), solveMs: cms.reduce((a, b) => a + b, 0) });
+    });
+    return out;
+  }
+
+  // ---------------- day view ----------------
+  const days = []; for (let k = today; k >= FIRST; k = addDays(k, -1)) days.push(k);
+  const daysel = $("#daysel");
+  daysel.innerHTML = days.map((k) => { const t = themeOf(k); return '<option value="' + k + '">' + new Date(k + "T12:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }) + (t ? " · " + esc(t.emoji + " " + t.name) : "") + "</option>"; }).join("");
+  $("#prev").onclick = () => { if (daysel.selectedIndex < days.length - 1) { daysel.selectedIndex++; showDay(); } };
+  $("#next").onclick = () => { if (daysel.selectedIndex > 0) { daysel.selectedIndex--; showDay(); } };
+  daysel.onchange = showDay;
+  const kpi = (v, label) => '<div class="kpi"><b>' + v + "</b><span>" + label + "</span></div>";
+  const points = (day, e) => (e.total || 0) + (day >= NEW_RULES ? (e.themeWords || 0) : 0);
+
+  async function showDay() {
+    const day = daysel.value, t = themeOf(day);
+    $("#daytheme").textContent = t ? t.emoji + " " + t.name + " · " + ({ T: "Trail", R: "Ridge", S: "Summit" }[t.tier] || "") : "";
+    $("#daykpis").innerHTML = '<p class="note">Loading…</p>';
+    let ent = [], prog = [], progErr = null;
+    try { ent = await entrants(day); } catch (e) { ent = []; }
+    try { prog = await progress(day); } catch (e) { progErr = e; prog = []; }
+    const byId = {};
+    prog.forEach((p) => { byId[p.id] = { id: p.id, name: p.name, prog: p }; });
+    ent.forEach((e) => { (byId[e.id] = byId[e.id] || { id: e.id, name: e.name }).ent = e; });
+    const all = Object.values(byId);
+    const finished = all.filter((x) => x.ent || (x.prog && x.prog.finished));
+    const started = all.length;
+    const times = ent.map((e) => e.solveMs).filter(Boolean);
+    $("#daykpis").innerHTML = kpi(started, "started") + kpi(finished.length, "finished") +
+      kpi(started ? Math.round(100 * finished.length / started) + "%" : "–", "finish rate") +
+      kpi(fmtMs(median(times)), "median finish time") + kpi(ent.length ? (mean(ent.map((e) => points(day, e)))).toFixed(1) : "–", "average points");
+    // funnel: reached each Climb, finished
+    const reached = (k) => all.filter((x) => x.ent || (x.prog && ((x.prog.climb || 1) >= k))).length;
+    const rows = [["Started", started], ["Reached Climb 2", reached(2)], ["Reached Climb 3", reached(3)], ["Finished", finished.length]];
+    $("#funnel").innerHTML = rows.map(([l, n]) => '<div class="frow"><span>' + l + '</span><div class="ftrack"><div class="ffill" style="width:' + (started ? 100 * n / started : 0) + '%"></div></div><em>' + n + (started ? " · " + Math.round(100 * n / started) + "%" : "") + "</em></div>").join("");
+    const noProg = all.filter((x) => !x.prog).length;
+    $("#funnelnote").textContent = progErr ? "Progress records aren't readable yet (see the rule at the top). Showing finishers only."
+      : noProg && day < "2026-10-05" ? "Before Oct 5 only finishers were recorded, so 'started' is incomplete for this day." : "";
+    // where people stopped
+    const stops = {};
+    all.filter((x) => x.prog && !x.ent && !x.prog.finished).forEach((x) => { const k = "Climb " + (x.prog.climb || 1) + (x.prog.climbDone >= (x.prog.climb || 1) ? " · after finishing it" : " · word " + ((x.prog.step || 0) + 1)); stops[k] = (stops[k] || 0) + 1; });
+    const sk = Object.keys(stops).sort();
+    $("#stopped").innerHTML = sk.length ? "<table><tr><th>Stopped at</th><th class='num'>Players</th></tr>" + sk.map((k) => "<tr><td>" + esc(k) + "</td><td class='num'>" + stops[k] + "</td></tr>").join("") + "</table>"
+      : '<p class="note">' + (progErr ? "Needs the progress records." : "Nobody stopped partway (or no progress records for this day).") + "</p>";
+    // time per Climb (from progress, where recorded)
+    const per = [0, 1, 2].map((i) => all.map((x) => x.prog && x.prog.climbMs && x.prog.climbMs[i]).filter((v) => v > 0));
+    $("#times").innerHTML = "<table><tr><th></th><th class='num'>Players</th><th class='num'>Median</th><th class='num'>Average</th></tr>" +
+      ["Climb 1", "Climb 2", "Climb 3"].map((l, i) => "<tr><td>" + l + "</td><td class='num'>" + per[i].length + "</td><td class='num'>" + fmtMs(median(per[i])) + "</td><td class='num'>" + fmtMs(mean(per[i])) + "</td></tr>").join("") +
+      "<tr><td><b>Whole daily (finishers)</b></td><td class='num'>" + times.length + "</td><td class='num'>" + fmtMs(median(times)) + "</td><td class='num'>" + fmtMs(mean(times)) + "</td></tr></table>" +
+      (per.every((a) => !a.length) ? '<p class="note">Per-Climb times are recorded from the stats update on; earlier days only have the whole-daily time.</p>' : "");
+    // players
+    all.sort((a, b) => (b.ent ? 1 : 0) - (a.ent ? 1 : 0) || (b.ent ? points(day, b.ent) : (b.prog || {}).points || 0) - (a.ent ? points(day, a.ent) : (a.prog || {}).points || 0));
+    $("#pcount").textContent = all.length + " players";
+    $("#plist").innerHTML = "<table><tr><th>Player</th><th>Status</th><th class='num'>Points</th><th class='num'>Time</th><th class='num'>Climb 1</th><th class='num'>Climb 2</th><th class='num'>Climb 3</th></tr>" +
+      all.map((x) => { const p = x.prog || {}, e = x.ent, cms = p.climbMs || [];
+        const status = e || p.finished ? "<span class='tag done'>finished</span>" : "<span class='tag stop'>Climb " + (p.climb || 1) + " · word " + ((p.step || 0) + 1) + "</span>";
+        return "<tr><td>" + esc(x.name || x.id.slice(0, 6)) + "</td><td>" + status + "</td><td class='num'>" + (e ? points(day, e) : (p.points != null ? p.points : "–")) + "</td><td class='num'>" + fmtMs(e ? e.solveMs : p.solveMs) +
+          "</td>" + [0, 1, 2].map((i) => "<td class='num'>" + (cms[i] ? fmtMs(cms[i]) : "–") + "</td>").join("") + "</tr>"; }).join("") + "</table>";
+  }
+
+  // ---------------- players view ----------------
+  async function showOverview() {
+    $("#okpis").innerHTML = '<p class="note">Loading…</p>';
+    const ps = await players();
+    const yst = addDays(today, -1);
+    const live = (p) => { const d = String(p.dailyLastDay || "").slice(0, 10); return d === today || d === yst; };
+    const nm = (p) => esc(p.username || p.name || p.id.slice(0, 6));
+    const reminders = ps.filter((p) => p.reminder && p.reminder.on && (p.reminder.tokens || []).length);
+    const sharers = ps.filter((p) => p.shares && ((p.shares.copy || 0) + (p.shares.native || 0)));
+    const shareTotal = sharers.reduce((a, p) => a + (p.shares.copy || 0) + (p.shares.native || 0), 0);
+    const advStart = ps.filter((p) => p.adventure && p.adventure.starts);
+    const advWin = ps.filter((p) => (p.adventureBeaten || []).length);
+    const played = ps.filter((p) => p.dailyLastDay);
+    $("#okpis").innerHTML = kpi(ps.length, "player profiles") + kpi(played.length, "have finished a daily") + kpi(reminders.length, "reminders on") +
+      kpi(sharers.length, "have shared the link") + kpi(advWin.length, "beat an Adventure Climb") + kpi(ps.filter(live).filter((p) => p.dailyStreak > 1).length, "on a 2+ day streak");
+    const top = (arr, f) => "<table><tr><th>#</th><th>Player</th><th class='num'>Days</th></tr>" + arr.map((p, i) => "<tr><td>" + (i + 1) + "</td><td>" + nm(p) + "</td><td class='num'>" + f(p) + "</td></tr>").join("") + "</table>";
+    $("#streakNow").innerHTML = top(ps.filter(live).filter((p) => p.dailyStreak > 0).sort((a, b) => b.dailyStreak - a.dailyStreak).slice(0, 10), (p) => p.dailyStreak);
+    $("#streakBest").innerHTML = top(ps.filter((p) => p.bestStreak > 0).sort((a, b) => b.bestStreak - a.bestStreak).slice(0, 10), (p) => p.bestStreak);
+    const wins = advWin.reduce((a, p) => a + p.adventureBeaten.length, 0);
+    $("#adv").innerHTML = "<table>" +
+      "<tr><td>Players who started an Adventure Climb</td><td class='num'>" + advStart.length + "</td></tr>" +
+      "<tr><td>Adventure Climbs started</td><td class='num'>" + advStart.reduce((a, p) => a + p.adventure.starts, 0) + "</td></tr>" +
+      "<tr><td>Players who beat one in Adventure Mode</td><td class='num'>" + advWin.length + "</td></tr>" +
+      "<tr><td>Adventure Climbs beaten</td><td class='num'>" + wins + "</td></tr>" +
+      "<tr><td>Players with any Climb marked beaten (incl. from dailies)</td><td class='num'>" + ps.filter((p) => (p.beatenSeeds || []).length).length + "</td></tr></table>" +
+      '<p class="note">Starts are counted from the stats update on; wins in Adventure Mode itself from Oct 2.</p>' +
+      (advWin.length ? "<table><tr><th>Most Adventure wins</th><th class='num'>Beaten</th></tr>" + advWin.sort((a, b) => b.adventureBeaten.length - a.adventureBeaten.length).slice(0, 5).map((p) => "<tr><td>" + nm(p) + "</td><td class='num'>" + p.adventureBeaten.length + "</td></tr>").join("") + "</table>" : "");
+    $("#share").innerHTML = "<table>" +
+      "<tr><td>Players with daily reminders on</td><td class='num'>" + reminders.length + "</td></tr>" +
+      "<tr><td>Players who shared the link</td><td class='num'>" + sharers.length + "</td></tr>" +
+      "<tr><td>Times shared (share sheet / copied)</td><td class='num'>" + shareTotal + " (" + sharers.reduce((a, p) => a + (p.shares.native || 0), 0) + " / " + sharers.reduce((a, p) => a + (p.shares.copy || 0), 0) + ")</td></tr></table>" +
+      '<p class="note">Shares are counted from the stats update on (Invite screen: Share or Copy).</p>';
+  }
+
+  // ---------------- trends ----------------
+  async function showTrend() {
+    const ks = []; for (let i = 29; i >= 0; i--) { const k = addDays(today, -i); if (k >= FIRST) ks.push(k); }
+    const rows = await Promise.all(ks.map(async (k) => {
+      let e = [], p = []; try { e = await entrants(k); } catch (x) {} try { p = await progress(k); } catch (x) {}
+      const ids = new Set(p.map((x) => x.id).concat(e.map((x) => x.id)));
+      return { k: k, started: ids.size, finished: e.length };
+    }));
+    const max = Math.max(1, ...rows.map((r) => r.started));
+    $("#trend").innerHTML = rows.map((r) => '<div class="col" title="' + r.k + ": " + r.started + " started, " + r.finished + ' finished"><div class="st" style="height:' + (100 * r.started / max) + '%"><div class="fi" style="height:' + (r.started ? 100 * r.finished / r.started : 0) + '%"></div></div><span class="lb">' + r.k.slice(8) + "</span></div>").join("");
+    $("#trendtable").innerHTML = "<table><tr><th>Day</th><th>Theme</th><th class='num'>Started</th><th class='num'>Finished</th><th class='num'>Rate</th></tr>" +
+      rows.slice().reverse().map((r) => { const t = themeOf(r.k); return "<tr><td>" + r.k + "</td><td>" + (t ? esc(t.emoji + " " + t.name) : "") + "</td><td class='num'>" + r.started + "</td><td class='num'>" + r.finished + "</td><td class='num'>" + (r.started ? Math.round(100 * r.finished / r.started) + "%" : "–") + "</td></tr>"; }).join("") + "</table>";
+  }
+
+  // ---------------- tabs + start ----------------
+  const shown = {};
+  $("#tabs").onclick = (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    document.querySelectorAll("#tabs button").forEach((x) => x.classList.toggle("on", x === b));
+    ["day", "overview", "trend"].forEach((v) => { $("#v-" + v).hidden = v !== b.dataset.v; });
+    if (!shown[b.dataset.v]) { shown[b.dataset.v] = 1; (b.dataset.v === "overview" ? showOverview : b.dataset.v === "trend" ? showTrend : showDay)().catch(fail); }
+  };
+  function fail(e) { console.error(e); $("#gate").hidden = false; $("#gate").innerHTML = "Couldn't load: " + esc(e && e.message || e); }
+  function start() { $("#app").hidden = false; shown.day = 1; showDay().catch(fail); }
+
+  if (MOCK) { $("#who").innerHTML = "Pretend data (mock mode)"; start(); }
+  else {
+    const cfg = window.THREE21_FIREBASE_CONFIG;
+    const app = initializeApp(cfg);
+    db = getFirestore(app);
+    // Never signs in by itself: it uses the account you're already signed into in the game.
+    onAuthStateChanged(getAuth(app), async (user) => {
+      if (!user) {
+        $("#who").textContent = "Not signed in";
+        $("#gate").hidden = false;
+        $("#gate").innerHTML = "Open <a href='./'>the game</a> in this browser, make sure you're signed in as yourself, then come back to this page.";
+        return;
+      }
+      $("#who").innerHTML = "Signed in · your account ID <code>" + esc(user.uid) + "</code>";
+      try { await progress(today); }
+      catch (e) {
+        $("#gate").hidden = false;
+        $("#gate").innerHTML = "<b>One step left.</b> Progress records are private, so Firebase needs to know this account is allowed to read them. In the Firebase console → Firestore → Rules, change the <code>progress</code> read line to:" +
+          "<pre>allow read: if request.auth != null && (request.auth.uid == uid || request.auth.uid == \"" + esc(user.uid) + "\");</pre>Then reload this page. Everything else below already works.";
+      }
+      start();
+    });
+  }
+</script>
+</body>
+</html>

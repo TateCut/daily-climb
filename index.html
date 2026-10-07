@@ -2981,6 +2981,8 @@ $1{ display: flex; gap: 8px; width: 100%; }
     saveTrophies: async function (map) { var p = player(); p.trophies = Object.assign(p.trophies || {}, map); save(); },
     getTrophyRarity: async function () { return null; },
     markSeedBeaten: async function (i) { var p = player(); p.beatenSeeds = p.beatenSeeds || []; if (p.beatenSeeds.indexOf(i) < 0) p.beatenSeeds.push(i); save(); },
+    markAdventureStart: async function (i) { var p = player(); p.adventure = p.adventure || { starts: 0 }; p.adventure.starts++; save(); },
+    markShare: async function (how) { var p = player(); p.shares = p.shares || {}; p.shares[how] = (p.shares[how] || 0) + 1; save(); },
     markAdventureBeaten: async function (i) { var p = player(); p.adventureBeaten = p.adventureBeaten || []; if (p.adventureBeaten.indexOf(i) < 0) p.adventureBeaten.push(i); save(); },
     createMatch: async function () { throw new Error("Not in the beta"); },
     getMatch: async function () { return null; },
@@ -3136,7 +3138,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
   import {
     getFirestore, doc, setDoc, getDoc, getDocs, updateDoc, onSnapshot, serverTimestamp,
-    arrayUnion, arrayRemove, collection, query, where, deleteDoc, deleteField,
+    arrayUnion, arrayRemove, collection, query, where, deleteDoc, deleteField, increment,
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
   import {
     getAuth, signInAnonymously, onAuthStateChanged,
@@ -3520,6 +3522,20 @@ $1{ display: flex; gap: 8px; width: 100%; }
     // ...and, when it was cleared in Adventure Mode itself, players/{uid}.adventureBeaten
     // (beatenSeeds also holds Climbs cleared during a daily). A separate write, so if the
     // rules ever refuse this field it can't take beatenSeeds down with it.
+    // players/{uid}.adventure = { starts, lastAt } and .adventureStarted: [seeds] (the stats page)
+    async markAdventureStart(seedIndex) {
+      if (!uid) return;
+      try {
+        await setDoc(doc(db, "players", uid), { adventure: { starts: increment(1), lastAt: serverTimestamp() }, adventureStarted: arrayUnion(seedIndex) }, { merge: true });
+      } catch (e) {}
+    },
+    // players/{uid}.shares = { native, copy, lastAt }: the Invite screen's Share / Copy (the stats page)
+    async markShare(how) {
+      if (!uid) return;
+      try {
+        await setDoc(doc(db, "players", uid), { shares: { [how]: increment(1), lastAt: serverTimestamp() } }, { merge: true });
+      } catch (e) {}
+    },
     async markAdventureBeaten(seedIndex) {
       if (!uid) return;
       try {
@@ -4582,6 +4598,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
   const RESUME_KEY = "three21.resume";
   const RESUME_TTL = 36 * 3600 * 1000; // drop a stale save after a day and a half
   let resumeState = null;
+  let climbMs = [];   // the daily's solving time per Climb (stats page)
 
   function saveProgress() {
     if (screens.play.hidden || mode === "climb" || mode === "collection") return; // one-off climbs don't resume
@@ -4596,7 +4613,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
         newCount: pool.filter((t) => t.isNew).length,
         guessesLeft: guessesLeft, wrongGuesses: wrongGuesses, hintUsed: hintUsed,
         sessionStrikes: sessionStrikes, solveMs: solveMs, dailyElapsedMs: dailyElapsedNow(),
-        themeFound: themeFound,
+        themeFound: themeFound, climbMs: climbMs,
       }));
     } catch (e) {}
   }
@@ -4607,7 +4624,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
         mode: mode, matchCode: matchCode, matchSeed: matchSeed, dailyDay: dailyDay,
         difficulty: difficulty, format: format,
         sessionStrikes: sessionStrikes, solveMs: solveMs, dailyElapsedMs: dailyElapsedNow(),
-        round: nextRound, roundWords: roundWords, hintUsed: hintUsed, themeFound: themeFound,
+        round: nextRound, roundWords: roundWords, hintUsed: hintUsed, themeFound: themeFound, climbMs: climbMs,
       }));
     } catch (e) {}
   }
@@ -4646,6 +4663,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     hintUsed = !!s.hintUsed;
     sessionStrikes = s.sessionStrikes || 0;
     solveMs = s.solveMs || 0;
+    climbMs = Array.isArray(s.climbMs) ? s.climbMs.slice() : [];
     locked = false;
     checking = false;
     carryMs = 0;
@@ -6837,6 +6855,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     roundWords = [];
     sessionStrikes = 0;
     solveMs = 0;
+    climbMs = [];
     hintUsed = false;                    // one hint for the whole session
     format = "guesses";                  // 3 strikes, no clock
     playerName = storedName || "You";
@@ -6864,6 +6883,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     matchCode = null; matchSeed = 0; dailyDay = null;
     collectionSeed = seedIndex;
     trackEv("adventure_start", { seed: seedIndex });
+    if (dbReady() && window.MatchDB.hasAuth && window.MatchDB.markAdventureStart) window.MatchDB.markAdventureStart(seedIndex).catch(() => {});
     startClimbSession();
     climbPuzzle = CLIMBS[seedIndex];
     beginClimbRound();
@@ -6882,7 +6902,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
   }
 
   function climbAccept(g) {
-    if (stageShownAt) solveMs += wordSolveMs();
+    if (stageShownAt) { const t = wordSolveMs(); solveMs += t; climbMs[round - 1] = (climbMs[round - 1] || 0) + t; }
     solved++;
     currentRoundWords.push(g);
     renderAscentMini();
@@ -7102,7 +7122,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
       name: storedName || playerName || "Player",
       climb: round, step: currentRoundWords.length,
       points: dailyWordsSoFar() + (dailyTheme && newRules(dailyTheme) ? themeBonusSoFar() : 0),
-      strikes: sessionStrikes, solveMs: Math.round(solveMs || 0), roundWords: words, finished: false,
+      strikes: sessionStrikes, solveMs: Math.round(solveMs || 0), climbMs: Array.from({ length: climbMs.length }, (_, i) => Math.round(climbMs[i] || 0)), roundWords: words, finished: false,
     }, extra || {});
     window.MatchDB.saveDailyProgress(dailyDay, rec);
     if (window.MatchDB.saveDailyLive) window.MatchDB.saveDailyLive(dailyDay, rec);   // the word-free public note
@@ -9230,14 +9250,17 @@ $1{ display: flex; gap: 8px; width: 100%; }
   function shareInvite() {
     if (!navigator.share) return;
     navigator.share({ title: "Daily Climb", text: "Play today's Daily Climb with me:", url: gameLink() })
-      .catch(() => {});
+      .then(() => markShare("native")).catch(() => {});
+  }
+  function markShare(how) {
+    if (dbReady() && window.MatchDB.hasAuth && window.MatchDB.markShare) window.MatchDB.markShare(how).catch(() => {});
   }
   $("#btn-home-invite").addEventListener("click", showInvite);
   $("#btn-invite-share").addEventListener("click", shareInvite);
   $("#btn-invite-home").addEventListener("click", goHome);
   $("#btn-invite-copy").addEventListener("click", () => {
     const field = $("#invite-link");
-    const done = () => { $("#invite-note").textContent = "Link copied!"; };
+    const done = () => { $("#invite-note").textContent = "Link copied!"; markShare("copy"); };
     const fail = () => {
       field.focus(); field.select();
       $("#invite-note").textContent = "Couldn't copy — select the link and copy it manually.";

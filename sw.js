@@ -35,6 +35,7 @@ self.addEventListener("fetch", (e) => {
   // Only same-origin GETs — never intercept Firestore, Datamuse, the Firebase CDN, etc.
   if (req.method !== "GET" || url.origin !== location.origin) return;
 
+  if (url.pathname.endsWith("/stats.html")) return;   // the private stats page is its own page, not the game
   const isHTML = req.mode === "navigate" ||
     (req.headers.get("accept") || "").includes("text/html") ||
     url.pathname.endsWith("/") || url.pathname.endsWith(".html");
