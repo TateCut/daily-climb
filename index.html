@@ -1496,13 +1496,13 @@ $1{ display: flex; gap: 8px; width: 100%; }
     --rd-climb: #f0a04b; --rd-strip: #c9874a; --rd-strip-ink: #121212; --rd-sky1: #17130f; --rd-sky2: #2b211a;
     --rd-m1: #3a2d23; --rd-m2: #4c392b; --rd-m3: #271e17; --rd-slot: #5c5c60; --rd-good: #2f6f49; --rd-bad: #ff7a6b; --rd-tint: rgba(201, 135, 74, 0.24);
     --rd-ok: #6fd08c; --rd-sun: #e9dccb; --rd-sun-ring: #c9874a;
-    --rd-gold-text: #f6c90e; --rd-on-climb: #1c1005; --rd-climb-inv: #c25e08; --rd-tier-t: #6fd08c; --rd-tier-s: #9fb8ff;
+    --rd-gold-text: #f6c90e; --rd-gm-line: #f6c90e; --rd-gm-ink: #f6c90e; --rd-on-climb: #1c1005; --rd-climb-inv: #c25e08; --rd-tier-t: #6fd08c; --rd-tier-s: #9fb8ff;
     --franklin: "Libre Franklin", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
   html.light { --rd-bg: #ffffff; --rd-sheet: #ffffff; --rd-card: #f6f4f0; --rd-ink: #121212; --rd-muted: #5a5a5a; --rd-line: #d3d6da;
     --rd-btn: #121212; --rd-btn-ink: #ffffff; --rd-tile: #efece6; --rd-tile-ink: #121212; --rd-climb: #c25e08; --rd-strip: #f4d3a6;
     --rd-sky1: #fdf6ee; --rd-sky2: #f7dfc0; --rd-m1: #efcfa9; --rd-m2: #e2b07f; --rd-m3: #c98d58; --rd-slot: #c9ccd1; --rd-good: #cfeedb; --rd-bad: #d4473a;
     --rd-tint: rgba(244, 211, 166, 0.55); --rd-ok: #1f8a4c; --rd-sun: #fffaf0; --rd-sun-ring: #f2a65a;
-    --rd-gold-text: #8a6700; --rd-on-climb: #ffffff; --rd-climb-inv: #f0a04b; --rd-tier-t: #1f8a4c; --rd-tier-s: #3b5bdb; color-scheme: light; }
+    --rd-gold-text: #8a6700; --rd-gm-line: #c99a00; --rd-gm-ink: #7a5a00; --rd-on-climb: #ffffff; --rd-climb-inv: #f0a04b; --rd-tier-t: #1f8a4c; --rd-tier-s: #3b5bdb; color-scheme: light; }
   /* Every screen on the redesign palette: the original tokens point at the --rd-* ones. */
   :root { --bg: var(--rd-bg); --surface: var(--rd-card); --line: var(--rd-line); --text: var(--rd-ink); --muted: var(--rd-muted);
     --accent: var(--rd-climb); --on-accent: var(--rd-on-climb); --good: var(--rd-ok); --warn: var(--rd-bad); --gold: var(--rd-gold-text);
@@ -1711,6 +1711,20 @@ $1{ display: flex; gap: 8px; width: 100%; }
   .rt-w.tw.zero { opacity: 0.7; }
   .rt-flag { display: inline-flex; margin-right: 5px; vertical-align: -1px; }
   .rt-flag svg { width: 8px; height: 11px; }
+  /* Leaderboard detail: steps a player didn't reach, and the day's total out of the most possible */
+  #screen-daily-board .chips .missed-step { padding: 2.5px 8.5px; border-radius: 999px; border: 1.5px dashed var(--rd-line); color: var(--rd-muted); background: none; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em; }
+  #screen-daily-board .chips .missed-step.tw { padding: 2px 8px; border: 2px dashed var(--rd-gm-line); color: var(--rd-gm-ink); }
+  #screen-daily-board .chips .pair { display: inline-flex; }
+  #screen-daily-board .chips .pair > span:first-child { border-top-right-radius: 0; border-bottom-right-radius: 0; padding-right: 8px; }
+  #screen-daily-board .chips .pair > .missed-step { border-top-left-radius: 0; border-bottom-left-radius: 0; border-left-style: solid; padding-left: 7px; }
+  #screen-daily-board .lb-total { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 10px; margin-bottom: 14px; border-bottom: 1px solid var(--rd-line); }
+  #screen-daily-board .lb-total .h, #screen-daily-board .rounds .round-label.pts .h { font-family: var(--slab); font-weight: 700; color: var(--rd-ink); }
+  #screen-daily-board .lb-total .h { font-size: 1.35rem; }
+  #screen-daily-board .lb-total .sc, #screen-daily-board .rounds .round-label.pts .sc { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--rd-ink); }
+  #screen-daily-board .lb-total .sc { font-size: 1.6rem; line-height: 1; }
+  #screen-daily-board .lb-total .sc span, #screen-daily-board .rounds .round-label.pts .sc span { color: var(--rd-muted); font-weight: 600; }
+  #screen-daily-board .rounds .round-label.pts { display: flex; align-self: stretch; margin-top: 4px; justify-content: space-between; align-items: baseline; font-size: 1.15rem; letter-spacing: 0; text-transform: none; }
+  #screen-daily-board .rounds .round-label.pts .clb { color: var(--rd-climb); }
   /* What's new: a one-time full-screen intro to Routes, with a little phone acting out the trip */
   .wn { position: fixed; inset: 0; z-index: 80; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
     padding: calc(env(safe-area-inset-top, 0px) + 16px) 24px calc(env(safe-area-inset-bottom, 0px) + 20px); background: var(--hs-bg); color: var(--hs-ink); text-align: center; }
@@ -4439,7 +4453,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     const fresh = tiles.filter((t) => t.isNew).map((t) => t.id);
     const grouped = carried.length > 0 && !!prevWord;
     const str = (ids) => ids.map((id) => tileMap[id].ch).join("");
-    let fallback = null;
+    let fallback = null, best = null, bestScore = Infinity;
 
     for (let attempt = 0; attempt < 40; attempt++) {
       const order = grouped
@@ -4448,9 +4462,10 @@ $1{ display: flex; gap: 8px; width: 100%; }
       fallback = order;
       if (WORD_SET.has(str(order))) continue;
       if (grouped && carried.length > 1 && str(order.slice(0, carried.length)) === prevWord) continue;
-      return order;
+      const sc = revealScore(str(order).toLowerCase());   // the least helpful start, like Shuffle
+      if (sc < bestScore) { best = order; bestScore = sc; if (sc === 0) break; }
     }
-    return fallback;
+    return best || fallback;
   }
 
   // 3-letter starting words that have at least one valid 5-letter extension.
@@ -5473,9 +5488,37 @@ $1{ display: flex; gap: 8px; width: 100%; }
     FX.play("shuffle"); buzz(8);
   }
 
+  // How much a row of letters gives away: letters already in a real word's spots count
+  // double, and pairs of letters that sit side by side in a real word count once. Lower is
+  // better. The real words are every word these letters spell (theme words included).
+  function revealScore(str) {
+    const cands = ANA.get(poolKey()) || [];
+    if (!cands.length || !str) return 0;
+    let best = 0;
+    for (const w of cands) {
+      if (w === str) return 1e9;   // the answer itself
+      let pos = 0, pairs = 0;
+      if (str.length === w.length) for (let i = 0; i < str.length; i++) if (str[i] === w[i]) pos++;
+      for (let i = 0; i + 1 < str.length; i++) if (w.includes(str[i] + str[i + 1])) pairs++;
+      best = Math.max(best, pos * 2 + pairs);
+    }
+    return best;
+  }
+  const trayString = (cells) => cells.filter((c) => c.type === "letter").map((c) => tileMap[c.id].ch).join("").toLowerCase();
+  // Shuffle as often as you like, but it never spells the answer or comes close: it tries a
+  // few dozen orders and keeps the one that gives the least away (tapping it over and over
+  // used to reveal short words).
   function doShuffle() {
     if (locked || checking) return;
-    shuffle(trayCells);
+    const before = trayString(trayCells);
+    let best = null, bestScore = Infinity;
+    for (let i = 0; i < 40; i++) {
+      const cand = shuffle(trayCells.slice());
+      const str = trayString(cand);
+      const sc = revealScore(str) + (str === before && before.length > 1 ? 50 : 0);   // and it visibly changes
+      if (sc < bestScore) { best = cand; bestScore = sc; if (sc === 0) break; }
+    }
+    trayCells.splice(0, trayCells.length, ...best);
     msg("");
     render(false);
     FX.play("shuffle"); buzz(8);
@@ -5517,6 +5560,24 @@ $1{ display: flex; gap: 8px; width: 100%; }
   // Renders one player's per-round word chips into a `.rounds` container.
   // theme (the daily board): label climbs, and put a flag on each climb's
   // theme rung (gold if they found the theme word there, grey if not).
+  // A themed Climb's most points: a point per word, plus one for every step where a theme word fits.
+  function climbMaxPoints(theme, i) {
+    const ladder = (theme.climbs[i] || {}).c || [];
+    return ladder.length + ladder.filter((rung) => (ANA.get(sortStr(rung)) || [rung]).some((w) => isThemeWord(theme, i, w))).length;
+  }
+  const climbPoints = (theme, i, words) => words.length + themeHits(theme, i, words).length;
+  function pointsHead(n) {
+    const h = document.createElement("span"), c = document.createElement("span");
+    h.className = "h"; c.className = "clb"; c.textContent = "Climb";
+    h.append(c, " " + n);
+    return h;
+  }
+  function pointsOutOf(got, max) {
+    const sc = document.createElement("span"), m = document.createElement("span");
+    sc.className = "sc"; m.textContent = "/" + max;
+    sc.append(String(got), m);
+    return sc;
+  }
   function renderRoundsBlock(container, wordsByRound, theme) {
     container.innerHTML = "";
     (wordsByRound || []).forEach((words, i) => {
@@ -5524,11 +5585,28 @@ $1{ display: flex; gap: 8px; width: 100%; }
       row.className = "round";
       const label = document.createElement("div");
       label.className = "round-label";
-      if (theme) { const c = document.createElement("span"); c.className = "clb"; c.textContent = "Climb"; label.append(c, " " + (i + 1) + " · " + wordsLabel(words.length)); }
+      const ladder = theme && theme.climbs[i] ? theme.climbs[i].c : null;
+      if (theme && ladder && newRules(theme)) {
+        // out of what was possible, so nobody has to do the math: "Climb 2 ... 6/8"
+        label.classList.add("pts");
+        label.append(pointsHead(i + 1), pointsOutOf(climbPoints(theme, i, words), climbMaxPoints(theme, i)));
+      }
+      else if (theme) { const c = document.createElement("span"); c.className = "clb"; c.textContent = "Climb"; label.append(c, " " + (i + 1) + " · " + wordsLabel(words.length)); }
       else label.textContent = "Round " + (i + 1) + " · " + wordsLabel(words.length);
       const chips = document.createElement("div");
       chips.className = "chips";
       fillChips(chips, words);
+      if (ladder && words.length && words.length < ladder.length) {
+        // the steps they didn't reach, as dashed tiles with the puzzle's word (gold where a theme word fit)
+        for (let k = words.length; k < ladder.length; k++) {
+          const g = document.createElement("span");
+          const themeStep = (ANA.get(sortStr(ladder[k])) || [ladder[k]]).filter((w) => isThemeWord(theme, i, w));
+          g.className = "missed-step" + (themeStep.length ? " tw" : "");
+          g.textContent = (themeStep[0] || ladder[k]).toUpperCase();
+          g.title = "Not reached";
+          chips.appendChild(g);
+        }
+      }
       (theme ? themeRungs(theme, i, words) : []).forEach((tr) => {
         const chip = chips.children[tr.rung];
         if (!chip) return;
@@ -5536,6 +5614,19 @@ $1{ display: flex; gap: 8px; width: 100%; }
         if (tr.found) chip.classList.add("gold");
         chip.appendChild(themeFlagSvg(tr.found, "chip-flag"));
         chips.classList.add("flagged");
+      });
+      // steps they reached where a theme word was hiding in the same letters (CARES when SCARE was one)
+      if (theme && newRules(theme)) Array.from(chips.children).slice(0, words.length).forEach((chip, k) => {
+        const w = words[k];
+        if (isThemeWord(theme, i, w)) return;
+        const tw = (ANA.get(sortStr(w)) || []).find((a) => isThemeWord(theme, i, a));
+        if (!tw) return;
+        const pair = document.createElement("div"), g = document.createElement("span");
+        pair.className = "pair";
+        g.className = "missed-step tw";
+        g.textContent = tw.toUpperCase();
+        chip.before(pair);
+        pair.append(chip, g);
       });
       row.appendChild(label);
       row.appendChild(chips);
@@ -8851,7 +8942,17 @@ $1{ display: flex; gap: 8px; width: 100%; }
       badge.textContent = "★ Completed without using a hint";
       d.appendChild(badge);
     }
-    if (theme) d.appendChild(themeFlagStrip(theme, e.roundWords || []));
+    if (theme && newRules(theme)) {
+      const tot = document.createElement("div"), h = document.createElement("span");
+      tot.className = "lb-total";
+      h.className = "h"; h.textContent = "Total";
+      const words = e.roundWords || [];
+      const got = theme.climbs.reduce((a, _, i) => a + climbPoints(theme, i, words[i] || []), 0);
+      const max = theme.climbs.reduce((a, _, i) => a + climbMaxPoints(theme, i), 0);
+      tot.append(h, pointsOutOf(got, max));
+      d.appendChild(tot);
+    }
+    else if (theme) d.appendChild(themeFlagStrip(theme, e.roundWords || []));
     const rounds = document.createElement("div");
     rounds.className = "rounds";
     renderRoundsBlock(rounds, e.roundWords || [], theme);
@@ -9711,6 +9812,12 @@ $1{ display: flex; gap: 8px; width: 100%; }
   // Lives here, inside the page, because the page is always fetched fresh
   // (sw.js caches other files cache-first, so a notes file could go stale).
   const PATCH_NOTES = [
+    { v: "0.12.3", date: "2026-10-07", title: "No peeking",
+      notes: [
+        ["imp", "Shuffle no longer spells the answer for you. Tap it as much as you like to see your letters in a new order, but it will never land on the word, or even come close."],
+        ["new", "Tap anyone on the leaderboard to see their points out of what was possible on each Climb. Theme words they missed are outlined in gold, so you can see exactly where the points went."],
+        ["imp", "The Still climbing list is off the leaderboard for now."],
+      ] },
     { v: "0.12.2", date: "2026-10-06", title: "Room to scroll",
       notes: [
         ["imp", "The leaderboard now scrolls as one page, so you can see more players at once."],
