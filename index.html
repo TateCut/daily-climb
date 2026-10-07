@@ -7125,7 +7125,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
       strikes: sessionStrikes, solveMs: Math.round(solveMs || 0), climbMs: Array.from({ length: climbMs.length }, (_, i) => Math.round(climbMs[i] || 0)), roundWords: words, finished: false,
     }, extra || {});
     window.MatchDB.saveDailyProgress(dailyDay, rec);
-    if (window.MatchDB.saveDailyLive) window.MatchDB.saveDailyLive(dailyDay, rec);   // the word-free public note
+    if (STILL_CLIMBING && window.MatchDB.saveDailyLive) window.MatchDB.saveDailyLive(dailyDay, rec);   // the word-free public note
   }
   function dailyWordsSoFar() {
     const wordsIn = (i) => (roundWords[i] ? roundWords[i].length : 0);
@@ -7898,7 +7898,11 @@ $1{ display: flex; gap: 8px; width: 100%; }
   // the standings, or with no new word in 3 hours, is left out. Today's board only.
   let climbingBoard = { day: null, list: null, at: 0 };
   const CLIMBING_STALE_MS = 3 * 3600 * 1000;
+  // Hidden for now (Oct 7, 2026): players found it random, and the stats page covers who's still
+  // going. Flip to true to bring the section (and its public notes) back.
+  const STILL_CLIMBING = false;
   function renderStillClimbing() {
+    if (!STILL_CLIMBING) return;
     const day = climbingBoard.day, list = $("#daily-board-list");
     if (!day || day !== dailyKeyOf() || !dbReady() || !window.MatchDB.getDailyLive) return;
     if (Date.now() - climbingBoard.at > 60000) {
