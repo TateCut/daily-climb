@@ -66,6 +66,15 @@
   .trend .lb { font-size: .58rem; color: var(--faint); white-space: nowrap; }
   .legend { display: flex; gap: 14px; font-size: .78rem; color: var(--muted); }
   .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  .rm { font: inherit; font-size: .74rem; font-weight: 700; border: 1.5px solid var(--bad); color: var(--bad); background: none; border-radius: 999px; padding: 3px 10px; cursor: pointer; }
+  .veil { position: fixed; inset: 0; background: rgba(0, 0, 0, .5); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+  .panel { background: var(--card); color: var(--ink); border-radius: 16px; padding: 18px; width: min(520px, 100%); max-height: 86vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+  .panel h3 { margin: 0; font-family: var(--slab); font-size: 1.3rem; }
+  .panel ul { margin: 0; padding-left: 1.1em; font-size: .84rem; line-height: 1.6; }
+  .panel input { font: inherit; font-size: .95rem; padding: 9px 11px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
+  .panel .row { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+  .panel .go { background: var(--bad); border-color: var(--bad); color: #fff; }
+  .panel .go:disabled { opacity: .4; cursor: default; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -116,12 +125,13 @@
     </section>
   </div>
 </div>
+<div class="veil" id="rmveil" hidden><div class="panel" id="rmpanel"></div></div>
 
 <script src="firebase-config.js"></script>
 <script src="daily-calendar.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-  import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+  import { getFirestore, collection, getDocs, doc, getDoc, setDoc, writeBatch, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
   import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
   const $ = (s) => document.querySelector(s);
@@ -287,23 +297,78 @@
     const dup = Object.keys(groups).filter((k) => groups[k].length > 1).sort();
     const short = (k) => k ? new Date(String(k).slice(0, 10) + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "–";
     $("#dupcount").textContent = dup.length ? dup.length + " names · " + dup.reduce((a, k) => a + groups[k].length, 0) + " accounts" : "none found";
-    $("#duplist").innerHTML = dup.length ? "<table><tr><th>Account</th><th>Owns the name</th><th class='num'>Dailies</th><th class='num'>First</th><th class='num'>Latest</th><th class='num'>Best streak</th><th>Account ID</th></tr>" +
-      dup.map((k) => '<tr class="grp"><td colspan="7">' + esc(k) + " · " + groups[k].length + " accounts</td></tr>" +
+    dupState = { tally: tally, acct: acct, owner: owner };
+    $("#duplist").innerHTML = dup.length ? "<table><tr><th>Account</th><th>Owns the name</th><th class='num'>Dailies</th><th class='num'>First</th><th class='num'>Latest</th><th class='num'>Best streak</th><th>Account ID</th><th></th></tr>" +
+      dup.map((k) => '<tr class="grp"><td colspan="8">' + esc(k) + " · " + groups[k].length + " accounts</td></tr>" +
         groups[k].sort((a, b) => (owner[k] === b.id) - (owner[k] === a.id) || ((b.t || {}).n || 0) - ((a.t || {}).n || 0)).map((a) => {
           const own = owner[k] === a.id, t = a.t || {}, p = a.p || {};
           return "<tr><td>" + esc(a.name) + (a.id === me ? " <span class='tag you'>you</span>" : "") + "</td><td>" + (own ? "<span class='tag keep'>yes · keep</span>" : owner[k] ? "<span class='tag stop'>no</span>" : "<span class='tag stop'>name not claimed</span>") +
-            "</td><td class='num'>" + (t.n || 0) + "</td><td class='num'>" + short(t.first) + "</td><td class='num'>" + short(t.last || p.dailyLastDay) + "</td><td class='num'>" + (p.bestStreak || "–") + "</td><td><code>" + esc(a.id) + "</code></td></tr>";
+            "</td><td class='num'>" + (t.n || 0) + "</td><td class='num'>" + short(t.first) + "</td><td class='num'>" + short(t.last || p.dailyLastDay) + "</td><td class='num'>" + (p.bestStreak || "–") + "</td><td><code>" + esc(a.id) + "</code></td><td>" +
+            (!own && a.id !== me && owner[k] ? "<button class='rm' data-uid='" + esc(a.id) + "' data-name='" + esc(a.name) + "'>Remove</button>" : "") + "</td></tr>";
         }).join("")).join("") + "</table>" +
         '<p class="note">"Owns the name" is the account the username (and its recovery code) belongs to: that\'s the one to keep. The others are older copies, usually from before account recovery existed. Clean them up in the Firebase console by their account ID.</p>'
       : '<p class="note">No name is shared by more than one account.</p>';
   }
+  // ---- Remove a duplicate copy ----
+  // Shows exactly what will go, asks you to type the name, saves a full copy of everything to
+  // removedAccounts/{uid} (only you can read it), then deletes. Only offered on copies that
+  // don't own their name, and never on your own account. The old sign-in itself stays (only
+  // Firebase's server tools can delete those); with no profile or scores it's harmless.
+  let dupState = null;
+  $("#duplist").addEventListener("click", (e) => { const b = e.target.closest(".rm"); if (b) planRemove(b.dataset.uid, b.dataset.name).catch(fail); });
+  async function planRemove(uid, name) {
+    if (!uid || uid === currentUid) return;
+    const panel = $("#rmpanel"), veil = $("#rmveil");
+    panel.innerHTML = "<h3>Checking what " + esc(name) + " has…</h3>"; veil.hidden = false;
+    const t = dupState.tally[uid] || { days: [] };
+    const paths = [];
+    for (const k of t.days) paths.push("dailies/" + k + SALT + "/entrants/" + uid);
+    // progress notes and the public "still climbing" note, on any day
+    for (const k of days) {
+      for (const sub of ["progress", "live"]) {
+        try { const rows = await list("dailies/" + k + SALT + "/" + sub); if (rows.some((r) => r.id === uid)) paths.push("dailies/" + k + SALT + "/" + sub + "/" + uid); } catch (x) {}
+      }
+    }
+    if (dupState.acct[uid] && dupState.acct[uid].p) paths.push("players/" + uid);
+    // username claims and recovery records that belong to this account (never someone else's)
+    let names = []; try { names = await list("usernames"); } catch (x) {}
+    names.filter((u) => u.uid === uid).forEach((u) => paths.push("usernames/" + u.id));
+    if (!MOCK) { try { const rq = await getDocs(query(collection(db, "recovery"), where("uid", "==", uid))); rq.docs.forEach((d) => paths.push("recovery/" + d.id)); } catch (x) {} }
+    const label = (p) => { const m = p.match(/^dailies\/([\d-]+)-r6\/(\w+)/); return m ? ({ entrants: "leaderboard entry", progress: "progress note", live: "still-climbing note" }[m[2]] + " · " + m[1]) : p.startsWith("players/") ? "player profile" : p.startsWith("usernames/") ? "username claim · " + p.slice(10) : "recovery record · " + p.slice(9); };
+    panel.innerHTML = "<h3>Remove this copy of " + esc(name) + "?</h3>" +
+      "<p class='note'>Account <code>" + esc(uid) + "</code>. This deletes " + paths.length + " item" + (paths.length === 1 ? "" : "s") + ":</p><ul>" + paths.map((p) => "<li>" + esc(label(p)) + "</li>").join("") + "</ul>" +
+      "<p class='note'>A full copy is saved to <b>removedAccounts</b> first, so it can be put back. Its leaderboard finishes come off those days' boards.</p>" +
+      "<label class='note' for='rmname'>Type <b>" + esc(name) + "</b> to confirm</label><input id='rmname' autocomplete='off'>" +
+      "<div class='row'><button class='btn' id='rmcancel'>Cancel</button><button class='btn go' id='rmgo' disabled>Remove</button></div><p class='note' id='rmmsg'></p>";
+    const input = $("#rmname"), go = $("#rmgo");
+    input.oninput = () => { go.disabled = input.value.trim().toLowerCase() !== String(name).trim().toLowerCase(); };
+    $("#rmcancel").onclick = () => { veil.hidden = true; };
+    input.focus();
+    go.onclick = async () => {
+      go.disabled = true; $("#rmcancel").disabled = true; $("#rmmsg").textContent = "Saving a copy…";
+      try {
+        if (MOCK) { await new Promise((r) => setTimeout(r, 400)); }
+        else {
+          const saved = [];
+          for (const p of paths) { const s = await getDoc(doc(db, ...p.split("/"))); if (s.exists()) saved.push({ path: p, data: s.data() }); }
+          await setDoc(doc(db, "removedAccounts", uid), { uid: uid, name: name, removedAt: serverTimestamp(), removedBy: currentUid, docs: saved });
+          $("#rmmsg").textContent = "Deleting…";
+          const batch = writeBatch(db); paths.forEach((p) => batch.delete(doc(db, ...p.split("/")))); await batch.commit();
+        }
+        Object.keys(cache).forEach((k) => delete cache[k]);
+        veil.hidden = true;
+        showOverview().catch(fail);
+      } catch (x) { $("#rmmsg").textContent = "Couldn't remove it: " + (x && x.message || x) + ". If the copy couldn't be saved, nothing was deleted; check the rules and try again."; $("#rmcancel").disabled = false; }
+    };
+  }
+
   // Every day's leaderboard, tallied by player: how many dailies each has finished.
   async function showDone(ps) {
     const byUid = {}; ps.forEach((p) => { byUid[p.id] = p; });
     const tally = {};
     await Promise.all(days.map(async (k) => {
       let e = []; try { e = await entrants(k); } catch (x) {}
-      e.forEach((x) => { const t = (tally[x.id] = tally[x.id] || { id: x.id, name: x.name, n: 0, first: k, last: k }); t.n++; if (k < t.first) t.first = k; if (k > t.last) { t.last = k; t.name = x.name || t.name; } });
+      e.forEach((x) => { const t = (tally[x.id] = tally[x.id] || { id: x.id, name: x.name, n: 0, first: k, last: k, days: [] }); t.n++; t.days.push(k); if (k < t.first) t.first = k; if (k > t.last) { t.last = k; t.name = x.name || t.name; } });
     }));
     const rows = Object.values(tally).sort((a, b) => b.n - a.n || b.last.localeCompare(a.last));
     const short = (k) => new Date(k + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
