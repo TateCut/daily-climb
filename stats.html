@@ -95,6 +95,7 @@
         <div class="card"><h2>Current streaks <small>top 10</small></h2><div id="streakNow"></div></div>
         <div class="card"><h2>Best streaks ever <small>top 10</small></h2><div id="streakBest"></div></div>
       </div>
+      <div class="card"><h2>Dailies completed <small id="donecount">every player who has finished a daily, most first</small></h2><div class="scroll" id="donelist"><p class="note">Loading…</p></div></div>
       <div class="grid2">
         <div class="card"><h2>Adventure Mode</h2><div id="adv"></div></div>
         <div class="card"><h2>Sharing &amp; reminders</h2><div id="share"></div></div>
@@ -262,6 +263,22 @@
       "<tr><td>Players who shared the link</td><td class='num'>" + sharers.length + "</td></tr>" +
       "<tr><td>Times shared (share sheet / copied)</td><td class='num'>" + shareTotal + " (" + sharers.reduce((a, p) => a + (p.shares.native || 0), 0) + " / " + sharers.reduce((a, p) => a + (p.shares.copy || 0), 0) + ")</td></tr></table>" +
       '<p class="note">Shares are counted from the stats update on (Invite screen: Share or Copy).</p>';
+    showDone(ps).catch(fail);
+  }
+  // Every day's leaderboard, tallied by player: how many dailies each has finished.
+  async function showDone(ps) {
+    const byUid = {}; ps.forEach((p) => { byUid[p.id] = p; });
+    const tally = {};
+    await Promise.all(days.map(async (k) => {
+      let e = []; try { e = await entrants(k); } catch (x) {}
+      e.forEach((x) => { const t = (tally[x.id] = tally[x.id] || { id: x.id, name: x.name, n: 0, first: k, last: k }); t.n++; if (k < t.first) t.first = k; if (k > t.last) { t.last = k; t.name = x.name || t.name; } });
+    }));
+    const rows = Object.values(tally).sort((a, b) => b.n - a.n || b.last.localeCompare(a.last));
+    const short = (k) => new Date(k + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    $("#donecount").textContent = rows.length + " players · " + rows.reduce((a, r) => a + r.n, 0) + " dailies finished since " + short(FIRST);
+    $("#donelist").innerHTML = rows.length ? "<table><tr><th>#</th><th>Player</th><th class='num'>Dailies</th><th class='num'>First</th><th class='num'>Latest</th><th class='num'>Best streak</th></tr>" +
+      rows.map((r, i) => { const p = byUid[r.id] || {}; return "<tr><td>" + (i + 1) + "</td><td>" + esc(p.username || r.name || r.id.slice(0, 6)) + "</td><td class='num'><b>" + r.n + "</b></td><td class='num'>" + short(r.first) + "</td><td class='num'>" + short(r.last) + "</td><td class='num'>" + (p.bestStreak || "–") + "</td></tr>"; }).join("") + "</table>"
+      : '<p class="note">Nobody has finished a daily yet.</p>';
   }
 
   // ---------------- trends ----------------
