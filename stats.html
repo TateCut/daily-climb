@@ -108,6 +108,7 @@
         <div class="card"><h2>Current streaks <small>top 10</small></h2><div id="streakNow"></div></div>
         <div class="card"><h2>Best streaks ever <small>top 10</small></h2><div id="streakBest"></div></div>
       </div>
+      <div class="card"><h2>Feedback <small id="fbcount">notes sent from the game's ☰ menu, newest first</small></h2><div class="scroll" id="fblist"><p class="note">Loading…</p></div></div>
       <div class="card"><h2>Notifications on <small id="remcount">players with daily reminders turned on</small></h2><div class="scroll" id="remlist"><p class="note">Loading…</p></div></div>
       <div class="card"><h2>Haven't finished a daily <small id="nonecount">player profiles with no finished daily</small></h2><div class="scroll" id="nonelist"><p class="note">Loading…</p></div></div>
       <div class="card"><h2>Duplicate players <small id="dupcount">same name, more than one account</small></h2><div class="scroll" id="duplist"><p class="note">Loading…</p></div></div>
@@ -121,6 +122,7 @@
         <div class="card"><h2>Home Screen app vs browser</h2><div id="appfx"><p class="note">Loading…</p></div></div>
         <div class="card"><h2>Features used</h2><div id="feat"><p class="note">Loading…</p></div></div>
       </div>
+      <div class="card"><h2>Announcements <small>how long each one stayed on screen</small></h2><div id="annreads"><p class="note">Loading…</p></div></div>
       <div class="card"><h2>Invites <small>players who joined from someone's shared link</small></h2><div class="scroll" id="invites"><p class="note">Loading…</p></div></div>
       <div class="grid2">
         <div class="card"><h2>Adventure Mode</h2><div id="adv"></div></div>
@@ -204,13 +206,16 @@
   function mockList(path) {
     const day = (path.match(/dailies\/([\d-]+)/) || [])[1];
     const r = rnd([...path].reduce((a, c) => a + c.charCodeAt(0), 7));
+    if (path === "feedback") return [["Wren", "Could the calendar show which days I played?", 2], ["Marco", "Today's Summit was brutal. Loved it.", 30], ["jules", "Shuffle sometimes puts the same letters back in place.", 300]]
+      .map(([n, t, mins], i) => ({ id: "f" + i, uid: "u" + i, name: n, text: t, at: { seconds: Math.floor((Date.now() - mins * 60000) / 1000) }, version: "0.12.4", app: { standalone: i % 2 === 0, platform: i ? "ios" : "android" } }));
     if (path === "usernames") return NAMES.map((n, i) => ({ id: nameKey(n), uid: "u" + i, username: n }));
     if (path === "players") return NAMES.concat(["Ali", "tess", "Wren"]).map((n, i) => ({ id: "u" + i, username: n, dailyStreak: Math.floor(r() * 12), dailyLastDay: (r() < 0.6 ? today : addDays(today, -3)) + SALT, bestStreak: 3 + Math.floor(r() * 14),
       reminder: r() < 0.35 ? { on: true, tokens: ["x"], hour: 7 + Math.floor(r() * 3), tz: "America/Los_Angeles" } : undefined, shares: r() < 0.3 ? { copy: 1 + Math.floor(r() * 3), native: Math.floor(r() * 2) } : undefined,
       adventure: r() < 0.5 ? { starts: 1 + Math.floor(r() * 9) } : undefined,
       app: r() < 0.8 ? { standalone: r() < 0.4, platform: r() < 0.6 ? "ios" : "desktop", tz: "America/Chicago" } : undefined,
       features: { routes: Math.floor(r() * 5), calendar: Math.floor(r() * 3), howTo: Math.floor(r() * 2), patchNotes: Math.floor(r() * 2) },
-      prefs: r() < 0.5 ? { dark: r() < 0.3, sound: r() < 0.6 } : undefined, referredBy: r() < 0.2 ? "wren" : undefined, adventureBeaten: r() < 0.35 ? [1, 2, 3].slice(0, 1 + Math.floor(r() * 3)) : [], beatenSeeds: [4, 9, 12].slice(0, Math.floor(r() * 4)) }));
+      prefs: r() < 0.5 ? { dark: r() < 0.3, sound: r() < 0.6 } : undefined,
+      announcements: r() < 0.75 ? { menu: (() => { const ms = r() < 0.3 ? Math.floor(r() * 5000) : Math.floor(8000 + r() * 70000); return { opens: 1 + Math.floor(r() * 2), totalMs: ms, firstMs: ms, firstHow: r() < 0.7 ? "done" : "outside", firstAuto: true, end: ms > 30000, words: 161 }; })() } : undefined, referredBy: r() < 0.2 ? "wren" : undefined, adventureBeaten: r() < 0.35 ? [1, 2, 3].slice(0, 1 + Math.floor(r() * 3)) : [], beatenSeeds: [4, 9, 12].slice(0, Math.floor(r() * 4)) }));
     const lens = (themeOf(day) || { lens: [4, 5, 5] }).lens;
     const out = [];
     NAMES.forEach((n, i) => {
@@ -515,6 +520,52 @@
       : '<p class="note">Wrong guesses are recorded from the stats update on; none yet.</p>';
   }
 
+  // Announcements: for each one, how many players have seen it and how long it stayed on their screen the
+  // first time (usually the pop-up). "Long enough to read it" = at least as long as reading every word at
+  // about 4 words a second (an average reading pace). Each viewing counts at most 5 minutes.
+  const ANN_TITLES = { menu: "Thank you, and a new menu", routes: "Climb Routes are here" };
+  function showAnnouncementReads(ps) {
+    const ids = [...new Set(ps.flatMap((p) => Object.keys(p.announcements || {})))];
+    if (!ids.length) { $("#annreads").innerHTML = '<p class="note">Nothing yet. Reading times are recorded from v0.13.0 on.</p>'; return; }
+    const secs = (ms) => (ms == null ? "–" : ms < 60000 ? Math.round(ms / 1000) + "s" : Math.floor(ms / 60000) + "m " + String(Math.round(ms / 1000) % 60).padStart(2, "0") + "s");
+    const median = (xs) => { if (!xs.length) return null; const a = xs.slice().sort((x, y) => x - y), m = a.length >> 1; return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; };
+    const rows = ids.map((id) => {
+      const seen = ps.filter((p) => p.announcements && p.announcements[id]).map((p) => Object.assign({ who: p.username || p.name || "(no name)" }, p.announcements[id]));
+      const firsts = seen.map((a) => a.firstMs).filter((x) => x != null);
+      const words = (seen.find((a) => a.words) || {}).words || 0;
+      const needMs = words / 4 * 1000;
+      return { id, seen, words, needMs, med: median(firsts), skip: firsts.filter((x) => x < 5000).length, read: needMs ? firsts.filter((x) => x >= needMs).length : 0,
+        end: seen.filter((a) => a.end).length, back: seen.filter((a) => (a.opens || 0) > 1).length, n: firsts.length };
+    });
+    let html = "<table><tr><th>Announcement</th><th class='num'>Seen</th><th class='num'>Typical first look</th><th class='num'>Under 5s</th><th class='num'>Long enough to read it</th><th class='num'>Reached the end</th><th class='num'>Came back</th></tr>" +
+      rows.map((r) => "<tr><td>" + esc(ANN_TITLES[r.id] || r.id) + (r.words ? " <small>(" + r.words + " words, about " + Math.round(r.needMs / 1000) + "s to read)</small>" : "") + "</td><td class='num'>" + r.seen.length +
+        "</td><td class='num'>" + secs(r.med) + "</td><td class='num'>" + pct(r.skip, r.n) + "</td><td class='num'>" + pct(r.read, r.n) + "</td><td class='num'>" + pct(r.end, r.seen.length) +
+        "</td><td class='num'>" + pct(r.back, r.seen.length) + "</td></tr>").join("") + "</table>";
+    // who has seen the newest one, longest first look first
+    const top = rows.find((r) => r.id === ids.find((i) => ANN_TITLES[i] === ANN_TITLES.menu)) || rows[0];
+    html += "<p class='note' style='margin-top:12px'><b>" + esc(ANN_TITLES[top.id] || top.id) + "</b>: who has seen it</p><div class='scroll'><table><tr><th>Player</th><th class='num'>First look</th><th>Closed by</th><th class='num'>Times opened</th><th class='num'>Total</th><th class='num'>Reached the end</th></tr>" +
+      top.seen.slice().sort((a, b) => (b.firstMs || 0) - (a.firstMs || 0)).map((a) => "<tr><td>" + esc(a.who) + "</td><td class='num'>" + secs(a.firstMs) + "</td><td>" +
+        ({ done: "Done", outside: "tapping outside", away: "leaving the screen", replay: "watching the intro" }[a.firstHow] || "–") + "</td><td class='num'>" + (a.opens || 0) +
+        "</td><td class='num'>" + secs(a.totalMs) + "</td><td class='num'>" + (a.end ? "✓" : "") + "</td></tr>").join("") + "</table></div>";
+    $("#annreads").innerHTML = html;
+  }
+
+  // Feedback from the game's ☰ menu: who, when, what they said, and on what (app or browser, game version).
+  async function showFeedback() {
+    let notes;
+    try { notes = await list("feedback"); }
+    catch (e) { $("#fblist").innerHTML = '<p class="note">Couldn\'t read feedback. Publish the rules with the <code>feedback</code> block, then reload.</p>'; return; }
+    const secs = (ts) => ts && ts.toDate ? ts.toDate().getTime() / 1000 : ts && ts.seconds ? ts.seconds : 0;
+    notes.sort((a, b) => secs(b.at) - secs(a.at));
+    const when = (ts) => { const t = secs(ts); return t ? new Date(t * 1000).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "–"; };
+    const on = (a) => !a ? "–" : (a.standalone ? "App" : "Browser") + " · " + (a.platform || "?");
+    $("#fbcount").textContent = notes.length + (notes.length === 1 ? " note" : " notes") + ", newest first";
+    $("#fblist").innerHTML = notes.length ? "<table><tr><th>When</th><th>Player</th><th>Feedback</th><th>On</th><th>Version</th></tr>" +
+      notes.map((n) => "<tr><td>" + when(n.at) + "</td><td>" + esc(n.name || "(no name)") + "</td><td style='white-space:pre-wrap;min-width:16em'>" + esc(n.text) +
+        "</td><td>" + esc(on(n.app)) + "</td><td>" + esc(n.version || "–") + "</td></tr>").join("") + "</table>"
+      : '<p class="note">No feedback yet. It shows up here as soon as someone sends some.</p>';
+  }
+
   // Players with daily reminders on: when they asked to be reminded (their own time zone), how many
   // devices, when they turned it on, and how many dailies they've finished.
   function showReminders(ps, tally) {
@@ -619,6 +670,8 @@
     $("#kpi-finished").textContent = Object.keys(tally).length;
     showNotFinished(ps, tally).catch(fail);
     showReminders(ps, tally);
+    showFeedback();
+    showAnnouncementReads(ps);
     showPlayerHealth(ps, tally).catch(fail);
     $("#donecount").textContent = rows.length + " players · " + rows.reduce((a, r) => a + r.n, 0) + " dailies finished since " + short(FIRST);
     $("#donelist").innerHTML = rows.length ? "<table><tr><th>#</th><th>Player</th><th class='num'>Dailies</th><th class='num'>First</th><th class='num'>Latest</th><th class='num'>Best streak</th></tr>" +
