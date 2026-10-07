@@ -86,7 +86,7 @@
   </header>
   <div class="msg" id="gate" hidden></div>
   <div id="app" hidden style="display:flex;flex-direction:column;gap:18px">
-    <div class="tabs" id="tabs"><button class="on" data-v="day">Day</button><button data-v="overview">Players</button><button data-v="trend">Trends</button></div>
+    <div class="tabs" id="tabs"><button class="on" data-v="day">Day</button><button data-v="overview">Players</button><button data-v="growth">Growth</button><button data-v="puzzles">Puzzles</button><button data-v="trend">Trends</button></div>
 
     <section id="v-day" style="display:flex;flex-direction:column;gap:14px">
       <div class="daybar">
@@ -112,9 +112,35 @@
       <div class="card"><h2>Haven't finished a daily <small id="nonecount">player profiles with no finished daily</small></h2><div class="scroll" id="nonelist"><p class="note">Loading…</p></div></div>
       <div class="card"><h2>Duplicate players <small id="dupcount">same name, more than one account</small></h2><div class="scroll" id="duplist"><p class="note">Loading…</p></div></div>
       <div class="card"><h2>Dailies completed <small id="donecount">every player who has finished a daily, most first</small></h2><div class="scroll" id="donelist"><p class="note">Loading…</p></div></div>
+      <div class="card"><h2>Drifting away <small>finished 3+ dailies, nothing in the last 3 days</small></h2><div class="scroll" id="drift"><p class="note">Loading…</p></div></div>
+      <div class="grid2">
+        <div class="card"><h2>Streak spread</h2><div id="spread"><p class="note">Loading…</p></div></div>
+        <div class="card"><h2>Do reminders help?</h2><div id="remfx"><p class="note">Loading…</p></div></div>
+      </div>
+      <div class="grid2">
+        <div class="card"><h2>Home Screen app vs browser</h2><div id="appfx"><p class="note">Loading…</p></div></div>
+        <div class="card"><h2>Features used</h2><div id="feat"><p class="note">Loading…</p></div></div>
+      </div>
+      <div class="card"><h2>Invites <small>players who joined from someone's shared link</small></h2><div class="scroll" id="invites"><p class="note">Loading…</p></div></div>
       <div class="grid2">
         <div class="card"><h2>Adventure Mode</h2><div id="adv"></div></div>
         <div class="card"><h2>Sharing &amp; reminders</h2><div id="share"></div></div>
+      </div>
+    </section>
+
+    <section id="v-growth" hidden style="display:flex;flex-direction:column;gap:14px">
+      <div class="kpis" id="gkpis"><p class="note">Loading…</p></div>
+      <div class="card"><h2>New players per day <small>first daily ever finished</small></h2><div class="trend" id="newchart"></div></div>
+      <div class="card"><h2>Comeback rate <small>of each day's new players</small></h2><div class="scroll" id="cohorts"></div><p class="note">Next day: finished the very next daily. Within a week: finished another daily in the next 7 days. Still playing: finished a daily 7 or more days after their first. Blank until enough days have passed.</p></div>
+      <div class="card"><h2>When people finish <small>hour of day, in each player's own time zone</small></h2><div class="trend" id="hours"></div><p class="note" id="hoursnote"></p></div>
+    </section>
+
+    <section id="v-puzzles" hidden style="display:flex;flex-direction:column;gap:14px">
+      <div class="card"><h2>Difficulty report card</h2><div class="scroll" id="report"><p class="note">Loading…</p></div></div>
+      <div class="card"><h2>Theme word find rate <small>share of finishers who found a theme word in each Climb</small></h2><div class="scroll" id="themerate"></div></div>
+      <div class="grid2">
+        <div class="card"><h2>Sticking points <small>where players stopped, all days</small></h2><div class="scroll" id="stick"></div></div>
+        <div class="card"><h2>Most common wrong guesses</h2><div class="scroll" id="misses"></div></div>
       </div>
     </section>
 
@@ -131,6 +157,7 @@
 
 <script src="firebase-config.js"></script>
 <script src="daily-calendar.js"></script>
+<script src="theme-words.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
   import { getFirestore, collection, getDocs, doc, getDoc, setDoc, writeBatch, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
@@ -180,15 +207,19 @@
     if (path === "usernames") return NAMES.map((n, i) => ({ id: nameKey(n), uid: "u" + i, username: n }));
     if (path === "players") return NAMES.concat(["Ali", "tess", "Wren"]).map((n, i) => ({ id: "u" + i, username: n, dailyStreak: Math.floor(r() * 12), dailyLastDay: (r() < 0.6 ? today : addDays(today, -3)) + SALT, bestStreak: 3 + Math.floor(r() * 14),
       reminder: r() < 0.35 ? { on: true, tokens: ["x"], hour: 7 + Math.floor(r() * 3), tz: "America/Los_Angeles" } : undefined, shares: r() < 0.3 ? { copy: 1 + Math.floor(r() * 3), native: Math.floor(r() * 2) } : undefined,
-      adventure: r() < 0.5 ? { starts: 1 + Math.floor(r() * 9) } : undefined, adventureBeaten: r() < 0.35 ? [1, 2, 3].slice(0, 1 + Math.floor(r() * 3)) : [], beatenSeeds: [4, 9, 12].slice(0, Math.floor(r() * 4)) }));
+      adventure: r() < 0.5 ? { starts: 1 + Math.floor(r() * 9) } : undefined,
+      app: r() < 0.8 ? { standalone: r() < 0.4, platform: r() < 0.6 ? "ios" : "desktop", tz: "America/Chicago" } : undefined,
+      features: { routes: Math.floor(r() * 5), calendar: Math.floor(r() * 3), howTo: Math.floor(r() * 2), patchNotes: Math.floor(r() * 2) },
+      prefs: r() < 0.5 ? { dark: r() < 0.3, sound: r() < 0.6 } : undefined, referredBy: r() < 0.2 ? "wren" : undefined, adventureBeaten: r() < 0.35 ? [1, 2, 3].slice(0, 1 + Math.floor(r() * 3)) : [], beatenSeeds: [4, 9, 12].slice(0, Math.floor(r() * 4)) }));
     const lens = (themeOf(day) || { lens: [4, 5, 5] }).lens;
     const out = [];
     NAMES.forEach((n, i) => {
       if (r() < 0.25) return;
       const fin = r() < 0.7, climb = fin ? 3 : 1 + Math.floor(r() * 3), step = fin ? lens[2] : Math.floor(r() * lens[climb - 1]);
       const cms = lens.map((L, k) => k < climb ? Math.round(40000 + r() * 200000) : 0);
-      if (path.endsWith("/progress")) out.push({ id: "u" + i, name: n, climb: climb, step: step, points: 5 + Math.floor(r() * 12), solveMs: cms.reduce((a, b) => a + b, 0), climbMs: cms, finished: fin, climbDone: fin ? 3 : climb - 1 });
-      else if (fin) out.push({ id: "u" + i, name: n, total: 8 + Math.floor(r() * 7), themeWords: Math.floor(r() * 4), solveMs: cms.reduce((a, b) => a + b, 0) });
+      if (path.endsWith("/progress")) out.push({ id: "u" + i, name: n, climb: climb, step: step, points: 5 + Math.floor(r() * 12), solveMs: cms.reduce((a, b) => a + b, 0), climbMs: cms, finished: fin, climbDone: fin ? 3 : climb - 1, misses: r() < 0.5 ? [["ssroe", "tares", "ratesh", "pleat"][Math.floor(r() * 4)]] : [] });
+      else if (fin) out.push({ id: "u" + i, name: n, total: 8 + Math.floor(r() * 7), themeWords: Math.floor(r() * 4), solveMs: cms.reduce((a, b) => a + b, 0), strikes: Math.floor(r() * 3), hintUsed: r() < 0.3, finishedAt: Date.now() - Math.floor(r() * 864e5),
+        roundWords: (themeWordsFor(day).ladders || []).map((lad) => ({ words: lad.slice(0, lad.length - (r() < 0.25 ? 1 : 0)) })) });
     });
     return out;
   }
@@ -310,6 +341,180 @@
         '<p class="note">"Owns the name" is the account the username (and its recovery code) belongs to: that\'s the one to keep. The others are older copies, usually from before account recovery existed. Clean them up in the Firebase console by their account ID.</p>'
       : '<p class="note">No name is shared by more than one account.</p>';
   }
+  // ---------------- every day at once (Growth, Puzzles, Players) ----------------
+  async function allDays() {
+    if (cache.__all) return cache.__all;
+    const rows = await Promise.all(days.slice().reverse().map(async (k) => {
+      let ent = [], prog = []; try { ent = await entrants(k); } catch (x) {} try { prog = await progress(k); } catch (x) {}
+      return { day: k, ent: ent, prog: prog };
+    }));
+    return (cache.__all = rows);   // oldest first
+  }
+  const pct = (a, b) => b ? Math.round(100 * a / b) + "%" : "–";
+  const shortDay = (k) => new Date(k + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const daysBetween = (a, b) => Math.round((new Date(b + "T12:00:00") - new Date(a + "T12:00:00")) / 864e5);
+  function bars(el, rows, label) {   // rows: [{ v, lab, tip }]
+    const max = Math.max(1, ...rows.map((r) => r.v));
+    el.innerHTML = rows.map((r) => '<div class="col" title="' + esc(r.tip) + '"><div class="st" style="height:' + (100 * r.v / max) + '%;background:var(--bar)"></div><span class="lb">' + esc(r.lab) + "</span></div>").join("");
+  }
+  // first and every finish per player
+  function finishesByPlayer(all) {
+    const by = {};
+    all.forEach((d) => d.ent.forEach((e) => { (by[e.id] = by[e.id] || { id: e.id, name: e.name, days: [] }).days.push(d.day); }));
+    Object.values(by).forEach((p) => { p.days.sort(); p.first = p.days[0]; p.last = p.days[p.days.length - 1]; });
+    return by;
+  }
+
+  // ---------------- Players tab: health sections ----------------
+  async function showPlayerHealth(ps, tally) {
+    const nm = (p) => esc(p.username || p.name || (p.id || "").slice(0, 6));
+    const byId = {}; ps.forEach((p) => { byId[p.id] = p; });
+    const yst = addDays(today, -1);
+    // drifting away
+    const drift = Object.values(tally).filter((t) => t.n >= 3 && daysBetween(t.last, today) >= 3).sort((a, b) => b.n - a.n || b.last.localeCompare(a.last));
+    $("#drift").innerHTML = drift.length ? "<table><tr><th>Player</th><th class='num'>Dailies</th><th class='num'>Last played</th><th class='num'>Days away</th><th class='num'>Best streak</th><th>Reminders</th></tr>" +
+      drift.map((t) => { const p = byId[t.id] || {}; return "<tr><td>" + esc(p.username || t.name || t.id.slice(0, 6)) + "</td><td class='num'>" + t.n + "</td><td class='num'>" + shortDay(t.last) + "</td><td class='num'>" + daysBetween(t.last, today) +
+        "</td><td class='num'>" + (p.bestStreak || "–") + "</td><td>" + (p.reminder && p.reminder.on ? "on" : "–") + "</td></tr>"; }).join("") + "</table>"
+      : '<p class="note">Nobody with 3+ dailies has gone quiet.</p>';
+    // streak spread (current streaks only count if they played today or yesterday)
+    const live = (p) => { const d = String(p.dailyLastDay || "").slice(0, 10); return d === today || d === yst; };
+    const buckets = [["1 day", 1, 1], ["2–6 days", 2, 6], ["7–29 days", 7, 29], ["30+ days", 30, 1e9]];
+    const cur = (lo, hi) => ps.filter(live).filter((p) => p.dailyStreak >= lo && p.dailyStreak <= hi).length;
+    const best = (lo, hi) => ps.filter((p) => p.bestStreak >= lo && p.bestStreak <= hi).length;
+    $("#spread").innerHTML = "<table><tr><th>Streak</th><th class='num'>Current</th><th class='num'>Best ever</th></tr>" + buckets.map(([l, lo, hi]) => "<tr><td>" + l + "</td><td class='num'>" + cur(lo, hi) + "</td><td class='num'>" + best(lo, hi) + "</td></tr>").join("") + "</table>";
+    // compare two groups of players who have finished at least one daily
+    const players = Object.values(tally).map((t) => ({ t: t, p: byId[t.id] || {} }));
+    const recent = (x) => daysBetween(x.t.last, today) <= 2;
+    const groupRow = (label, g) => "<tr><td>" + label + "</td><td class='num'>" + g.length + "</td><td class='num'>" + (g.length ? (g.reduce((a, x) => a + x.t.n, 0) / g.length).toFixed(1) : "–") +
+      "</td><td class='num'>" + pct(g.filter(recent).length, g.length) + "</td><td class='num'>" + (g.length ? (g.reduce((a, x) => a + (x.p.bestStreak || 0), 0) / g.length).toFixed(1) : "–") + "</td></tr>";
+    const head = "<table><tr><th></th><th class='num'>Players</th><th class='num'>Avg dailies</th><th class='num'>Played in last 3 days</th><th class='num'>Avg best streak</th></tr>";
+    const remOn = (x) => x.p.reminder && x.p.reminder.on && (x.p.reminder.tokens || []).length;
+    $("#remfx").innerHTML = head + groupRow("Reminders on", players.filter(remOn)) + groupRow("Reminders off", players.filter((x) => !remOn(x))) + "</table>";
+    // app vs browser (stamped from the stats update on)
+    const app = (x) => x.p.app && x.p.app.standalone === true, web = (x) => x.p.app && x.p.app.standalone === false;
+    const plat = {}; ps.forEach((p) => { if (p.app) { const k = (p.app.standalone ? "App · " : "Browser · ") + (p.app.platform || "?"); plat[k] = (plat[k] || 0) + 1; } });
+    $("#appfx").innerHTML = head + groupRow("Home Screen app", players.filter(app)) + groupRow("Browser", players.filter(web)) + groupRow("Not seen since the update", players.filter((x) => !x.p.app)) + "</table>" +
+      (Object.keys(plat).length ? "<p class='note'>" + Object.keys(plat).sort().map((k) => esc(k) + ": " + plat[k]).join(" · ") + "</p>" : "") +
+      "<p class='note'>Recorded once a day per device from the stats update on, for players with a profile.</p>";
+    // features
+    const F = [["routes", "Routes tab"], ["themeCard", "Theme pop-up (tapped)"], ["calendar", "Calendar"], ["howTo", "How to play"], ["patchNotes", "Patch notes"], ["invite", "Invite screen"]];
+    const withPrefs = ps.filter((p) => p.prefs);
+    $("#feat").innerHTML = "<table><tr><th>Feature</th><th class='num'>Players</th><th class='num'>Times opened</th></tr>" +
+      F.map(([k, l]) => { const us = ps.filter((p) => p.features && p.features[k]); return "<tr><td>" + l + "</td><td class='num'>" + us.length + "</td><td class='num'>" + us.reduce((a, p) => a + p.features[k], 0) + "</td></tr>"; }).join("") +
+      "<tr><td>Dark mode on</td><td class='num'>" + withPrefs.filter((p) => p.prefs.dark === true).length + "</td><td class='num'>of " + withPrefs.filter((p) => "dark" in p.prefs).length + " who switched</td></tr>" +
+      "<tr><td>Sound on</td><td class='num'>" + withPrefs.filter((p) => p.prefs.sound === true).length + "</td><td class='num'>of " + withPrefs.filter((p) => "sound" in p.prefs).length + " who switched</td></tr></table>" +
+      "<p class='note'>Counted from the stats update on.</p>";
+    // invites: referredBy is a username or an account ID
+    let names = []; try { names = await list("usernames"); } catch (x) {}
+    const ownerOf = {}; names.forEach((u) => { ownerOf[u.id] = u.uid; });
+    const rec = {};
+    ps.filter((p) => p.referredBy).forEach((p) => { const who = ownerOf[p.referredBy] || p.referredBy; (rec[who] = rec[who] || []).push(p); });
+    const top = Object.keys(rec).sort((a, b) => rec[b].length - rec[a].length);
+    $("#invites").innerHTML = top.length ? "<table><tr><th>Shared by</th><th class='num'>Players brought in</th><th>Who</th></tr>" +
+      top.map((who) => "<tr><td>" + (byId[who] ? nm(byId[who]) : esc(who)) + "</td><td class='num'>" + rec[who].length + "</td><td>" + rec[who].map(nm).join(", ") + "</td></tr>").join("") + "</table>"
+      : '<p class="note">No one has joined from a shared link yet. Links shared from the Invite screen now carry who shared them, and a new player is credited at their first finished daily.</p>';
+  }
+
+  // ---------------- Growth tab ----------------
+  async function showGrowth() {
+    const all = await allDays();
+    const by = finishesByPlayer(all);
+    const firsts = {}; Object.values(by).forEach((p) => { (firsts[p.first] = firsts[p.first] || []).push(p); });
+    const last7 = days.slice(0, 7);
+    const newLast7 = last7.reduce((a, k) => a + (firsts[k] || []).length, 0);
+    const avgDaily = all.slice(-7).reduce((a, d) => a + d.ent.length, 0) / Math.min(7, all.length || 1);
+    // comeback rates, over every cohort old enough to judge
+    const has = (p, k) => p.days.includes(k);
+    let nd = [0, 0], wk = [0, 0], still = [0, 0];
+    const rows = all.map((d) => {
+      const c = firsts[d.day] || [];
+      const age = daysBetween(d.day, today);
+      const next = age >= 1 ? c.filter((p) => has(p, addDays(d.day, 1))).length : null;
+      const within = age >= 7 ? c.filter((p) => p.days.some((x) => { const g = daysBetween(d.day, x); return g >= 1 && g <= 7; })).length : null;
+      const st = age >= 7 ? c.filter((p) => daysBetween(d.day, p.last) >= 7).length : null;
+      if (next != null) { nd[0] += next; nd[1] += c.length; } if (within != null) { wk[0] += within; wk[1] += c.length; } if (st != null) { still[0] += st; still[1] += c.length; }
+      return { day: d.day, n: c.length, next: next, within: within, st: st };
+    });
+    $("#gkpis").innerHTML = kpi(newLast7, "new players, last 7 days") + kpi(avgDaily.toFixed(1), "finishers per day, last 7") +
+      kpi(pct(nd[0], nd[1]), "came back the next day") + kpi(pct(wk[0], wk[1]), "came back within a week") + kpi(pct(still[0], still[1]), "still playing after a week");
+    bars($("#newchart"), all.slice(-30).map((d) => ({ v: (firsts[d.day] || []).length, lab: d.day.slice(8), tip: d.day + ": " + (firsts[d.day] || []).length + " new" })));
+    $("#cohorts").innerHTML = "<table><tr><th>First day</th><th class='num'>New players</th><th class='num'>Next day</th><th class='num'>Within a week</th><th class='num'>Still playing</th></tr>" +
+      rows.slice().reverse().filter((r) => r.n).map((r) => "<tr><td>" + shortDay(r.day) + "</td><td class='num'>" + r.n + "</td><td class='num'>" + (r.next == null ? "" : pct(r.next, r.n)) +
+        "</td><td class='num'>" + (r.within == null ? "" : pct(r.within, r.n)) + "</td><td class='num'>" + (r.st == null ? "" : pct(r.st, r.n)) + "</td></tr>").join("") + "</table>";
+    // hour of day, in the player's own time zone where known
+    let ps = []; try { ps = await players(); } catch (x) {}
+    const tzOf = {}; ps.forEach((p) => { const tz = (p.app && p.app.tz) || (p.reminder && p.reminder.tz); if (tz) tzOf[p.id] = tz; });
+    const local = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const hrs = new Array(24).fill(0); let known = 0, total = 0;
+    all.forEach((d) => d.ent.forEach((e) => {
+      const ms = typeof e.finishedAt === "number" ? e.finishedAt : e.finishedAt && e.finishedAt.toMillis ? e.finishedAt.toMillis() : null; if (!ms) return;
+      const tz = tzOf[e.id] || local; if (tzOf[e.id]) known++; total++;
+      let hr = 0; try { hr = Number(new Intl.DateTimeFormat("en-US", { hour: "numeric", hourCycle: "h23", timeZone: tz }).format(new Date(ms))); } catch (x) { hr = new Date(ms).getHours(); }
+      hrs[hr % 24]++;
+    }));
+    const lab = (h) => (h % 12 || 12) + (h < 12 ? "a" : "p");
+    bars($("#hours"), hrs.map((v, h) => ({ v: v, lab: h % 3 === 0 ? lab(h) : "", tip: lab(h) + ": " + v + " finishes" })));
+    $("#hoursnote").textContent = total ? known + " of " + total + " finishes use the player's own time zone; the rest use yours (" + local + ")." : "";
+  }
+
+  // ---------------- Puzzles tab ----------------
+  const TW = window.THEME_WORDS || {}, TWF = window.THEME_WORDS_FROM || {};
+  function themeWordsFor(day) {   // the day's theme list (words added later count from their day) + the calendar's own
+    if (!CAL) return { set: new Set(), cal: [] };
+    const [y, m, d] = day.split("-").map(Number), [y0, m0, d0] = CAL.start.split("-").map(Number);
+    const e = CAL.days[Math.round((new Date(y, m - 1, d, 12) - new Date(y0, m0 - 1, d0, 12)) / 864e5)]; if (!e) return { set: new Set(), cal: [] };
+    const from = TWF[e.t] || {};
+    return { set: new Set(String(TW[e.t] || "").split(" ").filter((w) => w && (!from[w] || day >= from[w]))), cal: e.w || [], ladders: e.c };
+  }
+  async function showPuzzles() {
+    const all = await allDays();
+    // report card
+    const tiers = {};
+    const rows = all.slice().reverse().map((d) => {
+      const t = themeOf(d.day), started = new Set(d.prog.map((x) => x.id).concat(d.ent.map((x) => x.id))).size;
+      const maxW = t ? t.lens.reduce((a, b) => a + b, 0) : null;
+      const n = d.ent.length, avg = (f) => n ? d.ent.reduce((a, e) => a + (f(e) || 0), 0) / n : null;
+      const r = { day: d.day, t: t, started: started, n: n, words: avg((e) => e.total), themes: avg((e) => e.themeWords), strikes: avg((e) => e.strikes), hint: n ? d.ent.filter((e) => e.hintUsed).length / n : null, med: median(d.ent.map((e) => e.solveMs).filter(Boolean)), maxW: maxW };
+      if (t && n) { const g = (tiers[t.tier] = tiers[t.tier] || []); g.push(r); }
+      return r;
+    });
+    const fmt = (v, dgt) => v == null ? "–" : v.toFixed(dgt);
+    const line = (label, r) => "<tr><td>" + label + "</td><td class='num'>" + r.started + "</td><td class='num'>" + pct(r.n, r.started) + "</td><td class='num'>" + fmt(r.words, 1) + (r.maxW ? " / " + r.maxW : "") +
+      "</td><td class='num'>" + fmt(r.themes, 1) + "</td><td class='num'>" + fmtMs(r.med) + "</td><td class='num'>" + fmt(r.strikes, 1) + "</td><td class='num'>" + (r.hint == null ? "–" : Math.round(100 * r.hint) + "%") + "</td></tr>";
+    const tierAvg = (k, l) => { const g = tiers[k]; if (!g) return ""; const a = (f) => g.reduce((s, r) => s + (f(r) || 0), 0) / g.length;
+      return "<tr class='grp'><td>" + l + " days (" + g.length + ")</td><td class='num'>" + a((r) => r.started).toFixed(1) + "</td><td class='num'>" + Math.round(100 * a((r) => r.started ? r.n / r.started : 0)) + "%</td><td class='num'>" + a((r) => r.words).toFixed(1) +
+        "</td><td class='num'>" + a((r) => r.themes).toFixed(1) + "</td><td class='num'>" + fmtMs(a((r) => r.med)) + "</td><td class='num'>" + a((r) => r.strikes).toFixed(1) + "</td><td class='num'>" + Math.round(100 * a((r) => r.hint)) + "%</td></tr>"; };
+    $("#report").innerHTML = "<table><tr><th>Day</th><th class='num'>Started</th><th class='num'>Finished</th><th class='num'>Avg words</th><th class='num'>Avg theme words</th><th class='num'>Median time</th><th class='num'>Avg strikes</th><th class='num'>Used hint</th></tr>" +
+      tierAvg("T", "Trail") + tierAvg("R", "Ridge") + tierAvg("S", "Summit") +
+      rows.filter((r) => r.started).map((r) => line(shortDay(r.day) + (r.t ? " · " + esc(r.t.emoji + " " + r.t.name) + " · " + ({ T: "Trail", R: "Ridge", S: "Summit" }[r.t.tier] || "") : ""), r)).join("") + "</table>" +
+      "<p class='note'>Started counts progress records from Oct 5 on, so earlier days show finishers only (100% finished).</p>";
+    // theme word find rate: per Climb, share of finishers who played any theme word in it
+    $("#themerate").innerHTML = "<table><tr><th>Day</th><th>Theme</th><th class='num'>Climb 1</th><th class='num'>Climb 2</th><th class='num'>Climb 3</th></tr>" +
+      all.slice().reverse().filter((d) => d.ent.length).map((d) => {
+        const tw = themeWordsFor(d.day), t = themeOf(d.day);
+        const cell = (i) => { const hit = d.ent.filter((e) => (unwrap(e.roundWords)[i] || []).some((w) => tw.set.has(w) || (tw.cal[i] || []).includes(w))).length;
+          return "<td class='num' title='" + esc((tw.cal[i] || []).join(", ").toUpperCase()) + "'>" + pct(hit, d.ent.length) + " <small style='color:var(--muted)'>" + esc(((tw.cal[i] || [])[0] || "").toUpperCase()) + "</small></td>"; };
+        return "<tr><td>" + shortDay(d.day) + "</td><td>" + (t ? esc(t.emoji + " " + t.name) : "") + "</td>" + cell(0) + cell(1) + cell(2) + "</tr>"; }).join("") + "</table>";
+    // sticking points: unfinished progress, plus finishers whose Climb ended early
+    const stick = {};
+    all.forEach((d) => {
+      const tw = themeWordsFor(d.day), done = new Set(d.ent.map((e) => e.id));
+      const add = (climb, step) => { const word = tw.ladders && tw.ladders[climb] ? tw.ladders[climb][step] : ""; const k = d.day + "|" + climb + "|" + step; (stick[k] = stick[k] || { day: d.day, climb: climb, step: step, word: word, n: 0 }).n++; };
+      d.prog.filter((p) => !done.has(p.id) && !p.finished).forEach((p) => add((p.climb || 1) - 1, p.step || 0));
+      d.ent.forEach((e) => unwrap(e.roundWords).forEach((ws, i) => { const L = tw.ladders && tw.ladders[i] ? tw.ladders[i].length : 0; if (L && ws.length < L) add(i, ws.length); }));
+    });
+    const top = Object.values(stick).sort((a, b) => b.n - a.n).slice(0, 20);
+    $("#stick").innerHTML = top.length ? "<table><tr><th>Where</th><th>The word there</th><th class='num'>Stopped</th></tr>" +
+      top.map((x) => "<tr><td>" + shortDay(x.day) + " · Climb " + (x.climb + 1) + " · word " + (x.step + 1) + "</td><td>" + esc(String(x.word || "").toUpperCase()) + "</td><td class='num'>" + x.n + "</td></tr>").join("") + "</table>"
+      : '<p class="note">No stopping points yet.</p>';
+    // wrong guesses (recorded from the stats update on)
+    const miss = {};
+    all.forEach((d) => d.prog.forEach((p) => (p.misses || []).forEach((w) => { const m = (miss[w] = miss[w] || { w: w, n: 0, days: new Set() }); m.n++; m.days.add(d.day); })));
+    const tm = Object.values(miss).sort((a, b) => b.n - a.n).slice(0, 30);
+    $("#misses").innerHTML = tm.length ? "<table><tr><th>Guess</th><th class='num'>Times</th><th>Days</th></tr>" + tm.map((m) => "<tr><td>" + esc(m.w.toUpperCase()) + "</td><td class='num'>" + m.n + "</td><td>" + [...m.days].sort().map(shortDay).join(", ") + "</td></tr>").join("") + "</table>"
+      : '<p class="note">Wrong guesses are recorded from the stats update on; none yet.</p>';
+  }
+
   // Players with daily reminders on: when they asked to be reminded (their own time zone), how many
   // devices, when they turned it on, and how many dailies they've finished.
   function showReminders(ps, tally) {
@@ -414,6 +619,7 @@
     $("#kpi-finished").textContent = Object.keys(tally).length;
     showNotFinished(ps, tally).catch(fail);
     showReminders(ps, tally);
+    showPlayerHealth(ps, tally).catch(fail);
     $("#donecount").textContent = rows.length + " players · " + rows.reduce((a, r) => a + r.n, 0) + " dailies finished since " + short(FIRST);
     $("#donelist").innerHTML = rows.length ? "<table><tr><th>#</th><th>Player</th><th class='num'>Dailies</th><th class='num'>First</th><th class='num'>Latest</th><th class='num'>Best streak</th></tr>" +
       rows.map((r, i) => { const p = byUid[r.id] || {}; return "<tr><td>" + (i + 1) + "</td><td>" + esc(p.username || r.name || r.id.slice(0, 6)) + "</td><td class='num'><b>" + r.n + "</b></td><td class='num'>" + short(r.first) + "</td><td class='num'>" + short(r.last) + "</td><td class='num'>" + (p.bestStreak || "–") + "</td></tr>"; }).join("") + "</table>"
@@ -439,8 +645,9 @@
   $("#tabs").onclick = (e) => {
     const b = e.target.closest("button"); if (!b) return;
     document.querySelectorAll("#tabs button").forEach((x) => x.classList.toggle("on", x === b));
-    ["day", "overview", "trend"].forEach((v) => { $("#v-" + v).hidden = v !== b.dataset.v; });
-    if (!shown[b.dataset.v]) { shown[b.dataset.v] = 1; (b.dataset.v === "overview" ? showOverview : b.dataset.v === "trend" ? showTrend : showDay)().catch(fail); }
+    ["day", "overview", "growth", "puzzles", "trend"].forEach((v) => { $("#v-" + v).hidden = v !== b.dataset.v; });
+    const run = { overview: showOverview, growth: showGrowth, puzzles: showPuzzles, trend: showTrend, day: showDay }[b.dataset.v];
+    if (!shown[b.dataset.v]) { shown[b.dataset.v] = 1; run().catch(fail); }
   };
   function fail(e) { console.error(e); $("#gate").hidden = false; $("#gate").innerHTML = "Couldn't load: " + esc(e && e.message || e); }
   function start() { $("#app").hidden = false; shown.day = 1; showDay().catch(fail); }
