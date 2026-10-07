@@ -1901,7 +1901,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
   /* The "Show me" tour */
   .tour-block { position: fixed; inset: 0; z-index: 70; transition: background .3s; }
   .tour-ui.intro .tour-block { background: rgba(10, 6, 2, 0.4); }
-  .tour-banner { position: fixed; z-index: 73; left: 50%; transform: translate(-50%, calc(-100% - 140px)); top: calc(env(safe-area-inset-top, 0px) + 112px); width: min(100% - 24px, 420px);
+  .tour-banner { position: fixed; z-index: 73; left: 50%; transform: translate(-50%, calc(-100% - 140px - env(safe-area-inset-top, 0px))); top: calc(env(safe-area-inset-top, 0px) + 112px); width: min(100% - 24px, 420px);
     padding: 16px 16px 14px; border-radius: 18px; background: var(--rd-sheet); color: var(--rd-ink); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3); text-align: left;
     display: flex; flex-direction: column; gap: 6px; transition: transform .45s cubic-bezier(.3,.7,.3,1); }
   .tour-banner.show { transform: translate(-50%, 0); }
@@ -10233,6 +10233,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     const st = TOUR_STEPS[i];
     if (st.menu && homeMenu.hidden) openHomeMenu();
     $("#tour-banner").classList.remove("show");
+    setTimeout(() => { if (tourStep >= 0) $("#tour-banner").hidden = true; }, 480);   // gone once it has slid away
     $("#tour-tip-t").textContent = st.t;
     $("#tour-tip-s").textContent = st.s;
     $("#tour-tip-n").textContent = (i + 1) + " of " + TOUR_STEPS.length;
