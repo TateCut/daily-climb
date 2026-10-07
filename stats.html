@@ -52,6 +52,10 @@
   .tag { font-size: .7rem; font-weight: 800; padding: 2px 7px; border-radius: 6px; }
   .tag.done { background: var(--good); color: var(--card); }
   .tag.stop { background: var(--line); color: var(--muted); }
+  .tag.keep { background: var(--good); color: var(--card); }
+  .tag.you { background: var(--accent); color: var(--card); }
+  td code { font-size: .72rem; user-select: all; color: var(--muted); }
+  tr.grp td { border-top: 1.5px solid var(--ink); font-weight: 700; padding-top: 12px; }
   .note { margin: 0; font-size: .82rem; color: var(--muted); line-height: 1.5; }
   .msg { background: var(--card); border-radius: 14px; padding: 16px; line-height: 1.55; }
   .msg pre { background: var(--bg); padding: 10px; border-radius: 8px; overflow-x: auto; font-size: .78rem; user-select: all; }
@@ -95,6 +99,7 @@
         <div class="card"><h2>Current streaks <small>top 10</small></h2><div id="streakNow"></div></div>
         <div class="card"><h2>Best streaks ever <small>top 10</small></h2><div id="streakBest"></div></div>
       </div>
+      <div class="card"><h2>Duplicate players <small id="dupcount">same name, more than one account</small></h2><div class="scroll" id="duplist"><p class="note">Loading…</p></div></div>
       <div class="card"><h2>Dailies completed <small id="donecount">every player who has finished a daily, most first</small></h2><div class="scroll" id="donelist"><p class="note">Loading…</p></div></div>
       <div class="grid2">
         <div class="card"><h2>Adventure Mode</h2><div id="adv"></div></div>
@@ -141,7 +146,7 @@
   }
 
   // ---------------- data ----------------
-  let db = null;
+  let db = null, currentUid = null;
   const cache = {};
   async function list(path) {
     if (cache[path]) return cache[path];
@@ -160,7 +165,8 @@
   function mockList(path) {
     const day = (path.match(/dailies\/([\d-]+)/) || [])[1];
     const r = rnd([...path].reduce((a, c) => a + c.charCodeAt(0), 7));
-    if (path === "players") return NAMES.map((n, i) => ({ id: "u" + i, username: n, dailyStreak: Math.floor(r() * 12), dailyLastDay: (r() < 0.6 ? today : addDays(today, -3)) + SALT, bestStreak: 3 + Math.floor(r() * 14),
+    if (path === "usernames") return NAMES.map((n, i) => ({ id: nameKey(n), uid: "u" + i, username: n }));
+    if (path === "players") return NAMES.concat(["Ali", "tess", "Wren"]).map((n, i) => ({ id: "u" + i, username: n, dailyStreak: Math.floor(r() * 12), dailyLastDay: (r() < 0.6 ? today : addDays(today, -3)) + SALT, bestStreak: 3 + Math.floor(r() * 14),
       reminder: r() < 0.35 ? { on: true, tokens: ["x"] } : undefined, shares: r() < 0.3 ? { copy: 1 + Math.floor(r() * 3), native: Math.floor(r() * 2) } : undefined,
       adventure: r() < 0.5 ? { starts: 1 + Math.floor(r() * 9) } : undefined, adventureBeaten: r() < 0.35 ? [1, 2, 3].slice(0, 1 + Math.floor(r() * 3)) : [], beatenSeeds: [4, 9, 12].slice(0, Math.floor(r() * 4)) }));
     const lens = (themeOf(day) || { lens: [4, 5, 5] }).lens;
@@ -265,6 +271,32 @@
       '<p class="note">Shares are counted from the stats update on (Invite screen: Share or Copy).</p>';
     showDone(ps).catch(fail);
   }
+  // Players who show up as more than one account under the same name: usually a name picked
+  // before account recovery existed, then claimed again later. usernames/{name}.uid says which
+  // account owns the name (the claim writes the recovery record with that same account).
+  const nameKey = (n) => String(n || "").trim().toLowerCase().replace(/ +/g, ".");
+  async function showDupes(ps, tally) {
+    let names = []; try { names = await list("usernames"); } catch (x) {}
+    const owner = {}; names.forEach((u) => { owner[u.id] = u.uid; });
+    const me = currentUid;
+    const acct = {};
+    ps.forEach((p) => { acct[p.id] = { id: p.id, name: p.username || p.name || "", p: p }; });
+    Object.values(tally).forEach((t) => { (acct[t.id] = acct[t.id] || { id: t.id, name: t.name || "" }).t = t; if (!acct[t.id].name) acct[t.id].name = t.name || ""; });
+    const groups = {};
+    Object.values(acct).forEach((a) => { const k = nameKey(a.name); if (k) (groups[k] = groups[k] || []).push(a); });
+    const dup = Object.keys(groups).filter((k) => groups[k].length > 1).sort();
+    const short = (k) => k ? new Date(String(k).slice(0, 10) + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "–";
+    $("#dupcount").textContent = dup.length ? dup.length + " names · " + dup.reduce((a, k) => a + groups[k].length, 0) + " accounts" : "none found";
+    $("#duplist").innerHTML = dup.length ? "<table><tr><th>Account</th><th>Owns the name</th><th class='num'>Dailies</th><th class='num'>First</th><th class='num'>Latest</th><th class='num'>Best streak</th><th>Account ID</th></tr>" +
+      dup.map((k) => '<tr class="grp"><td colspan="7">' + esc(k) + " · " + groups[k].length + " accounts</td></tr>" +
+        groups[k].sort((a, b) => (owner[k] === b.id) - (owner[k] === a.id) || ((b.t || {}).n || 0) - ((a.t || {}).n || 0)).map((a) => {
+          const own = owner[k] === a.id, t = a.t || {}, p = a.p || {};
+          return "<tr><td>" + esc(a.name) + (a.id === me ? " <span class='tag you'>you</span>" : "") + "</td><td>" + (own ? "<span class='tag keep'>yes · keep</span>" : owner[k] ? "<span class='tag stop'>no</span>" : "<span class='tag stop'>name not claimed</span>") +
+            "</td><td class='num'>" + (t.n || 0) + "</td><td class='num'>" + short(t.first) + "</td><td class='num'>" + short(t.last || p.dailyLastDay) + "</td><td class='num'>" + (p.bestStreak || "–") + "</td><td><code>" + esc(a.id) + "</code></td></tr>";
+        }).join("")).join("") + "</table>" +
+        '<p class="note">"Owns the name" is the account the username (and its recovery code) belongs to: that\'s the one to keep. The others are older copies, usually from before account recovery existed. Clean them up in the Firebase console by their account ID.</p>'
+      : '<p class="note">No name is shared by more than one account.</p>';
+  }
   // Every day's leaderboard, tallied by player: how many dailies each has finished.
   async function showDone(ps) {
     const byUid = {}; ps.forEach((p) => { byUid[p.id] = p; });
@@ -275,6 +307,7 @@
     }));
     const rows = Object.values(tally).sort((a, b) => b.n - a.n || b.last.localeCompare(a.last));
     const short = (k) => new Date(k + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    showDupes(ps, tally).catch(fail);
     $("#donecount").textContent = rows.length + " players · " + rows.reduce((a, r) => a + r.n, 0) + " dailies finished since " + short(FIRST);
     $("#donelist").innerHTML = rows.length ? "<table><tr><th>#</th><th>Player</th><th class='num'>Dailies</th><th class='num'>First</th><th class='num'>Latest</th><th class='num'>Best streak</th></tr>" +
       rows.map((r, i) => { const p = byUid[r.id] || {}; return "<tr><td>" + (i + 1) + "</td><td>" + esc(p.username || r.name || r.id.slice(0, 6)) + "</td><td class='num'><b>" + r.n + "</b></td><td class='num'>" + short(r.first) + "</td><td class='num'>" + short(r.last) + "</td><td class='num'>" + (p.bestStreak || "–") + "</td></tr>"; }).join("") + "</table>"
@@ -319,6 +352,7 @@
         $("#gate").innerHTML = "Open <a href='./'>the game</a> in this browser, make sure you're signed in as yourself, then come back to this page.";
         return;
       }
+      currentUid = user.uid;
       $("#who").innerHTML = "Signed in · your account ID <code>" + esc(user.uid) + "</code>";
       try { await progress(today); }
       catch (e) {
