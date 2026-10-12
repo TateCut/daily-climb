@@ -57,6 +57,11 @@ sub forbidden { my ($s, $l) = @_; return 1 if $l eq $s.'s'; if ($s =~ /e$/) { re
 my ($freq, $forder) = loadw("$DIR/freq.js");
 my ($enable)        = loadw("$DIR/words.js");
 my %rank; my $r = 0; $rank{$_} = ++$r for @$forder;
+# "common": an everyday word, and for the short steps (4-6 letters) one of the top SHORTMAX (12,000) -
+# the bottom of the list is full of words few people know (LAIRD, TOSH), fine high on a climb, not low down
+my $SHORTMAX = $ENV{SHORTMAX} || 12000;
+sub common { my ($w) = @_; $rank{$w} && (length($w) > 6 || $rank{$w} <= $SHORTMAX) }
+sub rareSteps { grep { !common($_) } @{ $_[0] } }
 my %ebk; push @{ $ebk{ keyf($_) } }, $_ for keys %$enable;
 
 my %blocked;
@@ -172,7 +177,7 @@ sub traps {
         # Only a trap if there was a choice: another word on this step keeps the theme word open.
         # (If the blocker is the only word that fits, everyone plays it and nobody is out-guessed.)
         my @open = grep { my $p = $_; grep { !forbidden($p, $_) } @next } @here;
-        @open = grep { $rank{$_} } @open unless $ENV{ANYOPEN};   # an obscure word (MACER for CREAM) isn't a real choice
+        @open = grep { common($_) } @open unless $ENV{ANYOPEN};   # an obscure word (MACER for CREAM) isn't a real choice
         next unless @block && @open;
         push @out, [$k + 1, $_, \@next] for @block;
     }
@@ -187,7 +192,7 @@ sub deadends {
         my @next = @{ $ebk{ keyf($ladder->[$k + 1]) } || [] };
         for my $p (@here) {
             my @ok = grep { !forbidden($p, $_) } @next;
-            push @out, [$k + 1, $p, \@ok] unless grep { $rank{$_} } @ok;
+            push @out, [$k + 1, $p, \@ok] unless grep { common($_) } @ok;
         }
     }
     return @out;
@@ -204,7 +209,7 @@ sub themeSetFor { my ($t, $w) = @_; my %s = %{ $GAMEWORDS{$t} || {} }; $s{$_} = 
 # written into the calendar, not into climbs.js or daily-pool.js.
 my (%okE, %predE, %succE, @byLenE);
 {
-    my %ev = map { $_ => 1 } grep { !$blocked{$_} } keys %$freq;
+    my %ev = map { $_ => 1 } grep { !$blocked{$_} && common($_) } keys %$freq;
     push @{ $byLenE[ length $_ ] }, $_ for keys %ev;
     my %fk; push @{ $fk{ keyf($_) } }, $_ for keys %ev;
     $okE{$_} = 1 for @{ $byLenE[4] || [] };
@@ -218,9 +223,9 @@ my (%okE, %predE, %succE, @byLenE);
 }
 sub byRank { sort { ($rank{$a} || 1e9) <=> ($rank{$b} || 1e9) || $a cmp $b } @_ }
 sub downChains { my ($w) = @_; return ([$w]) if length $w == 4;
-    map { my $p = $_; map { [@$_, $w] } downChains($p) } grep { defined } (byRank(@{ $predE{$w} || [] }))[0 .. 2] }
+    map { my $p = $_; map { [@$_, $w] } downChains($p) } grep { defined } (byRank(@{ $predE{$w} || [] }))[0 .. ($ENV{DOWNK} || 3) - 1] }
 sub upChains { my ($w, $n) = @_; return ([$w]) if length $w == $n;
-    map { my $s = $_; map { [$w, @$_] } upChains($s, $n) } grep { defined } (byRank(@{ $succE{$w} || [] }))[0 .. 3] }
+    map { my $s = $_; map { [$w, @$_] } upChains($s, $n) } grep { defined } (byRank(@{ $succE{$w} || [] }))[0 .. ($ENV{UPK} || 4) - 1] }
 sub lockout {
     my @c = @_;
     my %reach = map { $_ => 1 } @{ $ebk{ keyf($c[0]) } || [] };
@@ -265,8 +270,8 @@ sub newClimbs {
             next if lockout(@lad);
             my %sh; my @hits = grep { $THEME{$t}{words}{$_} && !$sh{$_}++ } @lad;
             push @out, [ { w => \@lad, n => $n, pct => pctOf(@lad), gen => 1 }, \@hits ];
-            last if ++$made >= 40;
-        } last if $made >= 40; }
+            last if ++$made >= ($ENV{MADE} || 40);
+        } last if $made >= ($ENV{MADE} || 40); }
     }
     $newCache{"$t|$n"} = \@out;
     return @out;
@@ -280,48 +285,114 @@ my %taken;
 my (@report, $swapped, $stuck);
 my ($strongT, %strong) = ('');
 if (($ENV{STRONG} || '') =~ /^(\w+)=(.+)$/) { $strongT = $1; %strong = map { $_ => 1 } split /,/, $2; }
+# A real choice at a theme word: some step's letters spell a theme word AND a common non-theme word
+# (top CHOICERANK everyday words, not blocklisted), so spotting the theme word is what earns the point.
+my $CHOICERANK = $ENV{CHOICERANK} || 10000;
+my $UNTIL = $ENV{UNTIL} || '9999-12-31';
+my %NOCHOICE = map { $_ => 1 } split /,/, ($ENV{CHOICEEXCLUDE} || '');   # theme words that don't count as the choice (too weak for the theme)
+sub hasChoice {
+    my ($ladder, $ts) = @_;
+    for my $w (@$ladder) {
+        my @c = grep { !$blocked{$_} } @{ $ebk{ keyf($w) } || [] };
+        # the theme word in the choice must be a common word too (a step word could be); its rival a top-10,000 word
+        return 1 if (grep { $ts->{$_} && !$NOCHOICE{$_} && common($_) } @c) && (grep { !$ts->{$_} && $rank{$_} && $rank{$_} <= $CHOICERANK } @c);
+    }
+    0;
+}
+sub dayHasChoice { my ($d) = @_; grep { hasChoice($d->{c}[$_], themeSetFor($d->{t}, $d->{w}[$_])) } 0 .. 2 }
+# RULES=YYYY-MM-DD: from that day on, also no near repeats: a theme word back on its theme within
+# 30 days, or a climb starting with the same first 3 words as one within 60 days.
+my $RULESFROM = $ENV{RULES} || '';
+sub near {
+    my ($i, $lad, $hits, $t) = @_;
+    return () unless $RULESFROM && dateOf($i) ge $RULESFROM;
+    # starts compare by letters: COAST and TACOS are the same step
+    my @p; my $s3 = join(' ', map { keyf($_) } @$lad[0 .. 2]); my %h = map { $_ => 1 } @$hits;
+    for my $q (($i > 59 ? $i - 59 : 0) .. $i - 1) {
+        my $e = $days[$q];
+        for my $x (0 .. 2) { push @p, "same start as " . dateOf($q) if join(' ', map { keyf($_) } @{ $e->{c}[$x] }[0 .. 2]) eq $s3 }
+        if ($ENV{NEAR2} && $i - $q < $ENV{NEAR2}) { my $s2 = join(' ', map { keyf($_) } @$lad[0 .. 1]); for my $x (0 .. 2) { push @p, "same first two steps as " . dateOf($q) if join(' ', map { keyf($_) } @{ $e->{c}[$x] }[0 .. 1]) eq $s2 } }   # NEAR2=14: the first 2 steps' letters not again within 14 days
+        next unless $i - $q < 30 && $e->{t} eq $t;
+        for my $w (map { @$_ } @{ $e->{w} }) { push @p, "theme word $w again (" . dateOf($q) . ")" if $h{$w} }
+    }
+    @p;
+}
+# every replacement that would be fine as climb $j of day $i (pool climbs and newly built ones)
+sub fitting {
+    my ($i, $j, $needChoice) = @_;
+    my $d = $days[$i]; my $lad = $d->{c}[$j];
+    my %dayWords = map { my $x = $_; $x == $j ? () : map { $_ => 1 } @{ $d->{c}[$x] } } 0 .. 2;
+    my $ok = sub {
+        my ($c, $hits) = @{ $_[0] }; my $key = join(',', @{ $c->{w} });
+        # a climb may come back, but never with a theme it has had, nor within 60 days of another use
+        @$hits && !(grep { $days[$_]{t} eq $d->{t} || abs($_ - $i) < ($ENV{REUSEDAYS} || 60) } @{ $usedAt{$key} || [] })
+          && !$taken{$key} && !(grep { $dayWords{$_} } @{ $c->{w} })
+          && !(grep { $blocked{$_} } @{ $c->{w} })
+          && !traps($c->{w}, themeSetFor($d->{t}, $hits))
+          && !(($ENV{DEADENDS} || $RULESFROM) && deadends($c->{w}))
+          && !($d->{t} eq $strongT && !grep { $strong{$_} } @$hits)
+          && !near($i, $c->{w}, $hits, $d->{t})
+          && !($RULESFROM && rareSteps($c->{w}))
+          && (!$needChoice || hasChoice($c->{w}, themeSetFor($d->{t}, $hits)))
+    };
+    my @pool = grep { $ok->($_) } @{ $cand{ $d->{t} }{ length $lad->[-1] } || [] };
+    return @pool if @pool && !$RULESFROM && !$needChoice;
+    return (@pool, $ENV{NOGEN} ? () : grep { $ok->($_) } newClimbs($d->{t}, length $lad->[-1]));
+}
+sub swapIn {
+    my ($i, $j, $best, $rec, $oldPct) = @_;
+    my $d = $days[$i];
+    $taken{ join(',', @{ $best->[0]{w} }) } = 1;
+    push @{ $usedAt{ join(',', @{ $best->[0]{w} }) } }, $i;
+    $d->{c}[$j] = $best->[0]{w}; $d->{w}[$j] = $best->[1];
+    @$rec{qw(new newW oldPct newPct)} = ($best->[0]{w}, $best->[1], sprintf("%.2f", $oldPct) + 0, sprintf("%.2f", $best->[0]{pct}) + 0);
+    $rec->{built} = 1 if $best->[0]{gen};
+    $rec->{newSteps} = stepsOf($best->[0]{w}, themeSetFor($d->{t}, $best->[1]));
+    $swapped++;
+}
+sub pctNow { my ($lad) = @_; my $o = $byKey{ join(',', @$lad) }; $o ? $o->{pct} : pctOf(@$lad) }
+my $byDiff = sub { my ($p) = @_; sort { abs($a->[0]{pct} - $p) <=> abs($b->[0]{pct} - $p) } @_[1 .. $#_] };
 for my $i ($from .. $#days) {
     my $d = $days[$i];
     for my $j (0 .. 2) {
         my $lad = $d->{c}[$j];
         my @tr = traps($lad, themeSetFor($d->{t}, $d->{w}[$j]));
-        my @de = $ENV{DEADENDS} ? deadends($lad) : ();
-        my @bl = $ENV{BLOCKED} ? grep { $blocked{$_} } @$lad : ();
+        my @de = ($ENV{DEADENDS} || $RULESFROM) ? deadends($lad) : ();
+        my @bl = ($ENV{BLOCKED} || $RULESFROM) ? grep { $blocked{$_} } @$lad : ();
         my $weak = $d->{t} eq $strongT && !grep { $strong{$_} } @{ $d->{w}[$j] || [] };
-        next unless @tr || @de || @bl || $weak;
-        my $old = $byKey{ join(',', @$lad) };
-        my $oldPct = $old ? $old->{pct} : 0.5;
-        my %dayWords = map { my $x = $_; $x == $j ? () : map { $_ => 1 } @{ $d->{c}[$x] } } 0 .. 2;
-        my $fits = sub {
-            my ($c, $hits) = @{ $_[0] }; my $key = join(',', @{ $c->{w} });
-            # gen-calendar's reuse rule: a climb may come back, but never with a theme it has had,
-            # and (here) never within 60 days of another use
-            @$hits && !(grep { $days[$_]{t} eq $d->{t} || abs($_ - $i) < ($ENV{REUSEDAYS} || 60) } @{ $usedAt{$key} || [] })
-              && !$taken{$key} && !(grep { $dayWords{$_} } @{ $c->{w} })
-              && !traps($c->{w}, themeSetFor($d->{t}, $hits))
-              && !($ENV{DEADENDS} && deadends($c->{w}))
-              && !($d->{t} eq $strongT && !grep { $strong{$_} } @$hits)
-        };
-        my @c = grep { $fits->($_) } @{ $cand{ $d->{t} }{ length $lad->[-1] } || [] };
-        @c = grep { $fits->($_) } newClimbs($d->{t}, length $lad->[-1]) unless @c || $ENV{NOGEN};   # option A
+        my @nr = near($i, $lad, $d->{w}[$j], $d->{t});
+        my @rs = $RULESFROM && dateOf($i) ge $RULESFROM ? rareSteps($lad) : ();
+        next unless @tr || @de || @bl || $weak || @nr || @rs;
+        my $oldPct = pctNow($lad);
+        my @c = fitting($i, $j, 0);
         my $rec = { day => dateOf($i), theme => $THEME{ $d->{t} }{name}, tier => $d->{k}, climb => $j + 1,
                     old => $lad, oldW => $d->{w}[$j], oldSteps => stepsOf($lad, themeSetFor($d->{t}, $d->{w}[$j])), traps => [ map { { step => $_->[0], word => $_->[1], blocks => $_->[2] } } @tr ],
-                    dead => [ map { { step => $_->[0], word => $_->[1], left => $_->[2] } } @de ], blocked => \@bl, weak => $weak ? 1 : 0 };
-        if (@c) {
-            my ($best) = sort { abs($a->[0]{pct} - $oldPct) <=> abs($b->[0]{pct} - $oldPct) } @c;
-            $taken{ join(',', @{ $best->[0]{w} }) } = 1;
-            push @{ $usedAt{ join(',', @{ $best->[0]{w} }) } }, $i;
-            $d->{c}[$j] = $best->[0]{w}; $d->{w}[$j] = $best->[1];
-            @$rec{qw(new newW oldPct newPct)} = ($best->[0]{w}, $best->[1], sprintf("%.2f", $oldPct) + 0, sprintf("%.2f", $best->[0]{pct}) + 0);
-            $rec->{built} = 1 if $best->[0]{gen};
-            $rec->{newSteps} = stepsOf($best->[0]{w}, themeSetFor($d->{t}, $best->[1]));
-            $swapped++;
-        } else {
+                    dead => [ map { { step => $_->[0], word => $_->[1], left => $_->[2] } } @de ], blocked => \@bl, weak => $weak ? 1 : 0, near => \@nr };
+        if (@c) { swapIn($i, $j, ($byDiff->($oldPct, @c))[0], $rec, $oldPct) }
+        else {
             $rec->{stuck} = 1; $stuck++;
             # fallback check: the theme words this climb keeps if the blocked ones stop scoring that day
             my $ts = themeSetFor($d->{t}, $d->{w}[$j]); my %blk = map { map { $_ => 1 } @{ $_->[2] } } @tr; my %seen;
             $rec->{left} = [ grep { $ts->{$_} && !$blk{$_} && !$seen{$_}++ } map { @{ $ebk{ keyf($_) } || [$_] } } @$lad ];
         }
+        push @report, $rec;
+    }
+    # CHOICE=1: a day with no choice step (through UNTIL) gets one climb swapped for the nearest-difficulty one that has it
+    if ($ENV{CHOICE} && dateOf($i) le $UNTIL && !dayHasChoice($d)) {
+        my @opts;
+        for my $j (0 .. 2) {
+            my $oldPct = pctNow($d->{c}[$j]);
+            my @c = $byDiff->($oldPct, fitting($i, $j, 1)) or next;
+            if ($ENV{CHOICELIST}) { printf "OPTION %s climb %d (old %.2f): %s | theme %s | pct %.2f\n", dateOf($i), $j + 1, $oldPct,
+                join(' ', @{ $_->[0]{w} }), join('/', @{ $_->[1] }), $_->[0]{pct} for @c[0 .. ($#c < 3 ? $#c : 3)]; }
+            push @opts, [$j, $c[0], abs($c[0][0]{pct} - $oldPct), $oldPct];
+        }
+        my $rec = { day => dateOf($i), theme => $THEME{ $d->{t} }{name}, tier => $d->{k}, reason => 'choice' };
+        if (my ($o) = sort { $a->[2] <=> $b->[2] } @opts) {
+            my ($j, $best, undef, $oldPct) = @$o;
+            @$rec{qw(climb old oldW oldSteps)} = ($j + 1, $d->{c}[$j], $d->{w}[$j], stepsOf($d->{c}[$j], themeSetFor($d->{t}, $d->{w}[$j])));
+            swapIn($i, $j, $best, $rec, $oldPct);
+        } else { $rec->{stuck} = 1; $stuck++; }
         push @report, $rec;
     }
 }

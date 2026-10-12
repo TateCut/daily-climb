@@ -186,6 +186,9 @@
     return { name: CAL.themes[e.t] ? CAL.themes[e.t].name : e.t, emoji: CAL.themes[e.t] ? CAL.themes[e.t].emoji : "", tier: e.k, lens: e.c.map((c) => c.length) };
   }
 
+  // The 6-7-8 format starts with this day (keep in sync with FORMAT_DAY in index.html): the report card compares before and after.
+  const FORMAT_DAY = "2026-10-13";
+
   // ---------------- data ----------------
   let db = null, currentUid = null;
   const cache = {};
@@ -206,7 +209,7 @@
   function mockList(path) {
     const day = (path.match(/dailies\/([\d-]+)/) || [])[1];
     const r = rnd([...path].reduce((a, c) => a + c.charCodeAt(0), 7));
-    if (path === "feedback") return [["Wren", "Could the calendar show which days I played?", 2], ["Marco", "Today's Summit was brutal. Loved it.", 30], ["jules", "Shuffle sometimes puts the same letters back in place.", 300]]
+    if (path === "feedback") return [["Wren", "Could the calendar show which days I played?", 2], ["Marco", "Those forks in the trail were sneaky. Loved it.", 30], ["jules", "Shuffle sometimes puts the same letters back in place.", 300]]
       .map(([n, t, mins], i) => ({ id: "f" + i, uid: "u" + i, name: n, text: t, at: { seconds: Math.floor((Date.now() - mins * 60000) / 1000) }, version: "0.12.4", app: { standalone: i % 2 === 0, platform: i ? "ios" : "android" } }));
     if (path === "usernames") return NAMES.map((n, i) => ({ id: nameKey(n), uid: "u" + i, username: n }));
     if (path === "players") return NAMES.concat(["Ali", "tess", "Wren"]).map((n, i) => ({ id: "u" + i, username: n, dailyStreak: Math.floor(r() * 12), dailyLastDay: (r() < 0.6 ? today : addDays(today, -3)) + SALT, bestStreak: 3 + Math.floor(r() * 14),
@@ -241,7 +244,7 @@
 
   async function showDay() {
     const day = daysel.value, t = themeOf(day);
-    $("#daytheme").textContent = t ? t.emoji + " " + t.name + " · " + ({ T: "Trail", R: "Ridge", S: "Summit" }[t.tier] || "") : "";
+    $("#daytheme").textContent = t ? t.emoji + " " + t.name : "";
     $("#daykpis").innerHTML = '<p class="note">Loading…</p>';
     let ent = [], prog = [], progErr = null;
     try { ent = await entrants(day); } catch (e) { ent = []; }
@@ -474,13 +477,13 @@
   async function showPuzzles() {
     const all = await allDays();
     // report card
-    const tiers = {};
+    const tiers = {};   // report card groups: days before the 6-7-8 format, and from it on
     const rows = all.slice().reverse().map((d) => {
       const t = themeOf(d.day), started = new Set(d.prog.map((x) => x.id).concat(d.ent.map((x) => x.id))).size;
       const maxW = t ? t.lens.reduce((a, b) => a + b, 0) : null;
       const n = d.ent.length, avg = (f) => n ? d.ent.reduce((a, e) => a + (f(e) || 0), 0) / n : null;
       const r = { day: d.day, t: t, started: started, n: n, words: avg((e) => e.total), themes: avg((e) => e.themeWords), strikes: avg((e) => e.strikes), hint: n ? d.ent.filter((e) => e.hintUsed).length / n : null, med: median(d.ent.map((e) => e.solveMs).filter(Boolean)), maxW: maxW };
-      if (t && n) { const g = (tiers[t.tier] = tiers[t.tier] || []); g.push(r); }
+      if (t && n) { const k = d.day >= FORMAT_DAY ? "new" : "old"; const g = (tiers[k] = tiers[k] || []); g.push(r); }
       return r;
     });
     const fmt = (v, dgt) => v == null ? "–" : v.toFixed(dgt);
@@ -490,8 +493,8 @@
       return "<tr class='grp'><td>" + l + " days (" + g.length + ")</td><td class='num'>" + a((r) => r.started).toFixed(1) + "</td><td class='num'>" + Math.round(100 * a((r) => r.started ? r.n / r.started : 0)) + "%</td><td class='num'>" + a((r) => r.words).toFixed(1) +
         "</td><td class='num'>" + a((r) => r.themes).toFixed(1) + "</td><td class='num'>" + fmtMs(a((r) => r.med)) + "</td><td class='num'>" + a((r) => r.strikes).toFixed(1) + "</td><td class='num'>" + Math.round(100 * a((r) => r.hint)) + "%</td></tr>"; };
     $("#report").innerHTML = "<table><tr><th>Day</th><th class='num'>Started</th><th class='num'>Finished</th><th class='num'>Avg words</th><th class='num'>Avg theme words</th><th class='num'>Median time</th><th class='num'>Avg strikes</th><th class='num'>Used hint</th></tr>" +
-      tierAvg("T", "Trail") + tierAvg("R", "Ridge") + tierAvg("S", "Summit") +
-      rows.filter((r) => r.started).map((r) => line(shortDay(r.day) + (r.t ? " · " + esc(r.t.emoji + " " + r.t.name) + " · " + ({ T: "Trail", R: "Ridge", S: "Summit" }[r.t.tier] || "") : ""), r)).join("") + "</table>" +
+      tierAvg("old", "Before 6-7-8") + tierAvg("new", "6-7-8") +
+      rows.filter((r) => r.started).map((r) => line(shortDay(r.day) + (r.t ? " · " + esc(r.t.emoji + " " + r.t.name) : ""), r)).join("") + "</table>" +
       "<p class='note'>Started counts progress records from Oct 5 on, so earlier days show finishers only (100% finished).</p>";
     // theme word find rate: per Climb, share of finishers who played any theme word in it
     $("#themerate").innerHTML = "<table><tr><th>Day</th><th>Theme</th><th class='num'>Climb 1</th><th class='num'>Climb 2</th><th class='num'>Climb 3</th></tr>" +

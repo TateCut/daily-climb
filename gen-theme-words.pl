@@ -6,7 +6,7 @@
 #   perl gen-theme-words.pl
 #
 # Adding words here (and re-running this) never changes a puzzle: the calendar
-# (daily-calendar.js) is only rebuilt by gen-calendar.pl.
+# (daily-calendar.js) is only rebuilt by gen-calendar-678.pl.
 use strict; use warnings;
 
 open my $in, '<:raw', 'themes.txt' or die "themes.txt: $!";
