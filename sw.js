@@ -2,7 +2,7 @@
 // land immediately; static assets (dictionary, icons) are cache-first for a
 // fast, offline-capable launch. Firebase / Datamuse / gstatic always hit the
 // network.
-const CACHE = "wadder-shell-v19"; // bump to re-fetch cached assets (v19: v0.14.1, Oct 14 Food words)
+const CACHE = "wadder-shell-v20"; // bump to re-fetch cached assets (v20: v0.15.0, Share your Climb + three-peak icons)
 const ASSETS = [
   "./words.js",
   "./freq.js",

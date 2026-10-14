@@ -13,6 +13,14 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800;900&family=Zilla+Slab:wght@400;500;700&display=swap">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#f4d3a6">
+<meta name="description" content="A daily word ladder: Climb one word at a time. On-theme words score extra. Three Climbs a day.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Daily Climb">
+<meta property="og:title" content="Daily Climb">
+<meta property="og:description" content="Climb one word at a time. On-theme words score extra. Three Climbs a day.">
+<meta property="og:url" content="https://thedailyclimb.com/">
+<meta property="og:image" content="https://thedailyclimb.com/icon-512.png">
+<meta name="twitter:card" content="summary">
 <script>
   // Light mode unless the player picked dark (the moon on the home screen). Set before paint.
   try { if (localStorage.getItem("dc.theme") !== "dark") document.documentElement.classList.add("light"); }
@@ -1499,16 +1507,37 @@ $1{ display: flex; gap: 8px; width: 100%; }
   #screen-climb-roundend.f678 h2 { font-size: 1.7rem !important; }
   #screen-climb-roundend.f678 #cre-box, #screen-climb-roundend.f678 #cre-theme, #screen-climb-roundend.f678 #cre-sub,
   #screen-climb-roundend.f678 #cre-word, #screen-climb-roundend.f678 #cre-def { display: none !important; }
-  #screen-climb-roundend.f678 #cre-mt { display: block; align-self: stretch; }
+  #screen-climb-roundend.f678 #cre-mt { display: block; align-self: center; width: min(68%, 240px); }
+  #cre-mt { --pk-sand: #3a2f26; }
+  html.light #cre-mt { --pk-sand: #f4e6d4; }
+  #cre-mt .fillin { animation: cre-fill .7s ease-out calc(var(--walk, 0s) + .3s) both; }
+  #cre-mt { position: relative; }
+  #cre-mt .hop { animation: cre-hop .38s ease-out .8s both; }
+  @keyframes cre-hop { 0% { transform: translate(-14px, 22px); } 55% { transform: translate(-7px, -4px); } 100% { transform: none; } }
+  #cre-mt .shine { animation: cre-shine .9s ease-in-out calc(var(--walk, 0s) + 1.3s) both; }
+  @keyframes cre-shine { 0% { opacity: 0; transform: skewX(-20deg) translateX(0); } 20% { opacity: 1; } 100% { opacity: 0; transform: skewX(-20deg) translateX(190px); } }
+  #cre-mt .sunup { animation: cre-sun 1.4s cubic-bezier(.2, .7, .3, 1) calc(var(--walk, 0s) + 1.9s) both; }
+  @keyframes cre-sun { from { transform: translate(0, 70px); } to { transform: none; } }
+  .cre-banner { display: table; margin: 10px auto 0; transform: scale(0); background: var(--rd-gold); color: #121212;
+    font-family: var(--slab); font-weight: 700; font-size: 1.02rem; padding: 6px 18px; border-radius: 999px; white-space: nowrap; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22); pointer-events: none; }
+  .cre-banner.on { animation: cre-banner .5s cubic-bezier(.3, 1.6, .5, 1) both; }
+  @keyframes cre-banner { from { transform: scale(0); } to { transform: scale(1); } }
+  #cre-fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 40; }
+  @media (prefers-reduced-motion: reduce) {
+    #cre-mt .hop, #cre-mt .shine, #cre-mt .sunup { animation: none; }
+    .cre-banner.on { animation: none; transform: none; }
+  }
+  @keyframes cre-fill { from { opacity: 0; } to { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { #cre-mt .fillin { animation: none; } }
   #cre-mt svg { display: block; width: 100%; height: auto; overflow: visible; }
   /* the newest stretch of trail dots itself in, the climber pops in, then the newest flag goes up */
   #cre-mt .draw { animation: cre-draw 1s cubic-bezier(.5, .1, .3, 1) .25s both; }
   @keyframes cre-draw { from { stroke-dashoffset: var(--len); } to { stroke-dashoffset: 0; } }
   #cre-mt .pop { transform-box: fill-box; transform-origin: center; animation: cre-pop .4s cubic-bezier(.3, 1.7, .5, 1) .95s both; }
   @keyframes cre-pop { from { transform: scale(0); } to { transform: none; } }
-  #cre-mt .rise { transform-box: fill-box; transform-origin: 0% 100%; animation: cre-rise .45s cubic-bezier(.3, 1.6, .5, 1) 1.2s both; }
+  #cre-mt .rise { transform-box: fill-box; transform-origin: 0% 100%; animation: cre-rise .45s cubic-bezier(.3, 1.6, .5, 1) calc(var(--walk, 0s) + 1.2s) both; }
   @keyframes cre-rise { from { transform: scaleY(0); } to { transform: none; } }
-  #cre-mt .wave { transform-box: fill-box; transform-origin: 0% 50%; animation: cre-wave 2.4s ease-in-out 1.7s infinite; }
+  #cre-mt .wave { transform-box: fill-box; transform-origin: 0% 50%; animation: cre-wave 2.4s ease-in-out calc(var(--walk, 0s) + 1.7s) infinite; }
   @keyframes cre-wave { 0%, 100% { transform: none; } 50% { transform: skewY(-6deg) scaleX(.9); } }
   @media (prefers-reduced-motion: reduce) { #cre-mt .draw, #cre-mt .pop, #cre-mt .rise, #cre-mt .wave { animation: none; } }
   #screen-climb-roundend.f678 #cre-rows { display: flex; align-self: stretch; gap: 10px; text-align: left; }
@@ -1965,6 +1994,11 @@ $1{ display: flex; gap: 8px; width: 100%; }
   .hs-tag { margin: 10px 0 0; font-family: var(--slab); font-weight: 400; font-size: 1.4rem; line-height: 1.25; max-width: 13.5em; text-wrap: balance; }
   #screen-home .home-play { margin-top: 26px; width: auto; }
   #screen-home .home-play button.primary { width: auto; min-width: 214px; white-space: nowrap; padding: 14px 24px; border-radius: 999px; font-size: 1.05rem; font-weight: 600; background: var(--hs-btn); color: var(--hs-btn-ink); box-shadow: none; }
+  .hs-share { margin-top: 12px; width: 214px; height: 44px; border-radius: 999px; border: 1.5px solid var(--hs-ink); background: none; color: var(--hs-ink);
+    font: 600 0.95rem var(--franklin); display: flex; align-items: center; justify-content: center; gap: 7px; cursor: pointer; }
+  .hs-share[hidden] { display: none; }
+  .hs-share svg { width: 15px; height: 15px; }
+  .hs-share .clb { color: var(--hs-climb); }
   .hs-adv { margin-top: 12px; width: 214px; min-height: 50px; border-radius: 999px; border: 1.5px solid var(--hs-ink); background: none; color: var(--hs-ink);
     justify-content: center; padding: 6px 18px; text-align: center; }
   .hs-adv .shelfrow-txt { align-items: center; }
@@ -2070,6 +2104,57 @@ $1{ display: flex; gap: 8px; width: 100%; }
   .install-sheet { background: var(--rd-sheet); border: 1px solid var(--rd-line); border-radius: 16px; box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.18); }
   .install-scrim { background: rgba(0, 0, 0, 0.45); }
   .tr-pop { background: var(--rd-sheet); border-color: var(--rd-line); }
+  /* Share your player card: the pill under "You finished 2nd", and the card sheet */
+  #daily-board-sum { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .share-pill { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 22px; border-radius: 999px; border: 0; background: var(--rd-btn); color: var(--rd-btn-ink); font: 700 0.92rem var(--franklin); cursor: pointer; }
+  .share-pill svg { width: 15px; height: 15px; }
+  .pc-sheet { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, 0.5); display: flex; align-items: flex-end; justify-content: center; }
+  .pc-panel { width: 100%; max-width: 480px; max-height: 100%; background: var(--rd-sheet); color: var(--rd-ink); border-radius: 20px 20px 0 0; display: flex; flex-direction: column; padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .pc-bar { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; padding: 10px 10px 6px; text-align: center; }
+  .pc-bar b { font-family: var(--slab); font-weight: 700; font-size: 1.15rem; }
+  .pc-x { width: 40px; height: 40px; border: 0; background: none; color: var(--rd-ink); font-size: 1.6rem; line-height: 1; cursor: pointer; }
+  .pc-prev { display: flex; justify-content: center; padding: 4px 16px 12px; flex: none; }
+  .pc-prev img { width: min(62vw, 250px); height: auto; border-radius: 14px; box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22); }
+  .pc-tabs { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0 16px; border: 1.5px solid var(--rd-ink); border-radius: 999px; padding: 3px; flex: none; }
+  .pc-tabs button { border: 0; background: none; color: var(--rd-ink); font: 700 0.84rem var(--franklin); padding: 7px 0; border-radius: 999px; cursor: pointer; }
+  .pc-tabs button.on { background: var(--rd-ink); color: var(--rd-sheet); }
+  .pc-opts { flex: 1 1 auto; min-height: 120px; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .pc-grp { font-size: 0.66rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--rd-muted); margin-top: 4px; }
+  .pc-count { font-size: 0.78rem; font-weight: 700; color: var(--rd-muted); text-align: center; }
+  .pc-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .pc-chip { border: 1.5px solid var(--rd-line); border-radius: 999px; padding: 6px 12px; background: none; color: var(--rd-ink); font: 700 0.82rem var(--franklin); cursor: pointer; }
+  .pc-chip.on { background: var(--rd-ink); border-color: var(--rd-ink); color: var(--rd-sheet); }
+  .pc-chip:disabled { opacity: 0.4; cursor: default; }
+  .pc-frames { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .pc-frames button { border: 2px solid var(--rd-line); border-radius: 12px; padding: 9px 4px 7px; background: none; color: var(--rd-ink); font: 700 0.76rem var(--franklin); display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+  .pc-frames button.on { border-color: var(--rd-ink); }
+  .pc-frames button:disabled { opacity: 0.45; cursor: default; }
+  .pc-frames i { width: 36px; height: 44px; border-radius: 7px; border: 2px solid #121212; }
+  .pc-frames small { font-weight: 600; font-size: 0.64rem; color: var(--rd-muted); }
+  .pc-share { margin: 4px 16px 14px; height: 48px; border-radius: 999px; flex: none; }
+  /* the share sheet: your link card, Share (the link), and "Send as picture" */
+  .sh-one { display: flex; flex-direction: column; gap: 14px; padding: 6px 16px 20px; }
+  .sh-card1 { border-radius: 12px; overflow: hidden; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16); aspect-ratio: 1200 / 630; background: #f4d3a6; }
+  .sh-card1 img { display: block; width: 100%; height: 100%; }
+  .sh-go { height: 48px; border-radius: 999px; border: 0; background: var(--rd-btn); color: var(--rd-btn-ink); font: 700 1rem var(--franklin); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
+  .sh-go:disabled { opacity: 0.55; cursor: default; }
+  .sh-go svg { width: 16px; height: 16px; }
+  .sh-aspic { align-self: center; border: 0; background: none; color: var(--rd-ink); font: 700 0.88rem var(--franklin); display: inline-flex; align-items: center; gap: 6px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 4px 8px; }
+  .sh-aspic svg { width: 15px; height: 15px; }
+  /* the leaderboard: a mini Share pill in your own row */
+  #daily-board-list .lb-name.has-share { display: flex; align-items: center; justify-content: space-between; gap: 5px; padding-right: 6px; }
+  #daily-board-list .lb-name.has-share > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lb-share { flex: none; display: inline-flex; align-items: center; gap: 3px; padding: 3px 8px; border-radius: 999px; border: 0; background: var(--rd-btn); color: var(--rd-btn-ink); font: 700 0.68rem var(--franklin); cursor: pointer; }
+  .lb-share svg { width: 10px; height: 10px; }
+  /* the simple share: Picture | Text (before p133) */
+  .sh-duo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 6px 16px 18px; }
+  .sh-card { border: 1.5px solid var(--rd-line); border-radius: 16px; padding: 10px 10px 12px; display: flex; flex-direction: column; align-items: center; gap: 9px; }
+  .sh-card b { font-size: 1rem; }
+  .sh-prev { width: 100%; aspect-ratio: 320 / 340; border-radius: 10px; overflow: hidden; }
+  .sh-prev img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .sh-txt { background: var(--rd-tile); color: var(--rd-tile-ink); font: 600 0.72rem/1.55 -apple-system, "Segoe UI", Roboto, sans-serif; padding: 9px 10px; white-space: pre; text-align: left; }
+  .sh-btn { align-self: stretch; height: 40px; border-radius: 999px; border: 1.5px solid var(--rd-ink); background: none; color: var(--rd-ink); font: 700 0.9rem var(--franklin); cursor: pointer; }
+  .sh-btn.p { background: var(--rd-btn); border-color: var(--rd-btn); color: var(--rd-btn-ink); }
   .tr-pop-kick { color: var(--rd-climb); }
   /* Calendar. */
   .cal-mhead b { font-family: var(--slab); font-size: 1.25rem; font-weight: 700; }
@@ -2152,28 +2237,12 @@ $1{ display: flex; gap: 8px; width: 100%; }
         <linearGradient id="tg-summit" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e2f8ff"/><stop offset=".5" stop-color="#8fd8f5"/><stop offset="1" stop-color="#5b8fd6"/></linearGradient>
         <linearGradient id="tg-special" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb866"/><stop offset="1" stop-color="#c2620e"/></linearGradient>
       </defs>
-      <symbol id="summit-mark" viewBox="0 0 120 92">
-        <g stroke="#121212" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
-          <path d="M6 84 L34 42 L52 66 L74 26 L98 60 L114 84 Z" fill="#f6b46a"/>
-          <path d="M52 66 L74 26 L98 60 L114 84 L40 84 Z" fill="#e8871e"/>
-          <path d="M66 40 L74 26 L83 39 L78 36 L74 42 L70 37 Z" fill="#ffffff"/>
-          <path d="M28 51 L34 42 L40 50 L36 48 L33 53 Z" fill="#ffffff"/>
-          <path d="M74 26 L74 6" fill="none"/><path d="M74 6 L92 11 L74 17 Z" fill="#f6c90e"/>
-        </g>
-        <path d="M18 80 C30 74 44 70 56 60" fill="none" stroke="#121212" stroke-width="2.4" stroke-dasharray="1 6" stroke-linecap="round"/>
-        <circle cx="56" cy="60" r="6" fill="#ffffff" stroke="#121212" stroke-width="3.5"/>
+      <symbol id="summit-mark" viewBox="0 -10 132 100">
+        <g stroke="#121212" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"><path d="M4 84 L26 50 L50 84 Z" fill="#f6b46a"/><path d="M21.2 58.4 L26 50 L31.4 57.8 L28.4 56 L26 59.6 L23.6 56.6 Z" fill="#ffffff"/><path d="M74 84 L102 36 L128 84 Z" fill="#f6b46a"/><path d="M96 46.5 L102 36 L108.75 45.75 L105 43.5 L102 48 L99 44.25 Z" fill="#ffffff"/><path d="M28 84 L64 14 L102 84 Z" fill="#e8871e"/><path d="M56 28 L64 14 L73 27 L68 24 L64 30 L60 25 Z" fill="#ffffff"/><path d="M64 14 L64 -6" fill="none"/><path d="M64 -6 L82 -1 L64 5 Z" fill="#f6c90e"/></g><path d="M10 82 C18 78 28 72 38 64" fill="none" stroke="#121212" stroke-width="2.4" stroke-dasharray="1 6" stroke-linecap="round"/><circle cx="39" cy="63" r="6" fill="#ffffff" stroke="#121212" stroke-width="3.5"/>
       </symbol>
     </svg>
-    <svg class="brandmark" viewBox="0 0 120 92" aria-hidden="true">
-      <g stroke="#121212" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
-        <path d="M6 84 L34 42 L52 66 L74 26 L98 60 L114 84 Z" fill="#f6b46a"/>
-        <path d="M52 66 L74 26 L98 60 L114 84 L40 84 Z" fill="#e8871e"/>
-        <path d="M66 40 L74 26 L83 39 L78 36 L74 42 L70 37 Z" fill="#ffffff"/>
-        <path d="M28 51 L34 42 L40 50 L36 48 L33 53 Z" fill="#ffffff"/>
-        <path d="M74 26 L74 6" fill="none"/><path d="M74 6 L92 11 L74 17 Z" fill="#f6c90e"/>
-      </g>
-      <path d="M18 80 C30 74 44 70 56 60" fill="none" stroke="#121212" stroke-width="2.4" stroke-dasharray="1 6" stroke-linecap="round"/>
-      <circle cx="56" cy="60" r="6" fill="#ffffff" stroke="#121212" stroke-width="3.5"/>
+    <svg class="brandmark" viewBox="0 -10 132 100" aria-hidden="true">
+      <g stroke="#121212" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"><path d="M4 84 L26 50 L50 84 Z" fill="#f6b46a"/><path d="M21.2 58.4 L26 50 L31.4 57.8 L28.4 56 L26 59.6 L23.6 56.6 Z" fill="#ffffff"/><path d="M74 84 L102 36 L128 84 Z" fill="#f6b46a"/><path d="M96 46.5 L102 36 L108.75 45.75 L105 43.5 L102 48 L99 44.25 Z" fill="#ffffff"/><path d="M28 84 L64 14 L102 84 Z" fill="#e8871e"/><path d="M56 28 L64 14 L73 27 L68 24 L64 30 L60 25 Z" fill="#ffffff"/><path d="M64 14 L64 -6" fill="none"/><path d="M64 -6 L82 -1 L64 5 Z" fill="#f6c90e"/></g><path d="M10 82 C18 78 28 72 38 64" fill="none" stroke="#121212" stroke-width="2.4" stroke-dasharray="1 6" stroke-linecap="round"/><circle cx="39" cy="63" r="6" fill="#ffffff" stroke="#121212" stroke-width="3.5"/>
     </svg>
     <h1>Daily <span class="brand-k">Climb</span></h1>
     <div class="daily-timer" id="daily-timer" hidden><span id="daily-timer-val">0:00</span></div>
@@ -2331,23 +2400,16 @@ $1{ display: flex; gap: 8px; width: 100%; }
         </div>
       </div>
       <div class="home-gap hs-gap-top"></div>
-      <svg class="hs-logo" viewBox="0 0 120 92" aria-hidden="true">
-        <g stroke="#121212" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
-          <path d="M6 84 L34 42 L52 66 L74 26 L98 60 L114 84 Z" fill="#f6b46a"/>
-          <path d="M52 66 L74 26 L98 60 L114 84 L40 84 Z" fill="#e8871e"/>
-          <path d="M66 40 L74 26 L83 39 L78 36 L74 42 L70 37 Z" fill="#ffffff"/>
-          <path d="M28 51 L34 42 L40 50 L36 48 L33 53 Z" fill="#ffffff"/>
-          <path d="M74 26 L74 6" fill="none"/><path d="M74 6 L92 11 L74 17 Z" fill="#f6c90e"/>
-        </g>
-        <path d="M18 80 C30 74 44 70 56 60" fill="none" stroke="#121212" stroke-width="2.4" stroke-dasharray="1 6" stroke-linecap="round"/>
-        <circle cx="56" cy="60" r="6" fill="#ffffff" stroke="#121212" stroke-width="3.5"/>
+      <svg class="hs-logo" viewBox="0 -10 132 100" aria-hidden="true">
+        <g stroke="#121212" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"><path d="M4 84 L26 50 L50 84 Z" fill="#f6b46a"/><path d="M21.2 58.4 L26 50 L31.4 57.8 L28.4 56 L26 59.6 L23.6 56.6 Z" fill="#ffffff"/><path d="M74 84 L102 36 L128 84 Z" fill="#f6b46a"/><path d="M96 46.5 L102 36 L108.75 45.75 L105 43.5 L102 48 L99 44.25 Z" fill="#ffffff"/><path d="M28 84 L64 14 L102 84 Z" fill="#e8871e"/><path d="M56 28 L64 14 L73 27 L68 24 L64 30 L60 25 Z" fill="#ffffff"/><path d="M64 14 L64 -6" fill="none"/><path d="M64 -6 L82 -1 L64 5 Z" fill="#f6c90e"/></g><path d="M10 82 C18 78 28 72 38 64" fill="none" stroke="#121212" stroke-width="2.4" stroke-dasharray="1 6" stroke-linecap="round"/><circle cx="39" cy="63" r="6" fill="#ffffff" stroke="#121212" stroke-width="3.5"/>
       </svg>
       <p class="hs-title">Daily <span class="clb">Climb</span></p>
-      <p class="hs-tag" id="home-tagline"><span class="clb">Climb</span> one word at a time and find the day's theme.</p>
+      <p class="hs-tag" id="home-tagline"><span class="clb">Climb</span> one word at a time. On-theme words score extra.</p>
       <div class="home-play" id="dailycard-hero">
         <button class="primary" id="btn-daily-play" type="button">Play</button>
         <p class="note" id="daily-meta" hidden></p>
       </div>
+      <button class="hs-share" id="btn-home-share" type="button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.7l7.4-4.3M8.3 13.3l7.4 4.3"/></svg><span>Share today's <span class="clb">Climb</span></span></button>
       <button class="shelfrow" id="btn-daily-compact" type="button" hidden>
         <span class="shelfrow-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24">
@@ -2531,7 +2593,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
       </div>
       <p class="note" id="daily-board-sub"></p>
       <div class="lb-theme" id="daily-board-theme" hidden><div class="lb-theme-k">Theme</div><div class="lb-theme-n" id="daily-board-theme-name"></div></div>
-      <div class="lbsum" id="daily-board-sum" hidden><div class="lbsum-you" id="daily-board-you"></div></div>
+      <div class="lbsum" id="daily-board-sum" hidden><div class="lbsum-you" id="daily-board-you"></div><button class="share-pill" id="btn-share-card" type="button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.7l7.4-4.3M8.3 13.3l7.4 4.3"/></svg>Share</button></div>
       <div class="board-mtn" id="daily-board-mtn" hidden></div>
       <div class="lb-head" id="daily-board-head" hidden><span class="h-rank">Rank</span><span class="h-name">Player</span><span class="h-score">Points</span><span class="h-time">Time</span></div>
       <div class="lb-list" id="daily-board-list"></div>
@@ -2844,7 +2906,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
   <div class="install-scrim" id="install-scrim" hidden></div>
   <div class="install-sheet" id="install-sheet" role="dialog" aria-modal="true" aria-labelledby="install-title" hidden>
     <div class="install-head">
-      <div class="install-appicon"><svg viewBox="0 0 120 92" aria-hidden="true"><use href="#summit-mark"/></svg></div>
+      <div class="install-appicon"><svg viewBox="0 -10 132 100" aria-hidden="true"><use href="#summit-mark"/></svg></div>
       <div>
         <h3 id="install-title">Add Daily Climb to your Home Screen</h3>
         <p class="install-sub" id="install-sub"></p>
@@ -2865,7 +2927,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
        install / notifications blocked. -->
   <div class="install-sheet" id="reminder-sheet" role="dialog" aria-modal="true" aria-labelledby="reminder-title" hidden>
     <div class="install-head">
-      <div class="install-appicon"><svg viewBox="0 0 120 92" aria-hidden="true"><use href="#summit-mark"/></svg></div>
+      <div class="install-appicon"><svg viewBox="0 -10 132 100" aria-hidden="true"><use href="#summit-mark"/></svg></div>
       <div>
         <h3 id="reminder-title"></h3>
         <p class="install-sub" id="reminder-sub"></p>
@@ -3051,6 +3113,25 @@ $1{ display: flex; gap: 8px; width: 100%; }
     </div>
   </div>
   <!-- Trophy unlocked! (queued; shown on home / board / profile screens) -->
+  <div class="pc-sheet" id="share-sheet" role="dialog" aria-modal="true" aria-label="Share your Climb" hidden>
+    <div class="pc-panel">
+      <div class="pc-bar"><button class="pc-x" id="btn-share-x" type="button" aria-label="Close">&times;</button><b>Share your <span class="clb">Climb</span></b><span></span></div>
+      <div class="sh-one">
+        <div class="sh-card1"><img id="share-img" alt="Your Daily Climb picture"></div>
+        <button class="sh-go" id="btn-share-link" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.7l7.4-4.3M8.3 13.3l7.4 4.3"/></svg><span>Share</span></button>
+        <button class="sh-aspic" id="btn-share-pic" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-9 9"/></svg><span>Send as picture</span></button>
+      </div>
+    </div>
+  </div>
+  <div class="pc-sheet" id="pcard" role="dialog" aria-modal="true" aria-label="Your card" hidden>
+    <div class="pc-panel">
+      <div class="pc-bar"><button class="pc-x" id="btn-pcard-x" type="button" aria-label="Close">&times;</button><b>Your card</b><span></span></div>
+      <div class="pc-prev"><img id="pcard-img" alt="Your Daily Climb card"></div>
+      <div class="pc-tabs" id="pcard-tabs"><button type="button" data-tab="stats" class="on">Stats</button><button type="button" data-tab="title">Title</button><button type="button" data-tab="frame">Style</button></div>
+      <div class="pc-opts" id="pcard-opts"></div>
+      <button class="primary pc-share" id="btn-pcard-share" type="button">Share card</button>
+    </div>
+  </div>
   <div class="tr-pop" id="trophy-pop" role="dialog" aria-modal="true" aria-labelledby="tr-pop-name" hidden>
     <p class="tr-pop-kick" id="tr-pop-kick">Trophy unlocked!</p>
     <div class="tr-pop-badge"><div class="tr-pop-rays"></div><div id="tr-pop-badge"></div></div>
@@ -3247,10 +3328,21 @@ $1{ display: flex; gap: 8px; width: 100%; }
     submitDaily: async function (day, r) {
       db.dailies[day] = Object.assign({ uid: UID, name: r.name || "Player", total: r.total || 0, strikes: r.strikes || 0, solveMs: r.solveMs || 0,
         hintUsed: !!r.hintUsed, roundWords: r.roundWords || [], finishedAt: Date.now() },
-        r.themeWords != null ? { themeWords: r.themeWords, max: r.max, theme: r.theme } : {}, r.forks != null ? { forks: r.forks } : {}, r.twv ? { twv: r.twv } : {});
+        r.themeWords != null ? { themeWords: r.themeWords, max: r.max, theme: r.theme } : {}, r.forks != null ? { forks: r.forks } : {}, r.twv ? { twv: r.twv } : {}, Array.isArray(r.climbMs) ? { climbMs: r.climbMs } : {});
       save();
     },
     getDailyBoard: async function (day) { var m = mine(day); return fakeBoard(day).concat(m ? [m] : []); },
+    // The nightly job's summary of recent results (share of most possible points, time), made up from the pretend players.
+    getRecentResults: async function (keys) {
+      var out = {};
+      (keys || []).forEach(function (k) {
+        out[String(k).slice(0, 10)] = fakeBoard(k).filter(function (e) { return e.max; }).map(function (e) { return [(e.total + (e.themeWords || 0)) / e.max, e.solveMs]; });
+      });
+      // days before the beta's calendar starts borrow pretend results from days that have them, so a month is full
+      var have = Object.keys(out).filter(function (k) { return out[k].length; }), j = 0;
+      if (have.length) Object.keys(out).forEach(function (k) { if (!out[k].length) out[k] = out[have[j++ % have.length]]; });
+      return { days: out };
+    },
     saveDailyLive: async function (day, p) {
       db.live = db.live || {};
       db.live[day] = { uid: UID, name: p.name || "Player", climb: p.climb || 1, points: p.points || 0, finished: !!p.finished, at: Date.now() };
@@ -3529,6 +3621,8 @@ $1{ display: flex; gap: 8px; width: 100%; }
     ready: !!db,
     get uid() { return uid; },
     get hasAuth() { return !!uid; },
+    // Proof of who's signed in, for share.thedailyclimb.com (it only takes pictures from players).
+    async idToken() { try { return auth && auth.currentUser ? await auth.currentUser.getIdToken() : null; } catch (e) { return null; } },
 
     // Fire-and-forget analytics event (Google Analytics for Firebase). A
     // no-op until THREE21_FIREBASE_CONFIG.measurementId is filled in — see
@@ -3968,6 +4062,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
         // 6-7-8 days: forks in the trail where the theme word was played (the Forks trophies)
         ...(r.forks != null ? { forks: r.forks } : {}),
         ...(r.twv ? { twv: r.twv } : {}),   // theme word list version (the nightly job's Oct 14 fix reads it)
+        ...(Array.isArray(r.climbMs) ? { climbMs: r.climbMs } : {}),   // each Climb's time (the share picture)
       });
     },
     // dailies/{day}/progress/{uid} — where a player has got to in today's daily, updated as they
@@ -3999,6 +4094,11 @@ $1{ display: flex; gap: 8px; width: 100%; }
         const es = await getDocs(collection(db, "dailies", day, "entrants"));
         return es.docs.map((d) => unwrapEntrant(Object.assign({ uid: d.id }, d.data())));
       } catch (e) { return null; }
+    },
+    // dailies/_recent: every finished 6-7-8 daily of the past 30 days as [share of most possible points, time],
+    // written by the nightly job (tools/stats/finalize.mjs). For "Top X% this month" on the share card.
+    async getRecentResults() {
+      try { const snap = await getDoc(doc(db, "dailies", "_recent")); return snap.exists() ? snap.data() : null; } catch (e) { return null; }
     },
     watchDailyBoard(day, cb) {
       return onSnapshot(
@@ -4195,6 +4295,8 @@ $1{ display: flex; gap: 8px; width: 100%; }
       over:    () => arp([392, 330, 262], 0.11, 0.18, 0.45),
       board:   () => tone({ type: "sine", from: 660, to: 990, dur: 0.2, gain: 0.35 }),
       streak:  () => arp([784, 1047, 1319], 0.06, 0.1, 0.4),
+      summit:  () => arp([784, 1175], 0.09, 0.5, 0.4),
+      perfectday: () => arp([659, 784, 988, 1319], 0.11, 0.55, 0.42),
     };
     return {
       play: (name) => { if (on && cues[name]) { unlock(); cues[name](); } },
@@ -7375,64 +7477,185 @@ $1{ display: flex; gap: 8px; width: 100%; }
     return best || climbExample();
   }
 
-  // 6-7-8 days, between Climbs: the day's three peaks drawn like the app icon (ink outlines, orange once climbed with
-  // a white diamond, hatched while still ahead), a dotted switchback trail (faint ahead, ink where walked, the newest
-  // stretch dotting itself in), the white climber dot just under the newest summit, and a yellow flag on each one done.
-  const CRE_PEAKS = [{ a: [84, 58], l: 26, r: 142 }, { a: [176, 38], l: 112, r: 242 }, { a: [272, 14], l: 194, r: 336 }];
-  const CRE_TRAIL = (() => {
-    // switchbacks up a peak's left face, always inside it, from (x0, y0) to the summit
-    const faceX = (t, y) => t.a[0] - (t.a[0] - t.l) * (y - t.a[1]) / (124 - t.a[1]);
-    const zig = (t, x0, y0, legs) => {
-      const out = [[x0, y0]];
-      for (let k = 1; k <= legs; k++) {
-        const y = y0 - (y0 - t.a[1]) * k / (legs + 0.6), fx = faceX(t, y) + 4;
-        out.push([Math.round(k % 2 ? fx + (t.a[0] - fx) * 0.8 : fx), Math.round(y)]);
+  // 6-7-8 days, between Climbs: the logo's three peaks as the day's progress. Climb 1 is the small peak (left),
+  // Climb 2 the medium one (right), Climb 3 the tall one (middle, in front). A peak fills orange and gets a flag only
+  // when you got every point in that Climb; climbed but not perfect = sand; still ahead = hatched. The climber sits
+  // under the summit you just finished. A Climb you just perfected gets the summit moment (creCelebrate).
+  const CRE_PEAKS = [
+    { a: [26, 50], l: 4, r: 50, k: 0.6, tone: "#f6b46a" },
+    { a: [102, 36], l: 74, r: 128, k: 0.75, tone: "#f6b46a" },
+    { a: [64, 14], l: 28, r: 102, k: 1, tone: "#e8871e" },
+  ];
+  // The climber's trail, one leg per Climb, in the peaks' units. Layers, back to front: small peak, A, medium peak,
+  // B, tall peak, C, so on B the climber is hidden behind the tall peak. Each leg ends just under its summit.
+  const CRE_LEGS = [
+    [[8, 83, "C"], [20, 78, "C"], [27, 68, "C"], [26, 57]],
+    [[26, 57, "B"], [38, 66, "B"], [52, 75, "B"], [95, 75, "B"], [101, 78, "B"], [110, 66, "B"], [106, 52, "B"], [102, 43]],
+    [[102, 43, "B"], [92, 56, "B"], [84, 66, "B"], [50, 72, "B"], [34, 71, "C"], [44, 62, "C"], [52, 48, "C"], [58, 34, "C"], [64, 21]],
+  ].map((pts) => {
+    // a smooth curve through the points (Catmull-Rom), sampled into a list of points with the distance walked so far
+    const P = (i) => pts[Math.max(0, Math.min(pts.length - 1, i))], out = [{ x: pts[0][0], y: pts[0][1], s: 0, l: pts[0][2] }];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = P(i - 1), b = P(i), c = P(i + 1), d = P(i + 2);
+      const c1 = [b[0] + (c[0] - a[0]) / 6, b[1] + (c[1] - a[1]) / 6], c2 = [c[0] - (d[0] - b[0]) / 6, c[1] - (d[1] - b[1]) / 6];
+      for (let k = 1; k <= 24; k++) {
+        const t = k / 24, u = 1 - t, last = out[out.length - 1];
+        const x = u * u * u * b[0] + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t * t * t * c[0];
+        const y = u * u * u * b[1] + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t * t * t * c[1];
+        out.push({ x: x, y: y, s: last.s + Math.hypot(x - last.x, y - last.y), l: b[2] });
       }
-      out.push(t.a);
-      return out;
-    };
-    // where one peak's right face meets the next one's left face
-    const saddle = (p, q) => {
-      const s1 = (124 - p.a[1]) / (p.r - p.a[0]), s2 = (124 - q.a[1]) / (q.l - q.a[0]);
-      const x = (q.a[1] - p.a[1] + s1 * p.a[0] - s2 * q.a[0]) / (s1 - s2);
-      return [Math.round(x), Math.round(p.a[1] + s1 * (x - p.a[0]))];
-    };
-    return CRE_PEAKS.map((t, i) => {
-      if (!i) return zig(t, 40, 124, 4);
-      const p = CRE_PEAKS[i - 1], [sx, sy] = saddle(p, t);
-      return [p.a, [p.a[0] + 3, p.a[1] + 4], [sx, sy - 3]].concat(zig(t, sx + 3, sy - 4, [4, 5][i - 1]).slice(1));
-    });
-  })();
+    }
+    return out;
+  });
+  // Where the climber is f of the way along leg i: [x, y, layer].
+  function creAt(i, f) {
+    const pts = CRE_LEGS[i], L = pts[pts.length - 1].s, s = Math.max(0, Math.min(1, f)) * L;
+    let k = 1; while (k < pts.length - 1 && pts[k].s < s) k++;
+    const a = pts[k - 1], b = pts[k], t = b.s > a.s ? (s - a.s) / (b.s - a.s) : 0;
+    return [a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, b.l];
+  }
+  // How long the walk up leg i takes, in ms (the longer legs take longer, within limits).
+  const creWalkMs = (i) => Math.max(1300, Math.min(2600, CRE_LEGS[i][CRE_LEGS[i].length - 1].s * 14));
+  // Every point in Climb i: reached the top and found every theme word there was.
+  function crePerfect(i) {
+    const t = dailyTheme, words = roundWords[i] || [], ladder = (t && t.climbs[i] && t.climbs[i].c) || [];
+    return !!t && ladder.length > 0 && words.length >= ladder.length && words.length + themeHits(t, i, words).length >= climbMaxPoints(t, i);
+  }
   let creUid = 0;
   function creMountain(n) {
     const id = "cre" + (++creUid), ink = "var(--rd-ink)", paper = "var(--rd-bg)";
-    const tri = (t) => "M" + t.a + " L" + t.r + ",124 L" + t.l + ",124 Z";
-    const pathOf = (pts) => pts.map((p, i) => (i ? "L" : "M") + p[0] + " " + p[1]).join(" ");
-    const now = CRE_TRAIL[n - 1];
-    const len = Math.ceil(now.reduce((a, p, i) => i ? a + Math.hypot(p[0] - now[i - 1][0], p[1] - now[i - 1][1]) : 0, 0));
-    let s = '<svg viewBox="-4 -14 348 142" aria-hidden="true"><defs>' +
-      '<pattern id="' + id + 'h" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="5" stroke="' + ink + '" stroke-width="1" opacity=".22"/></pattern>' +
-      '<mask id="' + id + 'm" maskUnits="userSpaceOnUse" x="-20" y="-40" width="400" height="200"><path class="draw" style="stroke-dasharray:' + len + ";--len:" + len + '" d="' + pathOf(now) +
-      '" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/></mask></defs>';
-    [2, 1, 0].forEach((i) => {   // back to front
-      const t = CRE_PEAKS[i], up = i < n, x = t.a[0], y = t.a[1], k = [0.75, 0.9, 1][i];
-      s += '<path d="' + tri(t) + '" fill="' + (up ? "#e8871e" : paper) + '" stroke="' + ink + '" stroke-width="2.4" stroke-linejoin="round"/>';
-      if (!up) s += '<path d="' + tri(t) + '" fill="url(#' + id + 'h)"/>';
-      else s += '<path d="M' + x + " " + (y + 5 * k) + " L" + (x - 4.5 * k) + " " + (y + 11 * k) + " L" + x + " " + (y + 17 * k) + " L" + (x + 4.5 * k) + " " + (y + 11 * k) +
-        ' Z" fill="' + paper + '" stroke="' + ink + '" stroke-width="1.6" stroke-linejoin="round"/>';
+    const fresh = n - 1, freshPerfect = fresh >= 0 && crePerfect(fresh), day = n === 3 && [0, 1, 2].every(crePerfect);
+    const fp = CRE_PEAKS[Math.max(0, fresh)];
+    const snow = (p, fill) => { const x = p.a[0], y = p.a[1], k = p.k;
+      return '<path d="M' + (x - 8 * k) + " " + (y + 14 * k) + " L" + x + " " + y + " L" + (x + 9 * k) + " " + (y + 13 * k) + " L" + (x + 4 * k) + " " + (y + 10 * k) +
+        " L" + x + " " + (y + 16 * k) + " L" + (x - 4 * k) + " " + (y + 11 * k) + ' Z" fill="' + fill + '"/>'; };
+    const tri = (p) => "M" + p.l + " 84 L" + p.a[0] + " " + p.a[1] + " L" + p.r + " 84 Z";
+    let defs = '<pattern id="' + id + 'h" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="5" stroke="' + ink + '" stroke-width="1" opacity=".22"/></pattern>';
+    if (freshPerfect) defs +=
+      // the fill rising from the base, the shine's path, and the sky the sun rises in
+      '<clipPath id="' + id + 'r"><rect class="cre-riser" x="0" y="86" width="132" height="0">' +
+      '<animate attributeName="y" from="86" to="' + (fp.a[1] - 3) + '" dur="0.75s" begin="indefinite" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines=".2 .7 .3 1"/>' +
+      '<animate attributeName="height" from="0" to="' + (86 - fp.a[1] + 3) + '" dur="0.75s" begin="indefinite" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines=".2 .7 .3 1"/></rect></clipPath>' +
+      '<clipPath id="' + id + 't"><path d="' + tri(fp) + '"/></clipPath>' +
+      '<linearGradient id="' + id + 'g" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".75"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>';
+    if (day) defs += '<clipPath id="' + id + 'k"><rect x="-30" y="-60" width="192" height="144"/></clipPath>' +
+      '<radialGradient id="' + id + 's"><stop offset="0" stop-color="#fff2c8"/><stop offset=".55" stop-color="#ffd27a" stop-opacity=".9"/><stop offset="1" stop-color="#ffb266" stop-opacity="0"/></radialGradient>';
+    const sun = day ? '<g clip-path="url(#' + id + 'k)"><g class="sunup"><circle cx="64" cy="40" r="46" fill="url(#' + id + 's)"/><circle cx="64" cy="40" r="15" fill="#fff4d6"/></g></g>' : "";
+    const body = [];
+    CRE_PEAKS.forEach((p, i) => {   // drawn small, medium, then the tall one in front
+      const d = tri(p), now = i === fresh;
+      body[i] = "";
+      if (i < n && crePerfect(i)) {
+        const kf = Math.max(p.k, 0.9), fy = p.a[1] - 18 * kf - 2;   // flags stay big enough to read on the small peaks
+        body[i] += '<path d="' + d + '" fill="' + paper + '"/>' +
+          (now ? '<g clip-path="url(#' + id + 'r)"><path d="' + d + '" fill="' + p.tone + '" stroke="none"/></g>' +
+                 '<g clip-path="url(#' + id + 't)"><rect class="shine" x="-40" y="-20" width="26" height="130" fill="url(#' + id + 'g)" stroke="none" opacity="0"/></g>'
+               : '<path d="' + d + '" fill="' + p.tone + '" stroke="none"/>') +
+          '<path d="' + d + '" fill="none"/>' + snow(p, "#ffffff") +
+          "<g" + (now ? ' class="rise"' : "") + ' stroke-width="3"><path d="M' + p.a[0] + " " + p.a[1] + " V" + fy + '" fill="none"/><path' + (now ? ' class="wave"' : "") + ' d="M' + p.a[0] + " " + fy +
+          " L" + (p.a[0] + 16 * kf + 2) + " " + (fy + 5 * kf) + " L" + p.a[0] + " " + (fy + 10 * kf) + ' Z" fill="#f6c90e"/></g>';
+      } else if (i < n) body[i] += '<path d="' + d + '" fill="var(--pk-sand)"/>' + snow(p, paper);
+      else body[i] += '<path d="' + d + '" fill="' + paper + '"/><path d="' + d + '" fill="url(#' + id + 'h)" stroke="none"/><path d="' + d + '" fill="none" opacity=".55"/>';
     });
-    s += '<path d="M6 124 H334" stroke="' + ink + '" stroke-width="2.4" stroke-linecap="round"/>';
-    const dots = (d, extra) => '<path d="' + d + '" fill="none" stroke="' + ink + '" stroke-width="2.6" stroke-dasharray="0.1 6" stroke-linecap="round" stroke-linejoin="round"' + extra + "/>";
-    s += dots(pathOf([].concat(...CRE_TRAIL)), ' opacity=".28"');
-    if (n > 1) s += dots(pathOf([].concat(...CRE_TRAIL.slice(0, n - 1))), "");
-    s += dots(pathOf(now), ' mask="url(#' + id + 'm)"');
-    CRE_PEAKS.slice(0, n).forEach((t, i) => {
-      const x = t.a[0], y = t.a[1], fresh = i === n - 1;
-      s += "<g" + (fresh ? ' class="rise"' : "") + '><path d="M' + x + " " + y + " V" + (y - 15) + '" stroke="' + ink + '" stroke-width="1.7" stroke-linecap="round"/>' +
-        "<path" + (fresh ? ' class="wave"' : "") + ' d="M' + (x + 0.8) + " " + (y - 15) + ' h10 l-2.6 3.2 2.6 3.2 h-10 z" fill="var(--rd-gold)" stroke="' + ink + '" stroke-width="1" stroke-linejoin="round"/></g>';
+    // the trail: a dot every 5 units, only where it climbs; the newest leg's dots wait for the climber (creWalk)
+    const lay = { A: "", B: "", C: "" };
+    for (let i = 0; i <= fresh; i++) {
+      const L = CRE_LEGS[i][CRE_LEGS[i].length - 1].s;
+      for (let s5 = 5; s5 < L; s5 += 5) {
+        const pt = creAt(i, s5 / L);
+        if (creAt(i, (s5 + 0.6) / L)[1] >= pt[1]) continue;   // going down or level: no dot
+        lay[pt[2]] += '<circle' + (i === fresh ? ' class="tdot" data-at="' + (s5 / L).toFixed(4) + '" opacity="0"' : "") + ' cx="' + pt[0].toFixed(1) + '" cy="' + pt[1].toFixed(1) + '" r="1.25" fill="' + ink + '"/>';
+      }
+    }
+    const st = fresh >= 0 ? creAt(fresh, 0) : [8, 83, "C"];
+    lay[st[2]] += '<circle class="climber" cx="' + st[0].toFixed(1) + '" cy="' + st[1].toFixed(1) + '" r="5.5" fill="' + paper + '" stroke="' + ink + '" stroke-width="3.2"/>';
+    const walk = fresh >= 0 && !reduceMotion ? (300 + creWalkMs(fresh)) / 1000 : 0;
+    // each finished Climb's time under its peak (the share picture puts them in the same place)
+    const splits = CRE_PEAKS.map((p, i) => i < n && climbMs[i] > 0
+      ? '<text' + (i === fresh ? ' class="fillin"' : "") + ' x="' + p.a[0] + '" y="100" text-anchor="middle" font-size="10" font-weight="800" fill="' + ink + '" style="font-family: var(--franklin); font-variant-numeric: tabular-nums">' + fmtDuration(climbMs[i]) + "</text>"
+      : "").join("");
+    const g = (x) => '<g stroke="' + ink + '" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">' + x + "</g>";
+    return '<svg viewBox="0 -14 132 118" aria-hidden="true" style="--walk: ' + walk + 's"><defs>' + defs + "</defs>" + sun + splits +
+      g(body[0]) + '<g class="lA">' + lay.A + "</g>" + g(body[1]) + '<g class="lB">' + lay.B + "</g>" + g(body[2]) + '<g class="lC">' + lay.C + "</g></svg>" +
+      (day ? '<div class="cre-banner">Perfect day!</div>' : "");
+  }
+  // The summit moment, once the picture is on screen: the fill rises, then a chime, a buzz and streamers from the
+  // summit as the flag goes up; on a perfect day the finale follows (sun, confetti rain, banner, bigger chime).
+  function creCelebrate(n) {
+    const box = $("#cre-mt"), fresh = n - 1;
+    if (!box || fresh < 0) return;
+    const walk = creWalk(box, fresh);
+    if (!crePerfect(fresh)) return;
+    const day = n === 3 && [0, 1, 2].every(crePerfect), banner = box.querySelector(".cre-banner");
+    const grow = box.querySelectorAll(".cre-riser animate");
+    if (reduceMotion) {
+      grow.forEach((a) => { a.setAttribute("dur", "0.001s"); a.beginElement(); });
+      if (banner) banner.classList.add("on");
+      return;
+    }
+    setTimeout(() => grow.forEach((a) => a.beginElement()), walk + 150);
+    setTimeout(() => { FX.play("summit"); buzz([18, 60, 18]); creConfetti("ribbon", fresh); }, walk + 1200);
+    if (day) setTimeout(() => { FX.play("perfectday"); buzz([30, 50, 30, 50, 60]); if (banner) banner.classList.add("on"); creConfetti("rain"); }, walk + 1900);
+  }
+  // The climber walks leg i: from the last summit (or the start) to the newest one, the trail's dots appearing behind
+  // them, and slipping behind a peak where the trail goes round the back. Returns the ms until they arrive.
+  function creWalk(box, i) {
+    const svg = box.querySelector("svg"), me = svg && svg.querySelector(".climber");
+    if (!me) return 0;
+    const lay = { A: svg.querySelector(".lA"), B: svg.querySelector(".lB"), C: svg.querySelector(".lC") };
+    const dots = [...svg.querySelectorAll(".tdot")].map((d) => [+d.dataset.at, d]);
+    const ms = creWalkMs(i), ease = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+    const put = (f) => {
+      const p = creAt(i, f);
+      if (me.parentNode !== lay[p[2]]) lay[p[2]].appendChild(me);
+      const bob = f > 0 && f < 1 ? -Math.abs(Math.sin(f * Math.PI * 12)) * 1.2 : 0;   // a little step bounce
+      me.setAttribute("cx", p[0].toFixed(2)); me.setAttribute("cy", (p[1] + bob).toFixed(2));
+      dots.forEach(([at, d]) => { if (f >= at) d.setAttribute("opacity", "1"); });
+    };
+    if (reduceMotion) { put(1); return 0; }
+    const t0 = performance.now() + 300;
+    const step = () => {
+      if (!me.isConnected) return;
+      const f = ease(Math.max(0, Math.min(1, (performance.now() - t0) / ms)));
+      put(f);
+      if (f < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+    setTimeout(() => { if (me.isConnected) put(1); }, 300 + ms + 100);   // land even if frames were skipped
+    return 300 + ms;
+  }
+  // Streamers from a summit, or confetti raining from the top of the screen.
+  let creParts = [], creLoop = 0;
+  function creConfetti(kind, i) {
+    const COLORS = ["#e8871e", "#f6c90e", "#f6b46a", "#c25e08", "#fff3d6"];
+    if (kind === "ribbon") {
+      const svg = $("#cre-mt svg"); if (!svg) return;
+      const r = svg.getBoundingClientRect(), sc = r.width / 132, p = CRE_PEAKS[i], x = r.left + p.a[0] * sc, y = r.top + (p.a[1] + 14) * sc;
+      for (let k = 0; k < 26; k++) {
+        const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4, sp = 3.6 * (0.5 + Math.random() * 0.7);
+        creParts.push({ x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, g: 0.09, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.3, w: 3, h: 12 + Math.random() * 6, c: COLORS[k % 5], life: 0, max: 110 });
+      }
+    } else {
+      for (let k = 0; k < 90; k++) creParts.push({ x: Math.random() * innerWidth, y: -10 - Math.random() * 140, vx: (Math.random() - 0.5) * 0.6, vy: 1 + Math.random() * 1.5, g: 0.01,
+        rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.2, w: 5, h: 9, c: COLORS[k % 5], life: 0, max: 260 });
+    }
+    if (!creLoop) creLoop = requestAnimationFrame(creFrame);
+  }
+  function creFrame() {
+    let cv = document.getElementById("cre-fx");
+    if (!cv) { cv = document.createElement("canvas"); cv.id = "cre-fx"; document.body.appendChild(cv); }
+    const dpr = devicePixelRatio || 1, W = innerWidth, H = innerHeight;
+    if (cv.width !== Math.round(W * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+    const ctx = cv.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+    creParts = creParts.filter((p) => ++p.life < p.max && p.y < H + 40);
+    creParts.forEach((p) => {
+      p.vy += p.g; p.vx *= 0.985; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+      ctx.save(); ctx.globalAlpha = Math.max(0, 1 - p.life / p.max); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.c;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); ctx.restore();
     });
-    const me = now[now.length - 2];
-    return s + '<circle class="pop" cx="' + me[0] + '" cy="' + me[1] + '" r="4.6" fill="' + paper + '" stroke="' + ink + '" stroke-width="2"/></svg>';
+    if (creParts.length) creLoop = requestAnimationFrame(creFrame);
+    else { creLoop = 0; cv.remove(); }
   }
 
   // A climb (round) has ended — completed all 6 rungs, or struck out / gave up.
@@ -7528,6 +7751,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     }
     if (f678) {
       $("#cre-mt").innerHTML = creMountain(round);
+      creCelebrate(round);
       renderRoundsBlock($("#cre-rows"), roundWords.slice(0, round), dailyTheme);
       [...$("#cre-rows").children].forEach((r, i) => r.classList.toggle("fold", i < round - 1));
     }
@@ -8118,7 +8342,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     const rows = [[1, "summitsam", 19, "4:12"], [2, "Juniper", 18, "5:03"], [3, "You", 17, "5:41", 1], [4, "pebble", 17, "6:20"], [5, "trailmix", 16, "4:58"], [6, "Bex", 15, "7:45"]];
     const who = [[1, "summitsam"], [2, "Juniper"], [3, "You", 1], [5, "trailmix"], [6, "Bex"], [8, "goatfoot"], [11, "Nico"]];
     return '<div class="wn-sc wn-home">' + $(".hs-logo").outerHTML + '<div class="wn-ttl">Daily <span class="clb">Climb</span></div>' +
-      '<div class="wn-tag"><span class="clb">Climb</span> one word at a time and find the day\x27s theme.</div><div class="wn-play">See today\x27s results</div>' +
+      '<div class="wn-tag"><span class="clb">Climb</span> one word at a time. On-theme words score extra.</div><div class="wn-play">See today\x27s results</div>' +
       '<div class="wn-adv">Adventure Mode<small>Can you beat every <span class="clb">Climb</span>?</small></div></div>' +
       '<div class="wn-sc wn-board off"><div class="wn-bh"><span>&lsaquo; Home</span><b>Daily <span class="clb">Climb</span></b><span></span></div>' +
       '<div class="wn-tabs"><span>Standings</span><span>Routes</span></div>' +
@@ -8273,6 +8497,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
           total: totalRungs, strikes: sessionStrikes, solveMs: solveMs, roundWords: roundWords,
           hintUsed: hintUsed,
           ...(dailyTheme ? { themeWords: themeBonusSoFar(), max: dailyMax(), theme: dailyTheme.id, twv: 2 } : {}),
+          ...(newFormat(dailyTheme) ? { climbMs: Array.from({ length: 3 }, (_, i) => Math.round(climbMs[i] || 0)) } : {}),
           ...(newFormat(dailyTheme) ? { forks: forksTaken() } : {}),
         });
         await window.MatchDB.bumpStreak(day, prevDay);
@@ -8380,10 +8605,26 @@ $1{ display: flex; gap: 8px; width: 100%; }
     $("#daily-board-foot").textContent = foot;
     // Up top: "You finished 3rd / of 13 players · 15 points · 5:41".
     $("#daily-board-sum").hidden = mine < 0;
+    $("#btn-share-card").hidden = true;
+    pcardCtx = null;
     if (mine >= 0) {
       const me = done[mine];
       const pts = newRules(boardTheme) ? entrantPoints(me) : (me.total || 0);
       $("#daily-board-you").textContent = "You finished " + ordinal(mine + 1);
+      if (newFormat(boardTheme) && dayBase(dayKey) === dayBase(dailyKeyOf())) {
+        pcardCtx = { me: me, theme: boardTheme, day: dayBase(dayKey) };
+        const myName = list.querySelector('.lb-row.me .lb-name');
+        if (myName && !myName.querySelector(".lb-share")) {
+          const label = document.createElement("span");
+          label.textContent = myName.textContent;
+          const pill = document.createElement("button");
+          pill.type = "button"; pill.className = "lb-share";
+          pill.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.7l7.4-4.3M8.3 13.3l7.4 4.3"/></svg>' + "Share";
+          pill.addEventListener("click", (ev) => { ev.stopPropagation(); openShareSheet(); });   // not the row's tap
+          myName.replaceChildren(label, pill);
+          myName.classList.add("has-share");
+        }
+      }
       $("#daily-board-foot").textContent = "";
     }
 
@@ -8926,6 +9167,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     const meta = $("#daily-meta");
     if (!btn) return;
     meta.hidden = !isDev(); // the only note left under Play is the dev-mode reminder
+    $("#btn-home-share").hidden = true;
     if (isDev()) {
       btn.textContent = "Play (dev replay)";
       meta.textContent = "Dev mode — replay enabled. " + capFirst(dailyResetText()) + ".";
@@ -8941,6 +9183,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     if (playedToday) btn.textContent = "See today's results";
     else if (canResume) btn.textContent = "Resume today's game";
     else btn.textContent = "Play";
+    $("#btn-home-share").hidden = !(playedToday && newFormat(themedDay(today)));
     meta.textContent = capFirst(dailyResetText()) + ".";
     $("#daily-compact-meta").textContent = "Completed — see today's standings";
     $("#next-daily").hidden = $("#next-daily-gap").hidden = !playedToday;
@@ -9202,6 +9445,402 @@ $1{ display: flex; gap: 8px; width: 100%; }
     if (h < 1) return "closing within the hour";
     if (h < 24) return "closes in " + h + "h";
     return "closes in " + Math.round(h / 24) + "d";
+  }
+
+  // ===== The simple share: three peaks, filled or not, and your times =====
+  // Every point in Climb i (reached the top and found every theme word), from a finished entry's words.
+  function climbPerfectFrom(t, i, words) {
+    const ladder = (t && t.climbs[i] && t.climbs[i].c) || [];
+    words = words || [];
+    return ladder.length > 0 && words.length >= ladder.length && words.length + themeHits(t, i, words).length >= climbMaxPoints(t, i);
+  }
+  function shareModel() {
+    const c = pcardCtx, me = c.me, t = c.theme;
+    const fills = [0, 1, 2].map((i) => climbPerfectFrom(t, i, (me.roundWords || [])[i]));
+    const times = Array.isArray(me.climbMs) && me.climbMs.some((x) => x > 0) ? me.climbMs.map((x) => fmtDuration(x)) : null;
+    const p = c.day.split("-").map(Number);
+    const date = new Date(p[0], p[1] - 1, p[2], 12).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    const th = t.theme || { name: "" };
+    return { fills: fills, times: times, total: fmtDuration(me.solveMs || 0), date: date, theme: th.name || "", name: shownName(me.name), day: c.day };
+  }
+  const SHARE_SL = '"Zilla Slab", Georgia, serif', SHARE_SN = '"Libre Franklin", -apple-system, "Segoe UI", Roboto, sans-serif';
+  async function shareFonts() {
+    try { await Promise.all([document.fonts.load('700 78px "Zilla Slab"'), document.fonts.load('800 30px "Libre Franklin"'), document.fonts.load('600 30px "Libre Franklin"')]); } catch (e) {}
+  }
+  // The three peaks, filled or not, with each Climb's time under its peak, in the logo's units (0..132 wide).
+  function sharePeaks(x, m, tx, ty, sc) {
+    const INK = "#121212";
+    x.save(); x.translate(tx, ty); x.scale(sc, sc);
+    x.lineJoin = "round"; x.lineCap = "round"; x.strokeStyle = INK;
+    const poly = (pts, fill, lw) => { x.beginPath(); pts.forEach((pt, i) => (i ? x.lineTo(pt[0], pt[1]) : x.moveTo(pt[0], pt[1]))); x.closePath(); if (fill) { x.fillStyle = fill; x.fill(); } x.lineWidth = lw || 4; x.stroke(); };
+    CRE_PEAKS.forEach((pk, i) => {
+      const on = m.fills[i], ax = pk.a[0], ay = pk.a[1], k = pk.k;
+      poly([[pk.l, 84], [ax, ay], [pk.r, 84]], on ? pk.tone : "#f4e6d4");
+      poly([[ax - 8 * k, ay + 14 * k], [ax, ay], [ax + 9 * k, ay + 13 * k], [ax + 4 * k, ay + 10 * k], [ax, ay + 16 * k], [ax - 4 * k, ay + 11 * k]], "#ffffff");
+      if (on) {
+        const kf = Math.max(k, 0.9), fy = ay - 18 * kf - 2;
+        x.beginPath(); x.moveTo(ax, ay); x.lineTo(ax, fy); x.lineWidth = 3; x.stroke();
+        poly([[ax, fy], [ax + 16 * kf + 2, fy + 5 * kf], [ax, fy + 10 * kf]], "#f6c90e", 3);
+      }
+    });
+    x.beginPath(); x.moveTo(0, 84); x.lineTo(132, 84); x.lineWidth = 4; x.stroke();
+    if (m.times) {
+      x.fillStyle = INK; x.font = "800 10px " + SHARE_SN; x.textAlign = "center";
+      CRE_PEAKS.forEach((pk, i) => x.fillText(m.times[i], pk.a[0], 100));
+    }
+    x.restore();
+  }
+  // "Tate · Oct 14 · Food", the name in bold ink, centred on cx.
+  function shareNameLine(x, m, cx, y, px) {
+    const rest = " · " + m.date + " · " + m.theme;
+    x.font = "800 " + px + "px " + SHARE_SN; const wn = x.measureText(m.name).width;
+    x.font = "600 " + px + "px " + SHARE_SN; const wr = x.measureText(rest).width;
+    const x0 = cx - (wn + wr) / 2;
+    x.textAlign = "left";
+    x.font = "800 " + px + "px " + SHARE_SN; x.fillStyle = "#121212"; x.fillText(m.name, x0, y);
+    x.font = "600 " + px + "px " + SHARE_SN; x.fillStyle = "#5a4a3c"; x.fillText(rest, x0 + wn, y);
+  }
+  function shareTitle(x, cx, y, px) {
+    x.textAlign = "left"; x.font = "700 " + px + "px " + SHARE_SL;
+    const wd = x.measureText("Daily ").width, wc = x.measureText("Climb").width, x0 = cx - (wd + wc) / 2;
+    x.fillStyle = "#121212"; x.fillText("Daily ", x0, y); x.fillStyle = "#c25e08"; x.fillText("Climb", x0 + wd, y);
+  }
+  // The picture ("Send as picture"): 960 x 1092 (the mockup's 320 x 364, tripled).
+  async function drawSharePic(m) {
+    const W = 960, H = 1092, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    const x = cv.getContext("2d");
+    await shareFonts();
+    x.fillStyle = "#f4d3a6"; x.fillRect(0, 0, W, H);
+    shareTitle(x, W / 2, 138, 78);
+    shareNameLine(x, m, W / 2, 204, 39);
+    sharePeaks(x, m, 120, 258, 5.49);
+    x.fillStyle = "#121212"; x.font = "800 84px " + SHARE_SN; x.textAlign = "center";
+    x.fillText("⏱ " + m.total, W / 2, 954);
+    x.fillStyle = "#8a6f55"; x.font = "700 33px " + SHARE_SN;
+    x.fillText("thedailyclimb.com", W / 2, 1044);
+    return cv;
+  }
+  // The link card (what a shared link shows as its preview): 1200 x 630, peaks on the left, the rest on the right.
+  async function drawShareCard(m) {
+    const W = 1200, H = 630, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    const x = cv.getContext("2d");
+    await shareFonts();
+    x.fillStyle = "#f4d3a6"; x.fillRect(0, 0, W, H);
+    sharePeaks(x, m, 48, 108, 4.08);
+    shareTitle(x, 876, 198, 81);
+    shareNameLine(x, m, 876, 270, 34);
+    x.fillStyle = "#121212"; x.font = "800 102px " + SHARE_SN; x.textAlign = "center";
+    x.fillText("⏱ " + m.total, 876, 438);
+    return cv;
+  }
+  const toPng = (cv) => new Promise((r) => cv.toBlob(r, "image/png"));
+  // The link: the card goes up to share.thedailyclimb.com while the sheet is open, so Share is ready by the time
+  // it's tapped (phones only open the share sheet straight from a tap).
+  const SHARE_API = "https://share.thedailyclimb.com/api/share";
+  let shareLink = null, sharePicFile = null, shareOpenId = 0;
+  async function uploadShareCard(m, blob) {
+    const headers = { "Content-Type": "image/png", "X-Title": encodeURIComponent(m.name + "’s Daily Climb · " + m.total), "X-Day": m.day };
+    try { const tok = window.MatchDB && window.MatchDB.idToken ? await window.MatchDB.idToken() : null; if (tok) headers.Authorization = "Bearer " + tok; } catch (e) {}
+    const r = await fetch(SHARE_API, { method: "POST", headers: headers, body: blob });
+    if (!r.ok) throw new Error("share " + r.status);
+    return (await r.json()).url;
+  }
+  async function openShareSheet() {
+    if (!pcardCtx) return;
+    const id = ++shareOpenId, m = shareModel(), go = $("#btn-share-link");
+    shareLink = null; sharePicFile = null;
+    go.disabled = true; go.lastChild.textContent = "Share";
+    $("#btn-share-pic").lastChild.textContent = "Send as picture";
+    $("#share-sheet").hidden = false;
+    trackEv("share_open", { perfect: m.fills.filter(Boolean).length });
+    const card = await drawShareCard(m);
+    if (id !== shareOpenId) return;
+    $("#share-img").src = card.toDataURL("image/png");
+    const [cardBlob, picBlob] = await Promise.all([toPng(card), drawSharePic(m).then(toPng)]);
+    if (id !== shareOpenId) return;
+    if (picBlob) sharePicFile = new File([picBlob], "daily-climb.png", { type: "image/png" });
+    try { shareLink = await uploadShareCard(m, cardBlob); } catch (e) { shareLink = "https://thedailyclimb.com"; }
+    if (id !== shareOpenId) return;
+    go.disabled = false;
+  }
+  function closeShareSheet() { shareOpenId++; $("#share-sheet").hidden = true; }
+  // Share: the link (its preview is your picture).
+  async function shareShareLink() {
+    if (!shareLink) return;
+    trackEv("share_link", {});
+    if (navigator.share) {
+      try { await navigator.share({ url: shareLink }); } catch (e) {}
+      return;
+    }
+    // No share sheet here (most computers): copy the link instead.
+    let ok = false;
+    try { await navigator.clipboard.writeText(shareLink); ok = true; } catch (e) {}
+    const lab = $("#btn-share-link").lastChild;
+    lab.textContent = ok ? "Link copied" : shareLink;
+    setTimeout(() => { lab.textContent = "Share"; }, 2500);
+  }
+  // Send as picture: the picture itself, with the site's address.
+  async function shareSharePic() {
+    if (!sharePicFile) return;
+    trackEv("share_picture", {});
+    if (navigator.canShare && navigator.canShare({ files: [sharePicFile] })) {
+      try { await navigator.share({ files: [sharePicFile], text: "https://thedailyclimb.com" }); } catch (e) {}
+      return;
+    }
+    // No share sheet with pictures here (most computers): save the picture instead.
+    const a = document.createElement("a"); a.href = URL.createObjectURL(sharePicFile); a.download = "daily-climb.png";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    const lab = $("#btn-share-pic").lastChild;
+    lab.textContent = "Saved";
+    setTimeout(() => { lab.textContent = "Send as picture"; }, 2000);
+  }
+  // Home's "Share today's Climb": your entry for today, then the same sheet.
+  async function homeShare() {
+    const today = dailyKeyOf();
+    let me = null;
+    try { if (dbReady()) me = await window.MatchDB.getDailyEntrant(today); } catch (e) {}
+    const t = themedDay(today);
+    if (!me || !t) { showDailyBoard(today, { live: true }); return; }
+    pcardCtx = { me: rescoreEntrant(me, t), theme: t, day: dayBase(today) };
+    openShareSheet();
+  }
+
+  // ===== Share your player card =====
+  let pcardCtx = null;   // { me, theme, day }: today's finished entry on the board, or null
+  const PCARD_KEY = "dc.card";
+  const PCARD_FRAMES = [
+    { id: "sand", name: "Sand", need: 0, fr: "#121212", bg: "#fbe7cc", top: "#f4d3a6", ink: "#121212", mut: "#5a4a3c", tile: "#ffffff", acc: "#c25e08" },
+    { id: "night", name: "Night", need: 0, fr: "#f0a04b", bg: "#1d1611", top: "#2b211a", ink: "#f8f8f8", mut: "#cdbfb2", tile: "#2f251d", acc: "#f0a04b" },
+    { id: "bronze", name: "Bronze", need: 1, fr: "#9a5a2c", bg: "#f6e1cf", top: "#e3b48c", ink: "#121212", mut: "#5a4a3c", tile: "#ffffff", acc: "#c25e08" },
+    { id: "silver", name: "Silver", need: 10, fr: "#6d7480", bg: "#eef0f3", top: "#cfd5dd", ink: "#121212", mut: "#4d535c", tile: "#ffffff", acc: "#c25e08" },
+    { id: "gold", name: "Gold", need: 50, fr: "#b88a00", bg: "#fff3c4", top: "#f6c90e", ink: "#121212", mut: "#5a4a10", tile: "#ffffff", acc: "#a14c00" },
+    { id: "summit", name: "Summit", need: 100, fr: "#121212", bg: "#ffffff", top: ["#f6c90e", "#e8871e", "#c25e08"], ink: "#121212", mut: "#5a4a3c", tile: "#fff7e6", acc: "#c25e08" },
+  ];
+  // The stats you can pick: all about you, never the puzzle.
+  const PCARD_STATS = [
+    ["Streaks", [["streak", "\u{1F525}", "current streak"], ["longest", "\u{1F3C6}", "longest streak"], ["played", "\u{1F4C5}", "dailies climbed"]]],
+    ["Speed", [["best", "\u{1F680}", "fastest perfect day"], ["avg", "\u23F1\uFE0F", "average time, 30 days"]]],
+    ["Rank", [["week", "\u{1F4C8}", "this week"], ["month", "\u{1F4C8}", "this month"], ["wins", "\u{1F947}", "daily wins"], ["podium", "\u{1F3C5}", "podium finishes"]]],
+    ["Collection", [["pdays", "\u{1F3D4}\uFE0F", "perfect days"], ["rate", "\u{1F3AF}", "of days perfect"], ["forks", "\u{1F500}", "forks taken"],
+      ["trophies", "\u{1F3C6}", "trophies earned"], ["adv", "\u{1F9ED}", "Adventure Climbs"], ["since", "\u{1F5D3}\uFE0F", "climbing since"]]],
+  ];
+  function pcardPrefs() {
+    let p = null; try { p = JSON.parse(localStorage.getItem(PCARD_KEY) || "null"); } catch (e) {}
+    return Object.assign({ on: ["streak", "pdays", "month"], title: null, frame: "sand", tab: "stats" }, p || {});
+  }
+  function savePcardPrefs(p) { try { localStorage.setItem(PCARD_KEY, JSON.stringify({ on: p.on, title: p.title, frame: p.frame })); } catch (e) {} }
+  let pcardRecent = null;   // { "YYYY-MM-DD": [[share of most possible, ms], ...] }
+  async function pcardRecentResults() {
+    if (pcardRecent) return pcardRecent;
+    const keys = [];
+    for (let i = 1; i <= 30; i++) keys.push(shiftDayKey(dailyKeyOf(), -i));
+    let r = null;
+    try { r = window.MatchDB && window.MatchDB.getRecentResults ? await window.MatchDB.getRecentResults(keys) : null; } catch (e) {}
+    pcardRecent = (r && r.days) || {};
+    return pcardRecent;
+  }
+  // Top X% of the past n days: share of results that ranked at or above yours (most points share, then time).
+  function pcardTopPct(days, n, ratio, ms) {
+    const today = dailyKeyOf();
+    let all = 0, better = 0;
+    for (let i = 1; i <= n; i++) (days[dayBase(shiftDayKey(today, -i))] || []).forEach((x) => {
+      all++;
+      if (x[0] > ratio + 1e-9 || (Math.abs(x[0] - ratio) <= 1e-9 && x[1] < ms)) better++;
+    });
+    if (all < (n >= 30 ? 300 : 80)) return null;
+    return Math.max(1, Math.ceil(100 * (better + 1) / (all + 1)));
+  }
+  // Everything the card can say about you today and over time.
+  async function pcardModel() {
+    const c = pcardCtx, me = c.me, theme = c.theme;
+    const max = me.max || theme.climbs.reduce((a, cl) => a + cl.c.length, 0);
+    const pts = entrantPoints(me), ms = me.solveMs || 0, ratio = max ? pts / max : 0;
+    const climbsDone = theme.climbs.filter((cl, i) => ((me.roundWords || [])[i] || []).length >= cl.c.length).length;
+    const perfect = pts >= max;
+    const tr = evaluateTrophies(), entries = tr.entries;
+    const fmt = entries.filter((e) => e.base >= FORMAT_DAY);
+    const perfectTimes = fmt.filter((e) => e.base !== c.day && isPerfect(e) && e.ms > 0).map((e) => e.ms);
+    const prevBest = perfectTimes.length ? Math.min.apply(null, perfectTimes) : null;
+    const days = await pcardRecentResults();
+    const month = pcardTopPct(days, 30, ratio, ms), week = pcardTopPct(days, 7, ratio, ms);
+    const t = fmtDuration(ms) + (climbsDone === theme.climbs.length && ms > 0 && ms < 180000 ? " \u26A1" : "");
+    let today;
+    if (perfect && prevBest != null && ms < prevBest) today = ["\u{1F680}", "Perfect day \u00B7 new best " + t];
+    else if (perfect) today = ["\u{1F3D4}\uFE0F", "Perfect day in " + t];
+    else if (month != null && month <= 10) today = ["\u{1F4C8}", "Top " + month + "% this month \u00B7 " + t];
+    else if (!me.strikes && climbsDone === theme.climbs.length) today = ["\u{1F3AF}", "Flawless climb in " + t];
+    else if (climbsDone === theme.climbs.length) today = ["\u26F0\uFE0F", "Climbed in " + t];
+    else today = ["\u{1F9D7}", "Made it up " + climbsDone + " of " + theme.climbs.length + " Climbs"];
+    const fastest = fmt.filter((e) => isPerfect(e) && e.ms > 0).map((e) => e.ms);
+    const recent = fmt.filter((e) => e.base >= dayBase(shiftDayKey(dailyKeyOf(), -29)) && e.ms > 0);
+    const forksBefore = entries.filter((e) => e.base < c.day).reduce((a, e) => a + (e.fk || 0), 0);
+    const first = entries.length ? entries[0].base.split("-").map(Number) : null;
+    const h = tr.have;
+    const stat = {
+      streak: [streakAlive() + (streakAlive() === 1 ? " day" : " days")],
+      longest: [h.streak + (h.streak === 1 ? " day" : " days")],
+      played: [String(h.days)],
+      best: fastest.length ? [fmtDuration(Math.min.apply(null, fastest))] : null,
+      avg: recent.length ? [fmtDuration(recent.reduce((a, e) => a + e.ms, 0) / recent.length)] : null,
+      week: week != null ? ["Top " + week + "%"] : null,
+      month: month != null ? ["Top " + month + "%"] : null,
+      wins: [String(h.wins)], podium: [String(h.podium)], pdays: [String(h.summit)],
+      rate: h.days ? [Math.round(100 * h.summit / h.days) + "%"] : null,
+      forks: [String(forksBefore)],
+      trophies: [String(Object.keys(tr.earned).length)],
+      adv: [myBeatenSeeds.length + " / " + (CLIMBS.length || 746)],
+      since: first ? [new Date(first[0], first[1] - 1, 15).toLocaleDateString(undefined, { month: "short", year: "numeric" })] : null,
+    };
+    const titles = Object.keys(tr.earned).sort((a, b) => String(tr.earned[b]).localeCompare(String(tr.earned[a]))).map((id) => trophyInfo(id).name).filter(Boolean);
+    return { today: today, stat: stat, titles: titles, perfectDays: h.summit,
+      name: myUsername || storedName || playerName || "Climber", theme: theme.theme || { name: "" }, day: c.day };
+  }
+  let pcardLogo = null;
+  function pcardLogoImg() {
+    if (pcardLogo) return pcardLogo;
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -10 132 100"><g stroke="#121212" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"><path d="M4 84 L26 50 L50 84 Z" fill="#f6b46a"/><path d="M21.2 58.4 L26 50 L31.4 57.8 L28.4 56 L26 59.6 L23.6 56.6 Z" fill="#ffffff"/><path d="M74 84 L102 36 L128 84 Z" fill="#f6b46a"/><path d="M96 46.5 L102 36 L108.75 45.75 L105 43.5 L102 48 L99 44.25 Z" fill="#ffffff"/><path d="M28 84 L64 14 L102 84 Z" fill="#e8871e"/><path d="M56 28 L64 14 L73 27 L68 24 L64 30 L60 25 Z" fill="#ffffff"/><path d="M64 14 L64 -6" fill="none"/><path d="M64 -6 L82 -1 L64 5 Z" fill="#f6c90e"/></g><path d="M10 82 C18 78 28 72 38 64" fill="none" stroke="#121212" stroke-width="2.4" stroke-dasharray="1 6" stroke-linecap="round"/><circle cx="39" cy="63" r="6" fill="#ffffff" stroke="#121212" stroke-width="3.5"/></svg>';
+    pcardLogo = new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg); });
+    return pcardLogo;
+  }
+  // The card as a 1080 x 1350 picture (what gets shared, and the preview).
+  async function drawPcard(model, prefs) {
+    const picks = prefs.on.filter((id) => model.stat[id]).slice(0, 3);
+    const W = 1080, H = 694 + picks.length * 160 + 140, F = PCARD_FRAMES.find((x) => x.id === prefs.frame) || PCARD_FRAMES[0];
+    const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    const x = cv.getContext("2d");
+    try { await Promise.all([document.fonts.load('700 70px "Zilla Slab"'), document.fonts.load('800 50px "Libre Franklin"'), document.fonts.load('600 40px "Libre Franklin"')]); } catch (e) {}
+    const SL = '"Zilla Slab", Georgia, serif', SN = '"Libre Franklin", -apple-system, "Segoe UI", Roboto, sans-serif';
+    const rr = (X, Y, w, h, r) => { x.beginPath(); x.moveTo(X + r, Y); x.arcTo(X + w, Y, X + w, Y + h, r); x.arcTo(X + w, Y + h, X, Y + h, r); x.arcTo(X, Y + h, X, Y, r); x.arcTo(X, Y, X + w, Y, r); x.closePath(); };
+    const fit = (text, weight, size, family, maxW) => { let s = size; do { x.font = weight + " " + s + "px " + family; } while (x.measureText(text).width > maxW && (s -= 2) > 18); return s; };
+    // card body + frame
+    x.fillStyle = F.bg; rr(6, 6, W - 12, H - 12, 70); x.fill();
+    x.save(); rr(6, 6, W - 12, H - 12, 70); x.clip();
+    if (Array.isArray(F.top)) { const g = x.createLinearGradient(0, 0, W, 300); F.top.forEach((c, i) => g.addColorStop(i / (F.top.length - 1), c)); x.fillStyle = g; } else x.fillStyle = F.top;
+    x.fillRect(0, 0, W, 300);
+    x.fillStyle = F.fr; x.fillRect(0, 296, W, 10);
+    x.restore();
+    x.lineWidth = 12; x.strokeStyle = F.fr; rr(6, 6, W - 12, H - 12, 70); x.stroke();
+    // header: logo, wordmark, day and theme
+    const logo = await pcardLogoImg();
+    if (logo) x.drawImage(logo, W / 2 - 78, 34, 156, 120);
+    x.textAlign = "center"; x.textBaseline = "alphabetic";
+    x.font = "700 70px " + SL;
+    const wDaily = x.measureText("Daily ").width, wClimb = x.measureText("Climb").width, x0 = W / 2 - (wDaily + wClimb) / 2;
+    x.textAlign = "left"; x.fillStyle = F.id === "night" ? "#f8f8f8" : "#121212"; x.fillText("Daily ", x0, 222);
+    x.fillStyle = F.acc; x.fillText("Climb", x0 + wDaily, 222);
+    x.textAlign = "center"; x.fillStyle = F.mut; x.font = "600 38px " + SN;
+    const p = model.day.split("-").map(Number);
+    const dLabel = new Date(p[0], p[1] - 1, p[2], 12).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    x.fillText(dLabel + " \u00B7 " + (model.theme.emoji ? model.theme.emoji + " " : "") + model.theme.name, W / 2, 272);
+    // name + title
+    x.textAlign = "left"; x.fillStyle = F.ink;
+    fit(model.name, "700", 92, SL, W - 120); x.fillText(model.name, 60, 424);
+    if (prefs.title) { x.fillStyle = F.acc; x.font = "800 36px " + SN; if (x.letterSpacing !== undefined) x.letterSpacing = "3px"; x.fillText(prefs.title.toUpperCase(), 62, 476); if (x.letterSpacing !== undefined) x.letterSpacing = "0px"; }
+    // today's row (gold)
+    const row = (Y, h, fill) => { x.fillStyle = fill; rr(48, Y, W - 96, h, 36); x.fill(); x.lineWidth = 8; x.strokeStyle = F.fr; rr(48, Y, W - 96, h, 36); x.stroke(); };
+    row(516, 136, "#f6c90e");
+    x.fillStyle = "#121212"; x.font = "60px " + SN; x.fillText(model.today[0], 84, 606);
+    fit(model.today[1], "700", 60, SL, W - 280); x.fillText(model.today[1], 172, 604);
+    // your three stats
+    const META = {}; PCARD_STATS.forEach((g) => g[1].forEach((s) => { META[s[0]] = s; }));
+    picks.forEach((id, i) => {
+      const Y = 694 + i * 160, m = META[id], v = model.stat[id];
+      row(Y, 130, F.tile);
+      if (!m) return;
+      x.fillStyle = F.ink; x.font = "54px " + SN; x.textAlign = "left"; x.fillText(m[1], 84, Y + 84);
+      fit(v[0], "800", 58, SN, 380); x.fillText(v[0], 166, Y + 84);
+      const vw = x.measureText(v[0]).width;
+      x.textAlign = "right"; x.fillStyle = F.mut; fit(m[2], "600", 38, SN, W - 140 - (166 + vw + 30)); x.fillText(m[2], W - 84, Y + 80);
+      x.textAlign = "left";
+    });
+    x.textAlign = "center"; x.fillStyle = F.mut; x.font = "700 34px " + SN; x.fillText("thedailyclimb.com", W / 2, H - 62);
+    return cv;
+  }
+  let pcardPrefsNow = null, pcardModelNow = null, pcardCanvas = null, pcardDrawTok = 0;
+  async function pcardRender() {
+    const tok = ++pcardDrawTok;
+    const cv = await drawPcard(pcardModelNow, pcardPrefsNow);
+    if (tok !== pcardDrawTok) return;
+    pcardCanvas = cv;
+    $("#pcard-img").src = cv.toDataURL("image/png");
+  }
+  function pcardOptions() {
+    const p = pcardPrefsNow, m = pcardModelNow, box = $("#pcard-opts");
+    box.replaceChildren();
+    $("#pcard-tabs").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.tab === p.tab));
+    const chip = (label, on, disabled, fn) => { const b = document.createElement("button"); b.type = "button"; b.className = "pc-chip" + (on ? " on" : ""); b.textContent = label; b.disabled = !!disabled; b.addEventListener("click", fn); return b; };
+    if (p.tab === "stats") {
+      const c = document.createElement("p"); c.className = "pc-count"; c.textContent = p.on.length + " of 3 picked"; box.appendChild(c);
+      PCARD_STATS.forEach(([g, list]) => {
+        const h = document.createElement("div"); h.className = "pc-grp"; h.textContent = g; box.appendChild(h);
+        const row = document.createElement("div"); row.className = "pc-chips";
+        list.forEach(([id, e, lab]) => {
+          const i = p.on.indexOf(id), has = !!m.stat[id];
+          row.appendChild(chip(e + " " + lab, i >= 0, !has || (i < 0 && p.on.length >= 3), () => {
+            if (i >= 0) p.on.splice(i, 1); else if (p.on.length < 3) p.on.push(id);
+            savePcardPrefs(p); pcardOptions(); pcardRender();
+          }));
+        });
+        box.appendChild(row);
+      });
+    } else if (p.tab === "title") {
+      const row = document.createElement("div"); row.className = "pc-chips";
+      row.appendChild(chip("No title", !p.title, false, () => { p.title = null; savePcardPrefs(p); pcardOptions(); pcardRender(); }));
+      m.titles.forEach((t) => row.appendChild(chip(t, p.title === t, false, () => { p.title = t; savePcardPrefs(p); pcardOptions(); pcardRender(); })));
+      if (!m.titles.length) { const n = document.createElement("p"); n.className = "pc-count"; n.textContent = "Earn trophies to unlock titles"; box.appendChild(n); }
+      box.appendChild(row);
+    } else {
+      const grid = document.createElement("div"); grid.className = "pc-frames";
+      PCARD_FRAMES.forEach((F) => {
+        const b = document.createElement("button"); b.type = "button"; b.className = p.frame === F.id ? "on" : "";
+        const locked = m.perfectDays < F.need;
+        b.disabled = locked;
+        const sw = document.createElement("i"); sw.style.background = Array.isArray(F.top) ? "linear-gradient(135deg," + F.top.join(",") + ")" : F.top;
+        b.append(sw, (locked ? "\u{1F512} " : "") + F.name);
+        if (locked) { const s = document.createElement("small"); s.textContent = F.need + " perfect days"; b.appendChild(s); }
+        b.addEventListener("click", () => { p.frame = F.id; savePcardPrefs(p); pcardOptions(); pcardRender(); });
+        grid.appendChild(b);
+      });
+      box.appendChild(grid);
+    }
+  }
+  async function openPcard() {
+    if (!pcardCtx) return;
+    pcardPrefsNow = pcardPrefs();
+    pcardModelNow = await pcardModel();
+    const p = pcardPrefsNow, m = pcardModelNow;
+    p.on = p.on.filter((id) => m.stat[id]).slice(0, 3);
+    if (p.title && m.titles.indexOf(p.title) < 0) p.title = null;
+    if (!p.title && m.titles.length && !localStorage.getItem(PCARD_KEY)) p.title = m.titles[0];
+    const F = PCARD_FRAMES.find((x) => x.id === p.frame);
+    if (!F || m.perfectDays < F.need) p.frame = "sand";
+    p.tab = "stats";
+    $("#pcard").hidden = false;
+    pcardOptions();
+    await pcardRender();
+    trackEv("share_card_open", {});
+  }
+  function closePcard() { $("#pcard").hidden = true; }
+  async function sharePcard() {
+    if (!pcardCanvas) return;
+    const btn = $("#btn-pcard-share");
+    const blob = await new Promise((r) => pcardCanvas.toBlob(r, "image/png"));
+    if (!blob) return;
+    const text = "Can you beat me? https://thedailyclimb.com/?s=share";
+    trackEv("share_card", { stats: pcardPrefsNow.on.join(","), frame: pcardPrefsNow.frame, title: pcardPrefsNow.title ? 1 : 0 });
+    const file = new File([blob], "daily-climb.png", { type: "image/png" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], text: text }); } catch (e) {}
+      return;
+    }
+    // No share sheet with pictures here (most computers): save the picture and copy the link.
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "daily-climb.png";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    try { await navigator.clipboard.writeText(text); } catch (e) {}
+    btn.textContent = "Saved \u00B7 link copied";
+    setTimeout(() => { btn.textContent = "Share card"; }, 2200);
   }
 
   function fmtDuration(ms) {
@@ -9592,6 +10231,18 @@ $1{ display: flex; gap: 8px; width: 100%; }
   $("#btn-climb-again").addEventListener("click", startClimb);
   $("#btn-climb-home").addEventListener("click", goHome);
   $("#btn-cre-next").addEventListener("click", climbRoundEndContinue);
+  $("#btn-share-card").addEventListener("click", openShareSheet);
+  $("#btn-share-x").addEventListener("click", closeShareSheet);
+  $("#share-sheet").addEventListener("click", (e) => { if (e.target === $("#share-sheet")) closeShareSheet(); });
+  $("#btn-share-pic").addEventListener("click", shareSharePic);
+  $("#btn-share-link").addEventListener("click", shareShareLink);
+  $("#btn-home-share").addEventListener("click", homeShare);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#share-sheet").hidden) closeShareSheet(); });
+  $("#btn-pcard-x").addEventListener("click", closePcard);
+  $("#pcard").addEventListener("click", (e) => { if (e.target === $("#pcard")) closePcard(); });
+  $("#btn-pcard-share").addEventListener("click", sharePcard);
+  $("#pcard-tabs").addEventListener("click", (e) => { const b = e.target.closest("button[data-tab]"); if (b && pcardPrefsNow) { pcardPrefsNow.tab = b.dataset.tab; pcardOptions(); } });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#pcard").hidden) closePcard(); });
 
   $("#btn-adventure-play").addEventListener("click", showCollection);
   $("#btn-collection-home").addEventListener("click", goHome);
@@ -10285,6 +10936,11 @@ $1{ display: flex; gap: 8px; width: 100%; }
   // and puts a dot on ☰ until it's read; all of them live in the Announcements sheet.
   // replay: "routes" adds a link that plays that update's intro again.
   const ANN_ALL = [
+    { id: "share", date: "2026-10-14", title: "Share your Climb",
+      body: "Sharing your results is here. After you finish the daily, tap **Share** in your row on the leaderboard, or **Share today's Climb** on the home screen.\n\n" +
+        "**A link with your picture.** Friends get a link that shows your three peaks, your time on each Climb and your total. Tapping it opens Daily Climb, so they can take on the same puzzle.\n\n" +
+        "**No spoilers.** Your picture never shows your words. A peak gets a flag when you got every point in that Climb.\n\n" +
+        "Texting someone whose phone doesn't show link previews? Tap **Send as picture** to send the picture itself." },
     { id: "shape", date: FORMAT_DAY, title: "A new shape for the daily", note: true,
       body: "Every Climb now peaks at 6, 7 and 8 letters: the same length every day, with more variety. Trail, Ridge and Summit are retired.\n\n" +
         "**Forks in the trail.** Every Daily Climb has 3+ steps that fit two words. Take the theme word for a bonus point.",
@@ -10544,6 +11200,14 @@ $1{ display: flex; gap: 8px; width: 100%; }
   // (sw.js caches other files cache-first, so a notes file could go stale).
   // Each release shows from its date on (the player's own day), so notes can ship ahead of the change they describe.
   const PATCH_NOTES = [
+    { v: "0.15.0", date: "2026-10-14", title: "Share your Climb",
+      notes: [
+        ["new", "Share your result. After the daily, tap Share in your row on the leaderboard, or Share today's Climb on the home screen. Friends get a link that shows your peaks, your time on each Climb and your total, and tapping it opens Daily Climb. Send as picture sends the picture itself."],
+        ["new", "A peak fills in orange and gets a flag when you get every point in that Climb, with a chime and streamers at the summit, and a sunrise on a perfect day."],
+        ["new", "Between Climbs, your climber walks the trail to the next summit, and each Climb's time sits under its peak."],
+        ["imp", "A new logo and app icon: three peaks."],
+        ["imp", "The home screen now says how the theme works: on-theme words score extra."],
+      ] },
     { v: "0.14.1", date: "2026-10-14", title: "Little fixes",
       notes: [
         ["fix", "If a Climb ends early, your leaderboard time now includes the time spent on the word you were on, so it matches your clock."],
@@ -11405,6 +12069,13 @@ $1{ display: flex; gap: 8px; width: 100%; }
     // this device (persisted), ?dev=0 turns it back off. Users never see it.
     try {
       const q = new URLSearchParams(location.search);
+      // From a shared link (share.thedailyclimb.com sends people here with ?s=<id>): count it, then tidy the address.
+      if (q.has("s")) {
+        const sid = (q.get("s") || "").slice(0, 16);
+        setTimeout(() => trackEv("share_visit", { s: sid }), 1500);
+        q.delete("s");
+        history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q : "") + location.hash);
+      }
       if (q.has("dev")) {
         if (q.get("dev") === "0") localStorage.removeItem("three21.dev");
         else localStorage.setItem("three21.dev", "1");

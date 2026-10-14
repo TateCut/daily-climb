@@ -1,8 +1,8 @@
 Add-Type -AssemblyName System.Drawing
 
-# Daily Climb app icon: the home screen's sticker logo (two peaks, snowcaps, a
-# yellow flag, the dotted trail and the climber) on the splash apricot.
-# Drawn from the same 120x92 viewBox as the .hs-logo / #summit-mark SVG in index.html.
+# Daily Climb app icon: the home screen's sticker logo (three peaks for the 6-7-8 Climbs - small left, medium
+# right, the tall flagged one in the middle - with snowcaps, the dotted trail and the climber) on the splash apricot.
+# Drawn from the same "0 -10 132 100" viewBox as the .hs-logo / #summit-mark SVG in index.html.
 
 function Add-RoundRect {
     param(
@@ -42,10 +42,10 @@ function New-Icon {
         $p.Dispose()
     }
 
-    # viewBox 120 x 92, centred (nudged up a touch: the flag is light, the base is heavy).
-    [double]$s = $Size * $MarkFrac / 120.0
-    [double]$left = ($Size - 120.0 * $s) / 2.0
-    [double]$top = ($Size - 92.0 * $s) / 2.0 - $Size * 0.01
+    # viewBox 0 -10 132 100, centred (nudged up a touch: the flag is light, the base is heavy).
+    [double]$s = $Size * $MarkFrac / 132.0
+    [double]$left = ($Size - 132.0 * $s) / 2.0
+    [double]$top = ($Size - 100.0 * $s) / 2.0 - $Size * 0.01 + 10.0 * $s
     function P([double]$vx, [double]$vy) { return New-Object System.Drawing.PointF([single]($left + $vx * $s), [single]($top + $vy * $s)) }
     function Pts([double[]]$xy) { $pts = @(); for ($i = 0; $i -lt $xy.Length; $i += 2) { $pts += (P $xy[$i] $xy[$i + 1]) }; return [System.Drawing.PointF[]]$pts }
     function InkPen([double]$w) {
@@ -62,20 +62,22 @@ function New-Icon {
         $pen = InkPen 4; $g.DrawPolygon($pen, $pts); $pen.Dispose()
     }
 
-    Shape $far  @(6, 84, 34, 42, 52, 66, 74, 26, 98, 60, 114, 84)
-    Shape $near @(52, 66, 74, 26, 98, 60, 114, 84, 40, 84)
-    Shape $white @(66, 40, 74, 26, 83, 39, 78, 36, 74, 42, 70, 37)
-    Shape $white @(28, 51, 34, 42, 40, 50, 36, 48, 33, 53)
-    $pen = InkPen 4; $g.DrawLine($pen, (P 74 26), (P 74 6)); $pen.Dispose()
-    Shape $gold @(74, 6, 92, 11, 74, 17)
+    Shape $far  @(4, 84, 26, 50, 50, 84)                                          # small peak (Climb 1)
+    Shape $white @(21.2, 58.4, 26, 50, 31.4, 57.8, 28.4, 56, 26, 59.6, 23.6, 56.6)
+    Shape $far  @(74, 84, 102, 36, 128, 84)                                       # medium peak (Climb 2)
+    Shape $white @(96, 46.5, 102, 36, 108.75, 45.75, 105, 43.5, 102, 48, 99, 44.25)
+    Shape $near @(28, 84, 64, 14, 102, 84)                                        # tall peak (Climb 3), in front
+    Shape $white @(56, 28, 64, 14, 73, 27, 68, 24, 64, 30, 60, 25)
+    $pen = InkPen 4; $g.DrawLine($pen, (P 64 14), (P 64 -6)); $pen.Dispose()
+    Shape $gold @(64, -6, 82, -1, 64, 5)
 
-    # dotted trail: the curve M18 80 C30 74 44 70 56 60, a dot every ~7 units
+    # dotted trail: the curve M10 82 C18 78 28 72 38 64, a dot every ~7 units
     $dot = New-Object System.Drawing.SolidBrush($ink)
     $prev = $null; [double]$acc = 7
     for ($i = 0; $i -le 400; $i++) {
         $t = $i / 400.0; $u = 1 - $t
-        $x = $u * $u * $u * 18 + 3 * $u * $u * $t * 30 + 3 * $u * $t * $t * 44 + $t * $t * $t * 56
-        $y = $u * $u * $u * 80 + 3 * $u * $u * $t * 74 + 3 * $u * $t * $t * 70 + $t * $t * $t * 60
+        $x = $u * $u * $u * 10 + 3 * $u * $u * $t * 18 + 3 * $u * $t * $t * 28 + $t * $t * $t * 38
+        $y = $u * $u * $u * 82 + 3 * $u * $u * $t * 78 + 3 * $u * $t * $t * 72 + $t * $t * $t * 64
         if ($prev) { $acc += [Math]::Sqrt(($x - $prev[0]) * ($x - $prev[0]) + ($y - $prev[1]) * ($y - $prev[1])) }
         $prev = @($x, $y)
         if ($acc -ge 7 -and $t -lt 0.9) {
@@ -88,7 +90,7 @@ function New-Icon {
     # the climber
     $r = 6
     $wb = New-Object System.Drawing.SolidBrush($white)
-    $rect = New-Object System.Drawing.RectangleF([single]($left + (56 - $r) * $s), [single]($top + (60 - $r) * $s), [single](2 * $r * $s), [single](2 * $r * $s))
+    $rect = New-Object System.Drawing.RectangleF([single]($left + (39 - $r) * $s), [single]($top + (63 - $r) * $s), [single](2 * $r * $s), [single](2 * $r * $s))
     $g.FillEllipse($wb, $rect); $wb.Dispose()
     $pen = InkPen 3.5; $g.DrawEllipse($pen, $rect); $pen.Dispose()
 

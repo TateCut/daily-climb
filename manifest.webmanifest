@@ -1,7 +1,7 @@
 {
   "name": "Daily Climb",
   "short_name": "Daily Climb",
-  "description": "A daily word ladder: Climb one word at a time and find the day's theme. Three Climbs a day.",
+  "description": "A daily word ladder: Climb one word at a time. On-theme words score extra. Three Climbs a day.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
