@@ -11056,13 +11056,15 @@ $1{ display: flex; gap: 8px; width: 100%; }
     if (annOpenedFrom && annOpenedFrom.focus) annOpenedFrom.focus();
     annOpenedFrom = null;
   }
-  // A brand-new announcement (one without its own intro) opens by itself, once, on the home screen.
+  // A brand-new announcement just puts the dot on ☰ (renderMenuDot); only one with its own intro (a launch note or
+  // a menu tour) opens by itself, once, on the home screen.
   function maybeAnnouncement() {
+    renderMenuDot();   // the profile may have loaded since home first drew the dot
     const top = annList()[0];
     if (!top || top.replay || !announcementUnread() || !tutorialSeen || updateWaiting || screens.home.hidden) return;
     if (!$("#whatsnew").hidden || !$("#howto-card").hidden || !$("#trophy-pop").hidden || anySheetOpen() || !$("#tour-layer").hidden) return;
     if (top.note) { if (!noteShown(top.id)) openShapeNote(true); return; }
-    if (top.tour) startMenuTour(true); else showAnnouncements(true);
+    if (top.tour) startMenuTour(true);
   }
 
   // ---- The 6-7-8 launch note: two pages, once, on the home screen ----
