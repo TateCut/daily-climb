@@ -41,6 +41,7 @@ cater creams dates deli eats gelatins gratin gratins nectar rations savor taco t
 +2026-10-13 meal meals meat melon nuts olives omelet onion orange pastry pear peas pies platter
 +2026-10-13 recipe ribs rice roast snacks sour spices steak steaks stew sugar tart toaster veal
 +2026-10-13 wheat
++2026-10-14 taster tastier treats
 
 # A line starting "+YYYY-MM-DD" adds words that only count from that day on (theme-words.js
 # THEME_WORDS_FROM), so adding a word never changes the scoring of a day already in play.
