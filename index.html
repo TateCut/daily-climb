@@ -142,7 +142,7 @@ try { if (navigator.standalone || matchMedia("(display-mode: standalone)").match
      everything"). The game screen stays locked: dragging tiles must never move the page. */
   html.noscroll, html.noscroll body { overflow: hidden; overscroll-behavior: none; }
   /* The few inner scrollers draw their bar in the theme's line color. */
-  .lb-list, .lb-routes, .rt-pop, .collection-grid, .def, .patch-list, .pf-scroll { scrollbar-color: var(--line) transparent; scrollbar-width: thin; }
+  .lb-list, .lb-routes, .rt-pop, .collection-grid, .def, .patch-list, .pf-scroll, .ann-list { scrollbar-color: var(--line) transparent; scrollbar-width: thin; }
   /* Tutorial is a fixed card — kill touch-panning so a swipe is never stolen. */
   h1 {
     margin: 0 0 22px;
@@ -1682,6 +1682,13 @@ $1{ display: flex; gap: 8px; width: 100%; }
   #screen-play #btn-endround.forfeit { margin: auto 0; display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 13px; border-radius: 999px;
     border: 1.5px solid var(--rd-bad); background: none; color: var(--rd-bad); font-size: 0.78rem; font-weight: 600; text-decoration: none; }
   #screen-play #btn-endround.forfeit .clb { color: inherit; }   /* all red: no orange right next to the red */
+  #screen-play #btn-endround.reveal { margin: auto 0; display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 14px; border-radius: 999px;
+    border: 1.5px solid var(--rd-ink); background: none; color: var(--rd-ink); font-size: 0.78rem; font-weight: 700; text-decoration: none; }
+  #screen-play #btn-endround.reveal svg { width: 14px; height: 14px; flex: none; }
+  /* a revealed word: dashed, muted, with a small eye (the trail, and the recap's chips) */
+  #screen-play .wordtrail .wordtrail-rev { display: inline-flex; align-items: center; gap: 3px; border: 1.5px dashed var(--rd-muted); color: var(--rd-muted); padding: 0 5px; border-radius: 4px; }
+  #screen-play .wordtrail .wordtrail-rev svg, .chips span.revealed svg { width: 10px; height: 10px; flex: none; }
+  .rounds .chips span.revealed, .chips span.revealed { display: inline-flex; align-items: center; gap: 3px; background: none !important; border: 1.5px dashed var(--rd-muted) !important; color: var(--rd-muted) !important; }
   #screen-play #btn-endround.forfeit svg { width: 11px; height: 12px; flex: none; }
   #screen-play .linkbtn { color: var(--rd-muted); }
   /* Today's theme card + the forfeit check, on the same paper. */
@@ -1700,6 +1707,8 @@ $1{ display: flex; gap: 8px; width: 100%; }
   #forfeit-confirm .ff-card h3 { font-family: var(--slab); font-weight: 700; font-size: 1.4rem; }
   #forfeit-confirm button.ghost.ff-go { height: 48px; border-radius: 999px; background: none; border: 1.5px solid var(--rd-bad); color: var(--rd-bad); font-weight: 600; }
   #forfeit-confirm button.ghost.ff-go .clb { color: inherit; }
+  #forfeit-confirm button.ghost.ff-go.rv { border-color: var(--rd-ink); color: var(--rd-ink); display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+  #forfeit-confirm button.ghost.ff-go.rv svg { width: 16px; height: 16px; }
   /* First-game tips: an ink bubble (gold for the theme tip). */
   .coach { background: var(--rd-ink); color: var(--rd-bg); }
   .coach.down::after { border-top-color: var(--rd-ink); }
@@ -1946,8 +1955,9 @@ $1{ display: flex; gap: 8px; width: 100%; }
   .fb-sheet.sent h3 { font-size: 1.45rem; }
   .fb-sheet.sent .install-sub { max-width: 22em; margin: 6px auto 16px; font-size: 0.86rem; }
   .fb-meta { display: flex; justify-content: space-between; margin: 6px 2px 12px; font-size: 0.72rem; color: var(--rd-muted); }
-  .ann-sheet { max-height: calc(100dvh - 40px); display: flex; flex-direction: column; }
-  .ann-list { margin: 10px 0 12px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; min-height: 0; }
+  .ann-sheet { max-height: 76vh; max-height: 76dvh; display: flex; flex-direction: column; }
+  .ann-list { margin: 10px 0 12px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; min-height: 0;
+    overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
   .ann { padding: 11px 13px; border-radius: 12px; background: color-mix(in srgb, var(--rd-ink) 5%, transparent); display: flex; flex-direction: column; gap: 4px; text-align: left; }
   .ann-meta { display: flex; justify-content: space-between; align-items: center; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--rd-muted); }
   .ann-new { padding: 1px 6px; border-radius: 6px; background: var(--rd-gold); color: var(--rd-gold-ink); letter-spacing: 0.08em; }
@@ -3328,7 +3338,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     submitDaily: async function (day, r) {
       db.dailies[day] = Object.assign({ uid: UID, name: r.name || "Player", total: r.total || 0, strikes: r.strikes || 0, solveMs: r.solveMs || 0,
         hintUsed: !!r.hintUsed, roundWords: r.roundWords || [], finishedAt: Date.now() },
-        r.themeWords != null ? { themeWords: r.themeWords, max: r.max, theme: r.theme } : {}, r.forks != null ? { forks: r.forks } : {}, r.twv ? { twv: r.twv } : {}, Array.isArray(r.climbMs) ? { climbMs: r.climbMs } : {});
+        r.themeWords != null ? { themeWords: r.themeWords, max: r.max, theme: r.theme } : {}, r.forks != null ? { forks: r.forks } : {}, r.twv ? { twv: r.twv } : {}, Array.isArray(r.climbMs) ? { climbMs: r.climbMs } : {}, Array.isArray(r.reveals) && r.reveals.length ? { reveals: r.reveals } : {});
       save();
     },
     getDailyBoard: async function (day) { var m = mine(day); return fakeBoard(day).concat(m ? [m] : []); },
@@ -4063,6 +4073,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
         ...(r.forks != null ? { forks: r.forks } : {}),
         ...(r.twv ? { twv: r.twv } : {}),   // theme word list version (the nightly job's Oct 14 fix reads it)
         ...(Array.isArray(r.climbMs) ? { climbMs: r.climbMs } : {}),   // each Climb's time (the share picture)
+        ...(Array.isArray(r.reveals) && r.reveals.length ? { reveals: r.reveals } : {}),   // Reveal word: ["<climb>:<word>"], worth no points
       });
     },
     // dailies/{day}/progress/{uid} — where a player has got to in today's daily, updated as they
@@ -4336,6 +4347,13 @@ $1{ display: flex; gap: 8px; width: 100%; }
   let solveMs = 0;        // time actively spent solving (sum of solved stages) — the daily tiebreak
   let stageShownAt = 0;
   let hintUsed = false;  // one hint per session
+  let revealed = [[], [], []];   // words shown with Reveal word, climb by climb (worth no points)
+  let revealAt = null;           // { r: climb, s: step } where Reveal word was used and the word isn't entered yet
+  const revealedIn = (i) => revealed[i] || [];
+  // A finished entry's revealed words in Climb i: its reveals are ["1:grain", ...].
+  const entrantReveals = (e, i) => ((e && e.reveals) || []).filter((x) => x.startsWith(i + ":")).map((x) => x.slice(String(i).length + 1));
+  // The words that score: everything but the revealed ones.
+  const scoredWords = (words, rev) => (rev && rev.length ? (words || []).filter((w) => !rev.includes(w)) : (words || []));
 
   // Daily Climb's visible "how long have I been on this" stopwatch. Aggregate
   // across all 3 rounds (never resets between climbs), pauses while the app
@@ -4996,7 +5014,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
         roundWords: roundWords, currentRoundWords: currentRoundWords,
         poolChars: pool.map((t) => t.ch),
         newCount: pool.filter((t) => t.isNew).length,
-        guessesLeft: guessesLeft, wrongGuesses: wrongGuesses, hintUsed: hintUsed,
+        guessesLeft: guessesLeft, wrongGuesses: wrongGuesses, hintUsed: hintUsed, revealed: revealed, revealAt: revealAt,
         sessionStrikes: sessionStrikes, solveMs: solveMs, dailyElapsedMs: dailyElapsedNow(),
         themeFound: themeFound, climbMs: climbMs, dailyMisses: dailyMisses,
       }));
@@ -5009,7 +5027,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
         mode: mode, matchCode: matchCode, matchSeed: matchSeed, dailyDay: dailyDay,
         difficulty: difficulty, format: format,
         sessionStrikes: sessionStrikes, solveMs: solveMs, dailyElapsedMs: dailyElapsedNow(),
-        round: nextRound, roundWords: roundWords, hintUsed: hintUsed, themeFound: themeFound, climbMs: climbMs, dailyMisses: dailyMisses,
+        round: nextRound, roundWords: roundWords, hintUsed: hintUsed, revealed: revealed, revealAt: revealAt, themeFound: themeFound, climbMs: climbMs, dailyMisses: dailyMisses,
       }));
     } catch (e) {}
   }
@@ -5046,6 +5064,8 @@ $1{ display: flex; gap: 8px; width: 100%; }
     round = s.round || 1;
     roundWords = (s.roundWords || []).map((w) => (w || []).slice());
     hintUsed = !!s.hintUsed;
+    revealed = [0, 1, 2].map((i) => (Array.isArray(s.revealed) && Array.isArray(s.revealed[i]) ? s.revealed[i].slice() : []));
+    revealAt = s.revealAt && s.revealAt.r ? s.revealAt : null;
     sessionStrikes = s.sessionStrikes || 0;
     solveMs = s.solveMs || 0;
     climbMs = Array.isArray(s.climbMs) ? s.climbMs.slice() : [];
@@ -5124,6 +5144,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     clearResume();
     round = 1;
     roundWords = [];
+    revealed = [[], [], []]; revealAt = null;
     hintUsed = false; // one hint per 3-round session
     sessionStrikes = 0;
     solveMs = 0;
@@ -5135,8 +5156,10 @@ $1{ display: flex; gap: 8px; width: 100%; }
   function dailyElapsedNow() {
     return dailyElapsedMs + (dailyTimerRunning ? Date.now() - dailyTimerStartedAt : 0);
   }
+  // The clock shows exactly the leaderboard time: the solved words' time, plus the word you're on.
+  const dailyShownMs = () => solveMs + (stageShownAt ? wordSolveMs() : 0);
   function renderDailyTimer() {
-    $("#daily-timer-val").textContent = $("#pnav-time").textContent = fmtDuration(dailyElapsedNow());
+    $("#daily-timer-val").textContent = $("#pnav-time").textContent = fmtDuration(dailyShownMs());
   }
   function startDailyTimer() {
     if (dailyTimerRunning) return;
@@ -5208,8 +5231,8 @@ $1{ display: flex; gap: 8px; width: 100%; }
     }
     // "Quit to menu" shows in practice/collection; the daily is one attempt, versus restarts.
     $("#btn-play-home").hidden = mode !== "solo" && mode !== "climb" && mode !== "collection";
-    $("#btn-endround").innerHTML = climb ? '<svg viewBox="0 0 12 13" aria-hidden="true"><path d="M2 12.5V1.2M2 1.5h7.5L8 4.2l1.5 2.8H2" fill="currentColor" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>Forfeit <span class="clb">Climb</span>' : "End round";
-    $("#btn-endround").className = climb ? "ghost forfeit" : "linkbtn";
+    $("#btn-endround").innerHTML = mode === "daily" ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>' + "Reveal word" : climb ? '<svg viewBox="0 0 12 13" aria-hidden="true"><path d="M2 12.5V1.2M2 1.5h7.5L8 4.2l1.5 2.8H2" fill="currentColor" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>Forfeit <span class="clb">Climb</span>' : "End round";
+    $("#btn-endround").className = mode === "daily" ? "ghost reveal" : climb ? "ghost forfeit" : "linkbtn";
   }
 
   function startRound() {
@@ -5863,8 +5886,10 @@ $1{ display: flex; gap: 8px; width: 100%; }
     if (locked || checking) return;
     const before = trayString(trayCells);
     let best = null, bestScore = Infinity;
+    // the letters packed to the left, shuffled; the spaces left by letters up in your word go to the end
+    const letters = trayCells.filter((c) => c.type === "letter"), gaps = trayCells.filter((c) => c.type !== "letter");
     for (let i = 0; i < 40; i++) {
-      const cand = shuffle(trayCells.slice());
+      const cand = shuffle(letters.slice()).concat(gaps);
       const str = trayString(cand);
       const sc = revealScore(str) + (str === before && before.length > 1 ? 50 : 0);   // and it visibly changes
       if (sc < bestScore) { best = cand; bestScore = sc; if (sc === 0) break; }
@@ -5931,7 +5956,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     const ladder = (theme.climbs[i] || {}).c || [];
     return ladder.length + playableSteps(theme, i).filter((ws) => ws.some((w) => isThemeWord(theme, i, w))).length;
   }
-  const climbPoints = (theme, i, words) => words.length + themeHits(theme, i, words).length;
+  const climbPoints = (theme, i, words, rev) => { const w = scoredWords(words, rev); return w.length + themeHits(theme, i, w).length; };
   function pointsHead(n) {
     const h = document.createElement("span"), c = document.createElement("span");
     h.className = "h"; c.className = "clb"; c.textContent = "Climb";
@@ -5944,7 +5969,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     sc.append(String(got), m);
     return sc;
   }
-  function renderRoundsBlock(container, wordsByRound, theme) {
+  function renderRoundsBlock(container, wordsByRound, theme, revByRound) {
     container.innerHTML = "";
     (wordsByRound || []).forEach((words, i) => {
       const row = document.createElement("div");
@@ -5955,13 +5980,19 @@ $1{ display: flex; gap: 8px; width: 100%; }
       if (theme && ladder && newRules(theme)) {
         // out of what was possible, so nobody has to do the math: "Climb 2 ... 6/8"
         label.classList.add("pts");
-        label.append(pointsHead(i + 1), pointsOutOf(climbPoints(theme, i, words), climbMaxPoints(theme, i)));
+        label.append(pointsHead(i + 1), pointsOutOf(climbPoints(theme, i, words, (revByRound || [])[i]), climbMaxPoints(theme, i)));
       }
       else if (theme) { const c = document.createElement("span"); c.className = "clb"; c.textContent = "Climb"; label.append(c, " " + (i + 1) + " · " + wordsLabel(words.length)); }
       else label.textContent = "Round " + (i + 1) + " · " + wordsLabel(words.length);
       const chips = document.createElement("div");
       chips.className = "chips";
       fillChips(chips, words);
+      const rev = (revByRound || [])[i] || [];
+      if (rev.length) Array.from(chips.children).slice(0, words.length).forEach((chip, k) => {
+        if (!rev.includes(words[k])) return;
+        chip.classList.add("revealed");
+        chip.insertAdjacentHTML("afterbegin", '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>');
+      });
       if (ladder && words.length && words.length < ladder.length) {
         // the steps they didn't reach, as dashed tiles with the puzzle's word (gold where a theme word fit)
         for (let k = words.length; k < ladder.length; k++) {
@@ -5977,8 +6008,9 @@ $1{ display: flex; gap: 8px; width: 100%; }
         const chip = chips.children[tr.rung];
         if (!chip) return;
         chip.classList.add("theme-rung");
-        if (tr.found) chip.classList.add("gold");
-        chip.appendChild(themeFlagSvg(tr.found, "chip-flag"));
+        const found = tr.found && !rev.includes(words[tr.rung]);   // a revealed theme word wasn't found
+        if (found) chip.classList.add("gold");
+        chip.appendChild(themeFlagSvg(found, "chip-flag"));
         chips.classList.add("flagged");
       });
       // steps they reached where a theme word was hiding in the same letters (CARES when SCARE was one)
@@ -7054,7 +7086,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
   // the list later (a fix) scores for everyone who played it, not only for people who finish afterwards.
   function rescoreEntrant(e, t) {
     if (!t || !newRules(t) || !e || !Array.isArray(e.roundWords) || !e.roundWords.length) return e;
-    const tw = e.roundWords.reduce((a, words, i) => a + themeHits(t, i, words).length, 0);
+    const tw = e.roundWords.reduce((a, words, i) => a + themeHits(t, i, scoredWords(words, entrantReveals(e, i))).length, 0);
     return tw === (e.themeWords || 0) ? e : Object.assign({}, e, { themeWords: tw });
   }
   function dailyCmp(a, b) {
@@ -7148,7 +7180,8 @@ $1{ display: flex; gap: 8px; width: 100%; }
       const s = document.createElement("span");
       s.textContent = w;
       if (i === words.length - 1) s.className = "wordtrail-last";
-      if (themed && isThemeWord(dailyTheme, round - 1, w.toLowerCase())) s.classList.add("wordtrail-theme");
+      if (mode === "daily" && revealedIn(round - 1).includes(w.toLowerCase())) { s.className = "wordtrail-rev"; s.insertAdjacentHTML("afterbegin", '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>'); }
+      if (themed && isThemeWord(dailyTheme, round - 1, w.toLowerCase())) { if (!s.classList.contains("wordtrail-rev")) s.classList.add("wordtrail-theme"); }   // a revealed theme word wasn't found
       trail.appendChild(s);
       trail.appendChild(dots());
     });
@@ -7284,7 +7317,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     if (!dailyTheme || !dailyClimbs) return 0;
     let n = 0;
     for (let i = 0; i < dailyClimbs.length; i++)
-      n += themeHits(dailyTheme, i, i === round - 1 ? currentRoundWords : roundWords[i]).length;
+      n += themeHits(dailyTheme, i, scoredWords(i === round - 1 ? currentRoundWords : roundWords[i], revealedIn(i))).length;
     return n;
   }
   // "a food word" / "an animal word"
@@ -7355,6 +7388,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     climbMs = [];
     dailyMisses = [];
     hintUsed = false;                    // one hint for the whole session
+    revealed = [[], [], []]; revealAt = null;
     format = "guesses";                  // 3 strikes, no clock
     playerName = storedName || "You";
     document.querySelectorAll(".tomenu").forEach((el) => { el.hidden = false; });
@@ -7399,14 +7433,75 @@ $1{ display: flex; gap: 8px; width: 100%; }
     FX.play("drop"); buzz(10);
   }
 
+  // Reveal word: the step's word. If a theme word fits the step it shows that one (you're skipping the step, and a
+  // revealed word scores nothing either way); otherwise the puzzle's word, else the most everyday word that fits.
+  function revealPick() {
+    const i = round - 1;
+    const ref = climbPuzzle && climbPuzzle.c[climbStage - 1];
+    const next = climbPuzzle && climbPuzzle.c[climbStage];
+    const nextOpts = next ? (ANA.get(sortStr(next)) || [next]) : null;
+    const ok = (w) => !isInflectionOf(w, climbPrev) && !nameIsBlocked(w) && (!nextOpts || nextOpts.some((x) => !isInflectionOf(x, w)));
+    const fits = (ANA.get(poolKey()) || []).filter(ok);
+    const theme = fits.filter((w) => isThemeWord(dailyTheme, i, w));
+    if (theme.length) return theme.includes(ref) ? ref : theme[0];
+    if (ref && ok(ref)) return ref;
+    let best = null, bestRank = Infinity;
+    for (const w of fits) {
+      const r = everydayRank(w);
+      if (best === null || r < bestRank) { best = w; bestRank = r; }
+    }
+    return best || climbHintWord();
+  }
+  function revealWord() {
+    if (mode !== "daily" || locked || checking || screens.play.hidden) return;
+    const w = revealPick();
+    if (!w) return;
+    // where every letter is now, so each can glide from there into its place in the word
+    const before = new Map();
+    document.querySelectorAll("#tray .tile, #answer .tile").forEach((el) => before.set(el.dataset.id, el.getBoundingClientRect()));
+    const answered = ans.filter((x) => x !== null);
+    let k = 0;
+    trayCells = trayCells.map((c) => (c.type === "gap" ? { type: "letter", id: answered[k++] } : c));
+    ans = new Array(tiles.length).fill(null);
+    const used = new Set();
+    [...w].forEach((ch, j) => {
+      const at = trayCells.findIndex((c) => c.type === "letter" && !used.has(c.id) && tileMap[c.id].ch.toLowerCase() === ch);
+      if (at < 0) return;
+      used.add(trayCells[at].id); ans[j] = trayCells[at].id; trayCells[at] = { type: "gap" };
+    });
+    render(false);
+    if (!reduceMotion && !document.hidden) [].forEach.call($("#answer").children, (el, k) => {
+      const r0 = el.dataset && before.get(el.dataset.id);
+      if (!r0) return;
+      const r1 = el.getBoundingClientRect(), dx = r0.left - r1.left, dy = r0.top - r1.top;
+      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+      anim(el, [{ transform: "translate(" + dx + "px, " + dy + "px)" }, { transform: "none" }],
+        { duration: 620, delay: k * 110, easing: "cubic-bezier(.35, .1, .2, 1)", fill: "backwards" });
+    });
+    FX.play("shuffle");
+    msg("");
+    if (!revealAt || revealAt.r !== round || revealAt.s !== climbStage) {
+      revealAt = { r: round, s: climbStage };
+      trackEv("reveal_word", { climb: round, step: climbStage });
+      saveProgress();
+    }
+  }
+
   function climbAccept(g) {
+    if (mode === "daily" && revealAt && revealAt.r === round && revealAt.s === climbStage) {
+      (revealed[round - 1] = revealed[round - 1] || []).push(g);
+      revealAt = null;
+    }
     if (stageShownAt) { const t = wordSolveMs(); solveMs += t; climbMs[round - 1] = (climbMs[round - 1] || 0) + t; }
+    stageShownAt = 0;   // this word's time is in; the clock holds until the next word appears
+    if (mode === "daily") renderDailyTimer();
     solved++;
     currentRoundWords.push(g);
     renderAscentMini();
     saveDailyProgress();
     // Theme word: only that exact word counts (CAUSE doesn't find SAUCE).
-    const foundTheme = mode === "daily" && dailyTheme && isThemeWord(dailyTheme, round - 1, g) &&
+    const shown = mode === "daily" && revealedIn(round - 1).includes(g);   // came from Reveal word
+    const foundTheme = mode === "daily" && !shown && dailyTheme && isThemeWord(dailyTheme, round - 1, g) &&
       (newRules(dailyTheme) || !themeFound[round - 1]);
     if (foundTheme) {
       if (!themeFound[round - 1]) themeFound[round - 1] = g;   // the first one names the climb's flag
@@ -7431,7 +7526,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
       confetti({ big: true });
       setTimeout(function () { climbRoundDone(true); }, 1100);
     } else {
-      msg("Nice — “" + g.toUpperCase() + "”", "good");
+      msg(shown ? "“" + g.toUpperCase() + "”" : "Nice — “" + g.toUpperCase() + "”", shown ? "" : "good");
       FX.play("accept"); buzz([8, 24, 8]);
       fxClass($("#answer"), "fx-good"); waveAnswer();
       setTimeout(climbNext, 450);   // short beat, then the next letter drops in
@@ -7519,7 +7614,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
   // Every point in Climb i: reached the top and found every theme word there was.
   function crePerfect(i) {
     const t = dailyTheme, words = roundWords[i] || [], ladder = (t && t.climbs[i] && t.climbs[i].c) || [];
-    return !!t && ladder.length > 0 && words.length >= ladder.length && words.length + themeHits(t, i, words).length >= climbMaxPoints(t, i);
+    return !!t && ladder.length > 0 && !revealedIn(i).length && words.length >= ladder.length && words.length + themeHits(t, i, words).length >= climbMaxPoints(t, i);
   }
   let creUid = 0;
   function creMountain(n) {
@@ -7752,7 +7847,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     if (f678) {
       $("#cre-mt").innerHTML = creMountain(round);
       creCelebrate(round);
-      renderRoundsBlock($("#cre-rows"), roundWords.slice(0, round), dailyTheme);
+      renderRoundsBlock($("#cre-rows"), roundWords.slice(0, round), dailyTheme, revealed);
       [...$("#cre-rows").children].forEach((r, i) => r.classList.toggle("fold", i < round - 1));
     }
     $("#btn-cre-next").innerHTML = isLastRound ? (f678 ? "See the leaderboard" : "See results") : 'Keep <span class="clb">Climbing</span>!';
@@ -7833,12 +7928,15 @@ $1{ display: flex; gap: 8px; width: 100%; }
     window.MatchDB.saveDailyProgress(dailyDay, rec);
     if (STILL_CLIMBING && window.MatchDB.saveDailyLive) window.MatchDB.saveDailyLive(dailyDay, rec);   // the word-free public note
   }
-  function dailyWordsSoFar() {
+  // Words so far (points: revealed words left out; withRevealed, for the climber's place on the mountain, kept in).
+  function dailyWordsSoFar(withRevealed) {
     const wordsIn = (i) => (roundWords[i] ? roundWords[i].length : 0);
     let priorTotal = 0;
     for (let i = 0; i < round - 1; i++) priorTotal += wordsIn(i);
-    // live count — this climb isn't finalized into roundWords[] until it ends
-    return priorTotal + currentRoundWords.length;
+    // live count — this climb isn't finalized into roundWords[] until it ends; revealed words don't count
+    let rev = 0;
+    if (!withRevealed) for (let i = 0; i < round; i++) rev += revealedIn(i).length;
+    return priorTotal + currentRoundWords.length - rev;
   }
 
   // Today's earlier finishers (for the "You beat X" pop-up), fetched once per climb so people who finish
@@ -7889,7 +7987,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     if (!newFormat(dailyTheme)) return 0;
     let fk = 0;
     (roundWords || []).forEach((words, i) => (words || []).forEach((w) => {
-      if (!isThemeWord(dailyTheme, i, w)) return;
+      if (!isThemeWord(dailyTheme, i, w) || revealedIn(i).includes(w)) return;   // a revealed theme word wasn't taken
       if ((ANA.get(sortStr(w)) || []).some((x) => x !== w && !isThemeWord(dailyTheme, i, x) && FREQ.has(x) && FREQ.get(x) < 10000)) fk++;
     }));
     return fk;
@@ -7902,7 +8000,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     loadDailyRivals();
 
     const totalMax = dailyMax();
-    const total = dailyWordsSoFar();
+    const total = dailyWordsSoFar(true);   // every step climbed moves the climber, revealed ones too
 
     const trail = $("#ascentTrailDone");
     const totalLen = trail.getTotalLength();
@@ -7926,7 +8024,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
         const words = i === round - 1 ? currentRoundWords : (roundWords[i] || []);
         words.forEach((w, k) => {
           at++;
-          if (!isThemeWord(dailyTheme, i, w)) return;
+          if (!isThemeWord(dailyTheme, i, w) || revealedIn(i).includes(w)) return;   // a revealed theme word wasn't found
           const q = pointAt((at - 0.85) / totalMax);
           const fresh = i === round - 1 && k === words.length - 1 && w === ascentFresh;
           const g = svgEl("g", { class: "af" + (fresh ? " fresh" : ""), transform: "translate(" + q.x.toFixed(1) + " " + q.y.toFixed(1) + ")" }, fl);
@@ -7971,7 +8069,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
   function climbSessionDone() {
     pauseDailyTimer();
     dailySessionActive = false;
-    const totalRungs = roundWords.reduce((a, w) => a + w.length, 0);
+    const totalRungs = roundWords.reduce((a, w, i) => a + scoredWords(w, revealedIn(i)).length, 0);
     if (mode === "daily") { submitDailyResult(totalRungs); return; }
     if (mode === "collection") { submitCollectionResult(); return; }
 
@@ -8484,8 +8582,14 @@ $1{ display: flex; gap: 8px; width: 100%; }
   function postDailyResult() {
     if (dailyPost && dailyPost.day === dailyDay) return dailyPost.p;
     const day = dailyDay;
-    const totalRungs = roundWords.reduce((a, w) => a + w.length, 0);
+    const totalRungs = roundWords.reduce((a, w, i) => a + scoredWords(w, revealedIn(i)).length, 0);   // revealed words score nothing
+    const reveals = revealed.flatMap((ws, i) => ws.map((w) => i + ":" + w));
+    const helped = hintUsed || reveals.length > 0;   // a reveal also takes away the no-hint badge
     const firstEver = !myDailyLastDay;
+    // Profile + trophies: today counts right away, before the network answers (final place comes tomorrow).
+    setTodayResult(Object.assign({ t: totalRungs, s: sessionStrikes, ms: solveMs, h: helped, at: Date.now() },
+      dailyTheme ? { m: dailyMax(), th: themeBonusSoFar(), tf: themeFound.slice(),
+        tp: dailyClimbs.map((_, i) => themeRevealFor(i, roundWords[i] || []).played), fk: newFormat(dailyTheme) ? forksTaken() : null } : {}));
     const p = (async () => {
       window.MatchDB.track("daily_finish", { rungs: totalRungs, strikes: sessionStrikes });
       saveDailyProgress({ finished: true });
@@ -8495,7 +8599,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
         await window.MatchDB.submitDaily(day, {
           name: storedName || playerName || "Player",
           total: totalRungs, strikes: sessionStrikes, solveMs: solveMs, roundWords: roundWords,
-          hintUsed: hintUsed,
+          hintUsed: helped, ...(reveals.length ? { reveals: reveals } : {}),
           ...(dailyTheme ? { themeWords: themeBonusSoFar(), max: dailyMax(), theme: dailyTheme.id, twv: 2 } : {}),
           ...(newFormat(dailyTheme) ? { climbMs: Array.from({ length: 3 }, (_, i) => Math.round(climbMs[i] || 0)) } : {}),
           ...(newFormat(dailyTheme) ? { forks: forksTaken() } : {}),
@@ -8507,10 +8611,6 @@ $1{ display: flex; gap: 8px; width: 100%; }
         if (pl) { myDailyStreak = pl.dailyStreak || 0; myDailyLastDay = pl.dailyLastDay || null; myPlayer = pl; }
         cacheProfile();
       } catch (e) {}
-      // Profile + trophies: today counts right away (final place comes tomorrow).
-      setTodayResult(Object.assign({ t: totalRungs, s: sessionStrikes, ms: solveMs, h: hintUsed, at: Date.now() },
-        dailyTheme ? { m: dailyMax(), th: themeBonusSoFar(), tf: themeFound.slice(),
-          tp: dailyClimbs.map((_, i) => themeRevealFor(i, roundWords[i] || []).played), fk: newFormat(dailyTheme) ? forksTaken() : null } : {}));
       if (ok) clearResume();   // posted: nothing left to resume (if it failed, a resume tries again)
     })();
     dailyPost = { day: day, p: p };
@@ -8530,9 +8630,14 @@ $1{ display: flex; gap: 8px; width: 100%; }
       if (totalRungs >= dailyMax() * 2 / 3) setTimeout(() => confetti({ big: totalRungs >= dailyMax() * 0.88 }), 350);
       return;
     }
-    await postDailyResult();
+    // Wait for the save, but never long: on a stalled connection the board opens anyway and the result keeps
+    // saving behind it (the live board adds it when it lands). If it never lands, the resume posts it next time.
+    const go = $("#btn-cre-next");
+    if (go) go.disabled = true;
+    const saved = await Promise.race([postDailyResult().then(() => true), new Promise((r) => setTimeout(() => r(false), 2500))]);
+    if (go) go.disabled = false;
     checkTrophies();
-    clearResume();
+    if (saved) clearResume();
     showDailyBoard(dailyDay, { live: true, justFinished: true });
     if (totalRungs >= dailyMax() * 2 / 3) setTimeout(() => confetti({ big: totalRungs >= dailyMax() * 0.88 }), 350);
   }
@@ -8766,7 +8871,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     }));
     const i = boardRouteClimb, ladder = boardTheme.climbs[i].c, playable = playableSteps(boardTheme, i);
     const me = done.find((e) => e.uid === myUid);
-    const runs = done.map((e) => (e.roundWords || [])[i] || []);
+    const runs = done.map((e) => { const rev = entrantReveals(e, i); return ((e.roundWords || [])[i] || []).map((w) => (rev.includes(w) ? null : w)); });
     const box = $("#routes-steps");
     box.replaceChildren(...ladder.map((rung, k) => {
       const counts = {}, who = {}; let reached = 0;
@@ -9449,14 +9554,15 @@ $1{ display: flex; gap: 8px; width: 100%; }
 
   // ===== The simple share: three peaks, filled or not, and your times =====
   // Every point in Climb i (reached the top and found every theme word), from a finished entry's words.
-  function climbPerfectFrom(t, i, words) {
+  function climbPerfectFrom(t, i, words, rev) {
+    if (rev && rev.length) return false;   // a revealed word scores nothing
     const ladder = (t && t.climbs[i] && t.climbs[i].c) || [];
     words = words || [];
     return ladder.length > 0 && words.length >= ladder.length && words.length + themeHits(t, i, words).length >= climbMaxPoints(t, i);
   }
   function shareModel() {
     const c = pcardCtx, me = c.me, t = c.theme;
-    const fills = [0, 1, 2].map((i) => climbPerfectFrom(t, i, (me.roundWords || [])[i]));
+    const fills = [0, 1, 2].map((i) => climbPerfectFrom(t, i, (me.roundWords || [])[i], entrantReveals(me, i)));
     const times = Array.isArray(me.climbMs) && me.climbMs.some((x) => x > 0) ? me.climbMs.map((x) => fmtDuration(x)) : null;
     const p = c.day.split("-").map(Number);
     const date = new Date(p[0], p[1] - 1, p[2], 12).toLocaleDateString(undefined, { month: "short", day: "numeric" });
@@ -9946,7 +10052,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
       tot.className = "lb-total";
       h.className = "h"; h.textContent = "Total";
       const words = e.roundWords || [];
-      const got = theme.climbs.reduce((a, _, i) => a + climbPoints(theme, i, words[i] || []), 0);
+      const got = theme.climbs.reduce((a, _, i) => a + climbPoints(theme, i, words[i] || [], entrantReveals(e, i)), 0);
       const max = theme.climbs.reduce((a, _, i) => a + climbMaxPoints(theme, i), 0);
       tot.append(h, pointsOutOf(got, max));
       d.appendChild(tot);
@@ -9954,7 +10060,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     else if (theme) d.appendChild(themeFlagStrip(theme, e.roundWords || []));
     const rounds = document.createElement("div");
     rounds.className = "rounds";
-    renderRoundsBlock(rounds, e.roundWords || [], theme);
+    renderRoundsBlock(rounds, e.roundWords || [], theme, (e.roundWords || []).map((_, i) => entrantReveals(e, i)));
     d.appendChild(rounds);
     row.after(d);
   }
@@ -10094,9 +10200,27 @@ $1{ display: flex; gap: 8px; width: 100%; }
   $("#btn-return").addEventListener("click", returnAll);
   $("#btn-shuffle").addEventListener("click", doShuffle);
   $("#btn-hint").addEventListener("click", useHint);
-  $("#btn-endround").addEventListener("click", () => { if (isClimb()) openForfeit(); else endRound(); });
+  $("#btn-endround").addEventListener("click", () => { if (mode === "daily") openRevealCheck(); else if (isClimb()) openForfeit(); else endRound(); });
+  // The same check card asks before Reveal word, unless this step is already revealed (putting the word back).
+  let ffReveal = false;
+  function openRevealCheck() {
+    if (locked || checking || screens.play.hidden) return;
+    if (revealAt && revealAt.r === round && revealAt.s === climbStage) { revealWord(); return; }
+    ffReveal = true;
+    $("#ff-title").textContent = "Reveal this word?";
+    $("#ff-body").textContent = "It won't score any points.";
+    const go = $("#btn-ff-go");
+    go.classList.add("rv");
+    go.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>' + "Reveal word";
+    $("#forfeit-confirm").hidden = false;
+    setTimeout(() => $("#btn-ff-keep").focus(), 50);
+  }
   function openForfeit() {
     if (locked || checking || screens.play.hidden) return;
+    ffReveal = false;
+    $("#ff-title").innerHTML = 'Forfeit this <span class="clb">Climb</span>?';
+    $("#btn-ff-go").classList.remove("rv");
+    $("#btn-ff-go").innerHTML = 'Forfeit <span class="clb">Climb</span>';
     const n = currentRoundWords.length;
     const body = $("#ff-body");
     body.replaceChildren();
@@ -10115,7 +10239,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
   }
   function closeForfeit() { $("#forfeit-confirm").hidden = true; }
   $("#btn-ff-keep").addEventListener("click", closeForfeit);
-  $("#btn-ff-go").addEventListener("click", () => { closeForfeit(); endRound(); });
+  $("#btn-ff-go").addEventListener("click", () => { closeForfeit(); if (ffReveal) revealWord(); else endRound(); });
   $("#forfeit-confirm").addEventListener("click", (e) => { if (e.target.id === "forfeit-confirm") closeForfeit(); });
   $("#btn-start").addEventListener("click", startSession);
 
@@ -10149,11 +10273,32 @@ $1{ display: flex; gap: 8px; width: 100%; }
     if (themeCardOpenAt && (e.key === "Enter" || e.key === "Escape")) { e.preventDefault(); closeThemeCard(); return; }
     if (!$("#forfeit-confirm").hidden) {
       if (e.key === "Escape" || (e.key === "Enter" && document.activeElement && document.activeElement.id !== "btn-ff-go")) { e.preventDefault(); closeForfeit(); }
-      if (e.key === "Enter" && document.activeElement && document.activeElement.id === "btn-ff-go") { e.preventDefault(); closeForfeit(); endRound(); }
+      if (e.key === "Enter" && document.activeElement && document.activeElement.id === "btn-ff-go") { e.preventDefault(); closeForfeit(); if (ffReveal) revealWord(); else endRound(); }
       return;
     }
+    // Playing with a keyboard: a letter goes up into your word, Backspace sends the last one back, Escape returns
+    // them all, Space shuffles (Enter submits, below).
+    if (!screens.play.hidden && !locked && !checking && !e.ctrlKey && !e.metaKey && !e.altKey &&
+        !(e.target && e.target.closest && e.target.closest("input, textarea, select, [contenteditable]")) && !anySheetOpen()) {
+      const k = e.key;
+      const act = (fn) => { e.preventDefault(); if (document.activeElement && document.activeElement.tagName === "BUTTON") document.activeElement.blur(); fn(); };
+      if (/^[a-z]$/i.test(k)) {
+        const cell = trayCells.find((c) => c.type === "letter" && tileMap[c.id].ch.toLowerCase() === k.toLowerCase());
+        if (cell && ans.indexOf(null) > -1) act(() => clickToAnswer(cell.id));
+        else { e.preventDefault(); FX.play("nope"); }
+        return;
+      }
+      if (k === "Backspace") {
+        let last = -1;
+        ans.forEach((id, i) => { if (id !== null) last = i; });
+        if (last > -1) act(() => toTrayHome(ans[last]));
+        return;
+      }
+      if (k === "Escape") { if (ans.some((id) => id !== null)) act(returnAll); return; }
+      if (k === " ") { act(doShuffle); return; }
+    }
     if (e.key !== "Enter") return;
-    if (!screens.play.hidden) { e.preventDefault(); submit(); }
+    if (!screens.play.hidden) { e.preventDefault(); if (document.activeElement && document.activeElement.tagName === "BUTTON" && document.activeElement.id !== "btn-enter") document.activeElement.blur(); submit(); }
     else if (!screens.roundend.hidden) { e.preventDefault(); roundEndContinue(); }
     else if (!screens.over.hidden) { e.preventDefault(); startSession(); }
     else if (!screens.climbintro.hidden && !$("#btn-climb-start").disabled) { e.preventDefault(); startClimb(); }
@@ -10378,7 +10523,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     // the drag itself) — except inside the few elements that scroll themselves.
     document.addEventListener("touchmove", (e) => {
       const t = e.target;
-      if (t && t.closest && t.closest(".lb-list, .lb-routes, .rt-pop, .collection-grid, .def, .patch-list, .pf-scroll")) return;
+      if (t && t.closest && t.closest(".lb-list, .lb-routes, .rt-pop, .collection-grid, .def, .patch-list, .pf-scroll, .ann-list")) return;
       const overCard = t && t.closest && t.closest(".wn, .hts-veil, #theme-card, #forfeit-confirm");
       if (!overCard && !document.documentElement.classList.contains("noscroll")) return;
       if (e.cancelable) e.preventDefault();
@@ -11202,6 +11347,15 @@ $1{ display: flex; gap: 8px; width: 100%; }
   // (sw.js caches other files cache-first, so a notes file could go stale).
   // Each release shows from its date on (the player's own day), so notes can ship ahead of the change they describe.
   const PATCH_NOTES = [
+    { v: "0.15.1", date: "2026-10-15", title: "Reveal word & Keyboard Integration",
+      notes: [
+        ["new", "Reveal word replaces Forfeit Climb. Stuck on a step? Tap it and the word unscrambles into place, then press Enter to keep climbing. A revealed word is worth no points, and it's marked on the leaderboard."],
+        ["new", "Play with a keyboard on a computer: type your letters, Backspace to take one back, Enter to climb."],
+        ["imp", "Shuffle keeps your letters together on the left."],
+        ["fix", "Your clock and your leaderboard time now match exactly."],
+        ["fix", "On a slow connection, See the leaderboard no longer seems to do nothing, and today shows on your profile right away."],
+        ["fix", "Announcements scroll on iPhone, and the sheet is a little smaller."],
+      ] },
     { v: "0.15.0", date: "2026-10-14", title: "Share your Climb",
       notes: [
         ["new", "Share your result. After the daily, tap Share in your row on the leaderboard, or Share today's Climb on the home screen. Friends get a link that shows your peaks, your time on each Climb and your total, and tapping it opens Daily Climb. Send as picture sends the picture itself."],
