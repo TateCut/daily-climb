@@ -1738,6 +1738,47 @@ $1{ display: flex; gap: 8px; width: 100%; }
   .lb-tabs[hidden] { display: none; }
   .lb-tabs button { height: 34px; border: 0; border-radius: 999px; background: none; color: var(--rd-ink); font: inherit; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
   .lb-tabs button.on { background: var(--rd-ink); color: var(--rd-bg); }
+  #daily-board-tabs button { display: flex; align-items: center; justify-content: center; gap: 7px; }
+  #daily-board-tabs button svg { width: 15px; height: 15px; flex: none; }
+  /* This week */
+  #screen-daily-board.week :is(#daily-board-tabs, #daily-board-sub, #daily-board-theme, #daily-board-sum, #daily-board-mtn, #daily-board-head, #daily-board-list, #daily-board-routes, #daily-board-foot, #btn-reminder, #btn-daily-board-flip) { display: none !important; }
+  .lb-week { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+  .lb-week[hidden] { display: none; }
+  .wk-step { display: grid; grid-template-columns: 36px 1fr 36px; align-items: center; text-align: center; }
+  .wk-arrow { width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--rd-ink); background: none; color: var(--rd-ink); font-size: 1.3rem; line-height: 1; cursor: pointer; }
+  .wk-arrow:disabled { opacity: 0.25; cursor: default; }
+  .wk-range b { font-weight: 700; font-size: 0.9rem; }
+  .wk-range small { display: block; font-size: 0.72rem; color: var(--rd-muted); font-weight: 600; }
+  .wk-final { display: inline-block; margin-left: 6px; background: var(--rd-ink); color: var(--rd-bg); font-size: 0.6rem; font-weight: 800; letter-spacing: 0.1em; padding: 2px 7px; border-radius: 999px; vertical-align: 2px; }
+  #wk-list .lb-rank, #wk-head .h-rank { min-width: 2.2rem; text-align: center; }
+  #wk-list .lb-row > .lb-name, #wk-head .h-name { flex: 1; min-width: 0; text-align: left; }
+  #wk-list .lb-days, #wk-head .h-days { min-width: 2.8rem; text-align: center; }
+  #wk-list .lb-score, #wk-head .h-score { min-width: 3rem; text-align: center; }
+  #wk-list { margin-top: -10px; }
+  .lb-days { display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-weight: 700; font-size: 0.86rem; }
+  .lb-days i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .lb-days i.done { background: var(--rd-climb); }
+  .lb-days i.wait { border: 1.5px solid var(--rd-muted); }
+  .wk-trophy { margin-left: 5px; display: inline-block; }
+  .wk-trophy.t2 { filter: grayscale(1) brightness(1.18) contrast(1.05); }   /* silver */
+  .wk-trophy.t3 { filter: sepia(1) saturate(3) hue-rotate(-28deg) brightness(0.7) contrast(1.2); }   /* bronze */
+  #wk-list .lb-row > .lb-name { display: flex; align-items: center; min-width: 0; }
+  #wk-list .lb-row > .lb-name > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #wk-list .wk-trophy { flex: none; }
+  #wk-list .lb-name .lb-share { margin-left: auto; margin-right: 4px; width: 26px; height: 26px; padding: 0; justify-content: center; }
+  #wk-list .lb-name .lb-share svg { width: 13px; height: 13px; }
+  .wk-detail { padding: 8px 4px 12px; border-bottom: 1px solid var(--rd-line); display: flex; flex-direction: column; gap: 4px; text-align: left; }
+  .wk-tot { display: flex; justify-content: flex-end; align-items: baseline; font-family: var(--slab); font-weight: 700; font-size: 1.05rem; margin-bottom: 2px; }
+  .wk-tot b { font-family: var(--franklin); font-size: 1.2rem; } .wk-tot b span { color: var(--rd-muted); font-weight: 600; font-size: 0.9rem; }
+  .wk-day { display: grid; grid-template-columns: 2.8rem 1fr 3.6rem 3.2rem 2.6rem; align-items: center; column-gap: 6px; font-size: 0.86rem; padding: 4px 0; }
+  .wk-day .d { font-weight: 800; } .wk-day .d small { display: block; font-weight: 600; color: var(--rd-muted); font-size: 0.66rem; }
+  .wk-day .th { color: var(--rd-muted); font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wk-day .p { text-align: right; font-weight: 800; } .wk-day .p span { color: var(--rd-muted); font-weight: 600; }
+  .wk-day .t { text-align: right; color: var(--rd-muted); font-variant-numeric: tabular-nums; } .wk-day .pl { text-align: right; font-weight: 700; font-size: 0.8rem; }
+  .wk-day.wait .p, .wk-day.wait .pl { color: var(--rd-muted); font-weight: 600; }
+  .wk-day.later { opacity: 0.4; }
+  .wk-day .wk-done { grid-column: 3 / 6; justify-self: end; display: inline-flex; align-items: center; gap: 5px; font-weight: 800; font-size: 0.8rem; color: var(--rd-climb); }
+  .wk-day .wk-done svg { width: 14px; height: 14px; flex: none; }
   .lb-tabs button:focus-visible, .lb-routes-pill:focus-visible { outline: 2px solid var(--rd-climb); outline-offset: 2px; }
   #screen-daily-board.routes :is(#daily-board-theme, #daily-board-sum, #daily-board-mtn, #daily-board-head, #daily-board-list, #daily-board-foot, #btn-reminder) { display: none !important; }
   .lb-routes { width: 100%; flex: none; overflow: visible; display: flex; flex-direction: column; gap: 12px; text-align: left; }
@@ -1864,6 +1905,38 @@ $1{ display: flex; gap: 8px; width: 100%; }
     border: 2px solid rgba(255, 255, 255, 0.95); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); opacity: 0; transition: left .7s cubic-bezier(.4,0,.2,1), top .7s cubic-bezier(.4,0,.2,1), opacity .3s, transform .15s; }
   .wn-fg.on { opacity: 1; }
   .wn-fg.down { transform: scale(.78); }
+  .wf-home { align-items: center; text-align: center; }
+  .wf-tb { align-self: stretch; display: flex; justify-content: space-between; align-items: center; font-size: 1.2rem; }
+  .wf-tb span:last-child { width: 30px; height: 30px; border-radius: 50%; border: 1.6px solid var(--hs-ink); display: grid; place-items: center; font-size: .8rem; font-weight: 700; }
+  .wf-home .hs-logo { width: 92px; margin: 4px 0 0; }
+  .wf-play { width: 210px; height: 46px; border-radius: 999px; background: var(--hs-btn); color: var(--hs-btn-ink); display: grid; place-items: center; font-weight: 700; font-size: 1.05rem; margin-top: 6px; }
+  .wf-pill { width: 210px; min-height: 50px; border-radius: 999px; border: 1.5px solid var(--hs-ink); display: flex; flex-direction: column; justify-content: center; transition: background .15s; }
+  .wf-pill b { font-weight: 600; font-size: .98rem; } .wf-pill small { font-size: .7rem; color: var(--hs-muted); }
+  .wf-k { margin-top: 8px; font-size: .62rem; font-weight: 800; letter-spacing: .16em; color: var(--hs-muted); } .wf-th { font-family: var(--slab); font-weight: 700; font-size: 1.6rem; line-height: 1; }
+  .wf-press { background: color-mix(in srgb, currentColor 10%, transparent) !important; }
+  .wf-wk { display: grid; grid-template-columns: 30px 1fr 30px; align-items: center; text-align: center; font-weight: 700; font-size: .84rem; }
+  .wf-wk i { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--rd-ink); display: grid; place-items: center; font-style: normal; font-size: .9rem; }
+  .wf-wk i.off { opacity: .25; }
+  .wf-fin { display: inline-block; margin-left: 5px; background: var(--rd-ink); color: var(--rd-bg); font-size: .55rem; font-weight: 800; letter-spacing: .1em; padding: 2px 6px; border-radius: 999px; vertical-align: 2px; transform: scale(0); transition: transform .3s cubic-bezier(.3,1.6,.5,1); }
+  .wf-fin.on { transform: none; }
+  .wf-hd { display: grid; grid-template-columns: 30px 1fr 42px 46px; padding: 0 4px 5px; font-size: .56rem; font-weight: 800; letter-spacing: .1em; color: var(--rd-muted); border-bottom: 1.5px solid var(--rd-ink); }
+  .wf-hd span:nth-child(n+3), .wf-hd span:first-child { text-align: center; }
+  .wf-list { position: relative; flex: 1; }
+  .wf-r { position: absolute; left: 0; right: 0; height: 36px; display: grid; grid-template-columns: 30px 1fr 42px 46px; align-items: center; padding: 0 4px; border-bottom: 1px solid var(--rd-line); transition: top .5s cubic-bezier(.3,.7,.3,1), background .2s, opacity .3s; font-size: .9rem; }
+  .wf-r .rk { text-align: center; color: var(--rd-muted); font-weight: 700; } .wf-r .nm { display: flex; align-items: center; gap: 5px; font-weight: 600; }
+  .wf-r .dy { display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-weight: 700; font-size: .84rem; }
+  .wf-r .dy i { width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--rd-muted); } .wf-r .dy i.done { background: var(--rd-climb); border-color: var(--rd-climb); }
+  .wf-r .pt { text-align: center; font-weight: 800; }
+  .wf-r.me { background: var(--rd-tint); border-radius: 8px; border-bottom-color: transparent; } .wf-r.me .rk { color: var(--rd-ink); }
+  .wf-plus { font-size: .7rem; font-weight: 800; color: var(--rd-climb); margin-left: 2px; opacity: 0; transition: opacity .3s; } .wf-plus.on { opacity: 1; }
+  .wf-tro { display: inline-block; transform: scale(0); transition: transform .35s cubic-bezier(.3,1.6,.5,1); } .wf-tro.on { transform: none; }
+  .wf-tro.t2 { filter: grayscale(1) brightness(1.18) contrast(1.05); } .wf-tro.t3 { filter: sepia(1) saturate(3) hue-rotate(-28deg) brightness(.7) contrast(1.2); }
+  .wf-det { position: absolute; left: 0; right: 0; overflow: hidden; height: 0; transition: height .45s cubic-bezier(.3,.7,.3,1); border-bottom: 1px solid var(--rd-line); }
+  .wf-dl { display: grid; grid-template-columns: 40px 1fr 48px 40px; align-items: center; padding: 3px 6px; font-size: .74rem; }
+  .wf-dl b { font-weight: 800; } .wf-dl small { display: block; color: var(--rd-muted); font-weight: 600; font-size: .58rem; }
+  .wf-dl .th { color: var(--rd-muted); } .wf-dl .p { text-align: right; font-weight: 800; } .wf-dl .p span { color: var(--rd-muted); font-weight: 600; } .wf-dl .pl { text-align: right; font-weight: 700; font-size: .7rem; }
+  .wf-dl.later { opacity: .4; }
+  .wf-tot { text-align: right; font-weight: 800; font-size: 1rem; padding: 6px 6px 2px; } .wf-tot span { color: var(--rd-muted); font-weight: 600; font-size: .8rem; }
   .wn-beats { display: flex; gap: 6px; }
   .wn-beats i { width: 22px; height: 4px; border-radius: 4px; background: color-mix(in srgb, var(--hs-ink) 22%, transparent); transition: background .3s; }
   .wn-beats i.on { background: var(--hs-ink); }
@@ -2003,10 +2076,12 @@ $1{ display: flex; gap: 8px; width: 100%; }
   .hs-title { margin: 12px 0 0; font-family: var(--slab); font-weight: 700; font-size: 2.85rem; letter-spacing: -0.02em; line-height: 1; white-space: nowrap; }
   .hs-tag { margin: 10px 0 0; font-family: var(--slab); font-weight: 400; font-size: 1.4rem; line-height: 1.25; max-width: 13.5em; text-wrap: balance; }
   #screen-home .home-play { margin-top: 26px; width: auto; }
-  #screen-home .home-play button.primary { width: auto; min-width: 214px; white-space: nowrap; padding: 14px 24px; border-radius: 999px; font-size: 1.05rem; font-weight: 600; background: var(--hs-btn); color: var(--hs-btn-ink); box-shadow: none; }
-  .hs-share { margin-top: 12px; width: 214px; height: 44px; border-radius: 999px; border: 1.5px solid var(--hs-ink); background: none; color: var(--hs-ink);
+  #screen-home .home-play button.primary { width: auto; min-width: 214px; min-height: 50px; white-space: nowrap; padding: 14px 24px; border-radius: 999px; font-size: 1.05rem; font-weight: 600; background: var(--hs-btn); color: var(--hs-btn-ink); box-shadow: none; }
+  .hs-share { margin-top: 12px; width: 214px; height: 50px; border-radius: 999px; border: 1.5px solid var(--hs-ink); background: none; color: var(--hs-ink);
     font: 600 0.95rem var(--franklin); display: flex; align-items: center; justify-content: center; gap: 7px; cursor: pointer; }
   .hs-share[hidden] { display: none; }
+  .hs-week { margin-top: 12px; border: 0; background: none; color: var(--hs-ink); font: 700 0.92rem var(--franklin); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 4px 8px; }
+  .hs-week[hidden] { display: none; }
   .hs-share svg { width: 15px; height: 15px; }
   .hs-share .clb { color: var(--hs-climb); }
   .hs-adv { margin-top: 12px; width: 214px; min-height: 50px; border-radius: 999px; border: 1.5px solid var(--hs-ink); background: none; color: var(--hs-ink);
@@ -2419,6 +2494,12 @@ $1{ display: flex; gap: 8px; width: 100%; }
         <button class="primary" id="btn-daily-play" type="button">Play</button>
         <p class="note" id="daily-meta" hidden></p>
       </div>
+      <button class="shelfrow hs-adv" id="btn-home-week" type="button" hidden>
+        <span class="shelfrow-txt">
+          <b>Weekly Leaderboard</b>
+          <span id="home-week-place" hidden></span>
+        </span>
+      </button>
       <button class="hs-share" id="btn-home-share" type="button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.7l7.4-4.3M8.3 13.3l7.4 4.3"/></svg><span>Share today's <span class="clb">Climb</span></span></button>
       <button class="shelfrow" id="btn-daily-compact" type="button" hidden>
         <span class="shelfrow-icon" aria-hidden="true">
@@ -2598,8 +2679,11 @@ $1{ display: flex; gap: 8px; width: 100%; }
     <!-- DAILY CLIMB: leaderboard -->
     <section id="screen-daily-board" hidden>
       <div class="scr-head"><button class="backpill" id="btn-daily-board-home" type="button"><span class="bp-ch" aria-hidden="true">&lsaquo;</span>Home</button><h2 class="scr-ttl" id="daily-board-title">Daily Climb</h2><span class="dailycard-streak" id="daily-board-streak" hidden></span></div>
+      <div class="lb-tabs" id="daily-board-scope" role="tablist" aria-label="Today or this week" hidden>
+        <button type="button" role="tab" data-scope="day" class="on">Today</button><button type="button" role="tab" data-scope="week">This week</button>
+      </div>
       <div class="lb-tabs" id="daily-board-tabs" role="tablist" aria-label="Leaderboard view" hidden>
-        <button type="button" role="tab" data-tab="standings">Standings</button><button type="button" role="tab" data-tab="routes">Routes</button>
+        <button type="button" role="tab" data-tab="standings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round" aria-hidden="true"><path d="M9 21V9h6v12M3 21v-7h6M15 21v-5h6v5M2 21h20"/></svg><span>Standings</span></button><button type="button" role="tab" data-tab="routes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="19" r="2"/><circle cx="19" cy="5" r="2"/><path d="M7 19h6a3 3 0 0 0 0-6h-2a3 3 0 0 1 0-6h6" stroke-dasharray="2.5 2.5"/></svg><span>Routes</span></button>
       </div>
       <p class="note" id="daily-board-sub"></p>
       <div class="lb-theme" id="daily-board-theme" hidden><div class="lb-theme-k">Theme</div><div class="lb-theme-n" id="daily-board-theme-name"></div></div>
@@ -2610,6 +2694,15 @@ $1{ display: flex; gap: 8px; width: 100%; }
       <div class="lb-routes" id="daily-board-routes" hidden>
         <div class="lb-routes-climbs" id="routes-climbs"></div>
         <div class="lb-routes-steps" id="routes-steps"></div>
+      </div>
+      <div class="lb-week" id="daily-board-week" hidden>
+        <div class="wk-step">
+          <button class="wk-arrow" id="wk-prev" type="button" aria-label="Previous week">&lsaquo;</button>
+          <div class="wk-range"><b id="wk-range"></b><span class="wk-final" id="wk-final" hidden>FINAL</span></div>
+          <button class="wk-arrow" id="wk-next" type="button" aria-label="Next week">&rsaquo;</button>
+        </div>
+        <div class="lb-head" id="wk-head"><span class="h-rank">Rank</span><span class="h-name">Player</span><span class="h-days">Days</span><span class="h-score">Points</span><span class="h-time">Time</span></div>
+        <div class="lb-list" id="wk-list"></div>
       </div>
       <p class="note" id="daily-board-foot"></p>
       <button class="reminder-cta" id="btn-reminder" type="button" hidden></button>
@@ -3263,7 +3356,23 @@ $1{ display: flex; gap: 8px; width: 100%; }
         e.total = Math.max(3, info.max - Math.floor(r() * r() * 9));
       }
       return e;
+    }).filter(function (e, i) {
+      // like real players: everyone misses a day now and then (some more than others), and today each one plays at
+      // their own time of day (6am to midnight), so some haven't played yet
+      var base = String(day).slice(0, 10);
+      if (seeded(base + "|" + i)() < [0.05, 0.1, 0.15, 0.22, 0.3, 0.45][i % 6]) return false;
+      if (base === fakeToday()) {
+        var at = 6 + 18 * seeded("today|" + i)(), h = new Date().getHours() + new Date().getMinutes() / 60;
+        if (h < at) return false;
+      }
+      return true;
     });
+  }
+  function fakeToday() {
+    var d = null; try { d = sessionStorage.getItem("three21.devDay"); } catch (x) {}
+    if (d) return d;
+    var t = new Date();
+    return t.getFullYear() + "-" + String(t.getMonth() + 1).padStart(2, "0") + "-" + String(t.getDate()).padStart(2, "0");
   }
   function mine(day) { var d = db.dailies[day]; return d ? copy(d) : null; }
 
@@ -4958,6 +5067,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
   const LOCKED_SCREENS = new Set(["play", "loading"]);
   function show(name) {
     if (updateWaiting && !BUSY_SCREENS.has(name)) setTimeout(applyUpdateWhenCalm, 300);
+    if (name !== "climbroundend") { try { creStop(); } catch (e) {} }   // a summit moment still to come stays on its own screen (try: show can run before it exists)
     hideChipPopover(); // never leave a word definition floating over the next screen
     if (!$("#rt-pop").hidden) hideRoutePop(); // ...or a Routes "who played it" pop-up
     hideInstallSheet(); // ...or the Add to Home Screen how-to
@@ -7688,9 +7798,19 @@ $1{ display: flex; gap: 8px; width: 100%; }
       if (banner) banner.classList.add("on");
       return;
     }
-    setTimeout(() => grow.forEach((a) => a.beginElement()), walk + 150);
-    setTimeout(() => { FX.play("summit"); buzz([18, 60, 18]); creConfetti("ribbon", fresh); }, walk + 1200);
-    if (day) setTimeout(() => { FX.play("perfectday"); buzz([30, 50, 30, 50, 60]); if (banner) banner.classList.add("on"); creConfetti("rain"); }, walk + 1900);
+    creLater(() => grow.forEach((a) => a.beginElement()), walk + 150);
+    creLater(() => { FX.play("summit"); buzz([18, 60, 18]); creConfetti("ribbon", fresh); }, walk + 1200);
+    if (day) creLater(() => { FX.play("perfectday"); buzz([30, 50, 30, 50, 60]); if (banner) banner.classList.add("on"); creConfetti("rain"); }, walk + 1900);
+  }
+  // The summit moment's timers, so leaving the screen early (a quick Keep Climbing) cancels what hasn't happened yet.
+  let creTimers = [];
+  const creLater = (fn, ms) => { creTimers.push(setTimeout(fn, ms)); };
+  function creStop() {
+    if (!creTimers.length && !creParts.length) return;
+    creTimers.forEach(clearTimeout); creTimers = [];
+    creParts = [];
+    if (creLoop) { cancelAnimationFrame(creLoop); creLoop = 0; }
+    const cv = document.getElementById("cre-fx"); if (cv) cv.remove();
   }
   // The climber walks leg i: from the last summit (or the start) to the newest one, the trail's dots appearing behind
   // them, and slipping behind a peak where the trail goes round the back. Returns the ms until they arrive.
@@ -8415,7 +8535,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
   // Before the first word of a session: the How to play card for a new player,
   // otherwise today's theme card (once a day).
   function startIntro() {
-    if (!tutorialSeen) { markWhatsNewSeen(); openHowto(true); return; }   // new players find Routes on their own board
+    if (!tutorialSeen) { markWhatsNewSeen(); markWeekFilmSeen(); openHowto(true); return; }   // new players find Routes (and the weekly board) on their own
     if (mode === "daily" && newRules(dailyTheme) && !themeCardShown(dailyDay)) openThemeCard();
   }
   // ---- What's new: Routes ----
@@ -8427,10 +8547,18 @@ $1{ display: flex; gap: 8px; width: 100%; }
   let wnTok = 0;
   function markWhatsNewSeen() { try { localStorage.setItem(WN_KEY, "1"); } catch (e) {} }
   function whatsNewSeen() { try { return localStorage.getItem(WN_KEY) === "1"; } catch (e) { return true; } }
+  // The weekly leaderboard's intro: once, from its announcement's date.
+  const WK_KEY = "dc.new.week";
+  const WK_CAPS = ["Find it on the home screen, right under Play", "Your daily points add up, Monday to Sunday", "Tap anyone to see their week", "When the week ends, the top three earn a trophy"];
+  function markWeekFilmSeen() { try { localStorage.setItem(WK_KEY, "1"); } catch (e) {} }
+  function weekFilmSeen() { try { return localStorage.getItem(WK_KEY) === "1"; } catch (e) { return true; } }
+  const weekFilmDue = () => annList().some((a) => a.replay === "week") && !weekFilmSeen();
+  let wnKind = "routes";
   function maybeWhatsNew() {
-    if (whatsNewSeen() || !tutorialSeen || updateWaiting || screens.home.hidden) return;
+    if (!tutorialSeen || updateWaiting || screens.home.hidden) return;
     if (!$("#howto-card").hidden || !$("#trophy-pop").hidden || anySheetOpen()) return;
-    openWhatsNew();
+    if (!whatsNewSeen()) openWhatsNew();
+    else if (weekFilmDue()) openWhatsNew("week");
   }
   function wnFilm() {
     const steps = [[["hear", 58], ["hare", 42, "you"], ["rhea", 0]], [["heart", 67, "you"], ["earth", 33], ["hater", 0]],
@@ -8451,10 +8579,13 @@ $1{ display: flex; gap: 8px; width: 100%; }
       '</div><div class="wn-pop"><b>RATCHET · 7 PLAYERS</b>' + who.map(([r, n, me]) => "<div" + (me ? ' class="me"' : "") + "><em>" + r + "</em>" + n + "</div>").join("") + "</div></div>" +
       '<div class="wn-fg"></div>';
   }
-  function openWhatsNew() {
-    markWhatsNewSeen();
+  function openWhatsNew(kind) {
+    wnKind = kind === "week" ? "week" : "routes";
+    if (wnKind === "week") markWeekFilmSeen(); else markWhatsNewSeen();
+    $("#wn-title").textContent = wnKind === "week" ? "Weekly Leaderboard" : "Meet Routes";
     const film = $("#wn-film");
-    film.innerHTML = wnFilm();
+    film.innerHTML = wnKind === "week" ? wkFilm() : wnFilm();
+    renderMenuDot();
     const box = $("#whatsnew");
     box.hidden = false;
     box.classList.remove("in"); void box.offsetWidth; box.classList.add("in");
@@ -8467,7 +8598,76 @@ $1{ display: flex; gap: 8px; width: 100%; }
     $("#whatsnew").hidden = true;
     $("#wn-film").replaceChildren();
   }
+  // The week film: Home -> the weekly board -> a player's week -> last week, FINAL, trophies. Made-up players.
+  const WF_THIS = [["Nova", 74, 4, 1], ["Lark", 70, 4, 1], ["Marco", 61, 3, 0], ["Otis", 58, 4, 1], ["You", 52, 3, 0, 1], ["Bea", 41, 3, 1], ["Theo", 33, 2, 0], ["Wren", 30, 2, 1]];
+  const WF_LAST = [["Wren", 118, 7], ["Nova", 112, 7], ["You", 109, 6, 0, 1], ["Lark", 104, 7], ["Marco", 99, 6], ["Otis", 95, 7], ["Bea", 80, 5], ["Theo", 71, 5]];
+  const WF_NOVA = [["Mon", "Space", 19, 21, "1st"], ["Tue", "Garden", 18, 19, "2nd"], ["Wed", "Music", 18, 20, "1st"], ["Thu", "Weather", 19, 21, "2nd"], ["Fri"], ["Sat"], ["Sun"]];
+  const WF_RH = 36;
+  function wkFilm() {
+    return '<div class="wn-sc wn-home wf-home"><div class="wf-tb"><span>&#9776;</span><span>' + (String(storedName || playerName || "").replace(/[^A-Za-z0-9]/g, "").charAt(0).toUpperCase() || "Y") + "</span></div>" + $(".hs-logo").outerHTML +
+      '<div class="wn-ttl">Daily <span class="clb">Climb</span></div><div class="wn-tag"><span class="clb">Climb</span> one word at a time. On-theme words score extra.</div>' +
+      '<div class="wf-play">Play</div><div class="wf-pill" data-wf="pill"><b>Weekly Leaderboard</b><small>You\x27re 5th</small></div>' +
+      '<div class="wf-pill"><b>Adventure Mode</b><small>Can you beat every <span class="clb">Climb</span>?</small></div><div class="wf-k">TODAY\x27S THEME</div><div class="wf-th">Weather</div></div>' +
+      '<div class="wn-sc wn-board off"><div class="wn-bh"><span>&lsaquo; Home</span><b>Leaderboard</b><span></span></div>' +
+      '<div class="wf-wk"><i data-wf="prev">&lsaquo;</i><span><span data-wf="range">This week</span><span class="wf-fin">FINAL</span></span><i class="off">&rsaquo;</i></div>' +
+      '<div class="wf-hd"><span>RANK</span><span>PLAYER</span><span>DAYS</span><span>POINTS</span></div><div class="wf-list"></div></div><div class="wn-fg"></div>';
+  }
+  function wkRows(film, data, final) {
+    film.querySelector(".wf-list").innerHTML = data.map((p, i) => '<div class="wf-r' + (p[4] ? " me" : "") + '" data-n="' + p[0] + '" style="top:' + i * WF_RH + 'px"><span class="rk">' + (i + 1) + '</span><span class="nm">' + p[0] +
+      (final && i < 3 ? '<span class="wf-tro' + (i ? " t" + (i + 1) : "") + '">🏆</span>' : "") + '</span><span class="dy">' + p[2] + (final ? "" : '<i class="' + (p[3] ? "done" : "") + '"></i>') +
+      '</span><span class="pt"><span class="v">' + p[1] + '</span><span class="wf-plus"></span></span></div>').join("") + '<div class="wf-det"></div>';
+  }
+  async function runWeekFilm(tok) {
+    const S = (ms) => new Promise((ok, no) => setTimeout(() => (tok === wnTok ? ok() : no(0)), ms));
+    const film = $("#wn-film"), cap = $("#wn-cap"), beats = [...document.querySelectorAll("#whatsnew .wn-beats i")];
+    const md = (k) => shortDay(k, { month: "short", day: "numeric" }), mon = weekStartOf(dailyKeyOf()), lastMon = shiftDayKey(mon, -7);
+    const range = (k) => md(k) + " – " + md(shiftDayKey(k, 6));
+    const at = (el) => { const fg = film.querySelector(".wn-fg"); let x = 0, y = 0, n = el; while (n && n !== film) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; } fg.style.left = x + el.offsetWidth / 2 + "px"; fg.style.top = y + el.offsetHeight / 2 + "px"; };
+    const tap = async (el) => { const fg = film.querySelector(".wn-fg"); fg.classList.add("down"); if (el) el.classList.add("wf-press"); await S(240); fg.classList.remove("down"); if (el) el.classList.remove("wf-press"); };
+    const say = async (i) => { cap.classList.add("fade"); await S(220); cap.innerHTML = "<span>" + WK_CAPS[i] + "</span>"; beats.forEach((b, j) => b.classList.toggle("on", j <= i)); cap.classList.remove("fade"); };
+    const row = (nm) => film.querySelector('.wf-r[data-n="' + nm + '"]');
+    for (;;) {
+      film.innerHTML = wkFilm(); wkRows(film, WF_THIS, false);
+      const fg = film.querySelector(".wn-fg"), board = film.querySelector(".wn-board");
+      film.querySelector('[data-wf="range"]').textContent = range(mon);
+      // 1: Home -> the weekly board
+      await say(0); await S(700);
+      fg.classList.add("on"); at(film.querySelector('[data-wf="pill"]')); await S(900); await tap(film.querySelector('[data-wf="pill"]')); await S(120);
+      board.classList.remove("off"); fg.classList.remove("on"); await S(1200);
+      // 2: your points land, you climb from 5th to 3rd
+      await say(1); await S(600);
+      const me = row("You"), plus = me.querySelector(".wf-plus");
+      plus.textContent = "+14"; plus.classList.add("on");
+      me.querySelector(".dy").firstChild.textContent = "4"; me.querySelector(".dy i").classList.add("done");
+      await S(700);
+      me.querySelector(".v").textContent = "66"; plus.classList.remove("on");
+      const order = ["Nova", "Lark", "You", "Marco", "Otis", "Bea", "Theo", "Wren"];
+      order.forEach((nm, i) => { const r = row(nm); r.style.top = i * WF_RH + "px"; r.querySelector(".rk").textContent = i + 1; });
+      await S(2400);
+      // 3: tap the leader, their week opens
+      await say(2);
+      const nova = row("Nova"); fg.classList.add("on"); at(nova); await S(900); await tap(nova);
+      const det = film.querySelector(".wf-det");
+      det.innerHTML = '<div class="wf-tot">74<span>/81</span></div>' + WF_NOVA.map((d, i) => d[1]
+        ? '<div class="wf-dl"><span><b>' + d[0] + "</b><small>" + md(shiftDayKey(mon, i)) + '</small></span><span class="th">' + d[1] + '</span><span class="p">' + d[2] + "<span>/" + d[3] + '</span></span><span class="pl">' + d[4] + "</span></div>"
+        : '<div class="wf-dl later"><span><b>' + d[0] + "</b><small>" + md(shiftDayKey(mon, i)) + '</small></span><span></span><span class="p">–</span><span></span></div>').join("");
+      const h = 30 + WF_NOVA.length * 27;
+      det.style.top = WF_RH + "px"; det.style.height = h + "px";
+      order.slice(1).forEach((nm, i) => { row(nm).style.top = (i + 1) * WF_RH + h + "px"; });
+      await S(500); fg.classList.remove("on"); await S(2600);
+      // 4: last week, FINAL, trophies
+      await say(3);
+      det.style.height = "0px"; order.slice(1).forEach((nm, i) => { row(nm).style.top = (i + 1) * WF_RH + "px"; });
+      const prev = film.querySelector('[data-wf="prev"]'); fg.classList.add("on"); at(prev); await S(900); await tap(prev);
+      film.querySelectorAll(".wf-r").forEach((r) => (r.style.opacity = "0")); await S(260);
+      film.querySelector('[data-wf="range"]').textContent = range(lastMon); wkRows(film, WF_LAST, true);
+      film.querySelector(".wf-fin").classList.add("on"); fg.classList.remove("on"); await S(450);
+      for (const t of film.querySelectorAll(".wf-tro")) { t.classList.add("on"); await S(260); }
+      await S(2600);
+    }
+  }
   async function runWhatsNew(tok) {
+    if (wnKind === "week") return runWeekFilm(tok);
     const S = (ms) => new Promise((ok, no) => setTimeout(() => (tok === wnTok ? ok() : no(0)), ms));
     const film = $("#wn-film"), board = film.querySelector(".wn-board"), fg = film.querySelector(".wn-fg"), cap = $("#wn-cap");
     const beats = [...document.querySelectorAll("#whatsnew .wn-beats i")], pop = film.querySelector(".wn-pop");
@@ -8492,7 +8692,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     }
   }
   $("#btn-wn-done").addEventListener("click", closeWhatsNew);
-  window.DC_showWhatsNew = () => { if (screens.home.hidden) goHome(); setTimeout(openWhatsNew, 300); };   // beta: see it again
+  window.DC_showWhatsNew = (kind) => { if (screens.home.hidden) goHome(); setTimeout(() => openWhatsNew(kind), 300); };   // beta: see it again ("week" for the weekly one)
   $("#btn-howto-go").addEventListener("click", () => { if (howtoStep < 2) showHowtoStep(howtoStep + 1); else closeHowto(); });
   $("#btn-howto-back").addEventListener("click", () => showHowtoStep(howtoStep - 1));
   $("#btn-howto-x").addEventListener("click", closeHowto);
@@ -8815,6 +9015,232 @@ $1{ display: flex; gap: 8px; width: 100%; }
   let routesData = null;      // { done, myUid } from the board's last render
   let boardRouteClimb = 0;    // which Climb the routes view shows
   let routeOpen = null;       // "step|word" whose players are showing in the pop-up
+  // ---- This week: Monday to Sunday added up (each player's own Monday midnight); most points, then least time ----
+  let boardScope = "day", weekStart = null, weekTok = 0;
+  const weekCache = {};   // finished days' boards (a day older than yesterday doesn't change)
+  // The Monday of the week a day key falls in (same salt).
+  function weekStartOf(key) {
+    const p = dayBase(key).split("-");
+    const back = (new Date(+p[0], +p[1] - 1, +p[2], 12).getDay() + 6) % 7;
+    return shiftDayKey(key, -back);
+  }
+  // Weeks count from the 6-7-8 format's first day; earlier days never count, and the first week is as far back as it goes.
+  const WEEK_FROM = FORMAT_DAY;
+  const weekCounts = (k) => dayBase(k) >= WEEK_FROM;
+  const weekBoardFrom = (k) => (weekCounts(k) ? weekBoard(k) : Promise.resolve([]));
+  const firstWeek = (mon) => dayBase(mon) <= dayBase(weekStartOf(WEEK_FROM));
+  const shortDay = (key, opts) => { const p = dayBase(key).split("-"); return new Date(+p[0], +p[1] - 1, +p[2], 12).toLocaleDateString(undefined, opts || { weekday: "short", month: "short", day: "numeric" }); };
+  // A week is final once its Sunday's daily is over everywhere: midnight at UTC-12, Monday 12:00 UTC.
+  function weekIsFinal(sundayKey) {
+    const p = dayBase(sundayKey).split("-");
+    return Date.now() >= Date.UTC(+p[0], +p[1] - 1, +p[2] + 1, 12);
+  }
+  // The most points a day could score (old days: words).
+  function dayMaxPoints(key) {
+    const t = themedDay(key);
+    if (t && newRules(t)) return t.climbs.reduce((a, _, i) => a + climbMaxPoints(t, i), 0);
+    return dayMaxFor(key);
+  }
+  async function weekBoard(key) {
+    if (weekCache[key]) return weekCache[key];
+    let list = null;
+    try { list = await window.MatchDB.getDailyBoard(key); } catch (e) {}
+    list = list || [];
+    if (dayBase(key) < dayBase(shiftDayKey(dailyKeyOf(), -1))) weekCache[key] = list;
+    return list;
+  }
+  // From Home before today's daily is done: the weekly board alone (no Today | This week switch).
+  function showWeekBoard() {
+    teardownDailyWatch();
+    boardBack = null;
+    $("#btn-daily-board-home").lastChild.textContent = "Home";
+    $("#daily-board-title").textContent = "Leaderboard";
+    const pill = $("#daily-board-streak"), today = dailyKeyOf(), yst = shiftDayKey(today, -1);
+    if (pill) {
+      const alive = myDailyStreak > 0 && (myDailyLastDay === today || myDailyLastDay === yst);
+      pill.textContent = alive ? myDailyStreak + " day" + (myDailyStreak === 1 ? "" : "s") + " 🔥" : "";
+      pill.hidden = !alive;
+    }
+    $("#daily-board-scope").hidden = true;
+    $("#daily-board-tabs").hidden = true;
+    show("dailyboard");
+    setBoardScope("week");
+  }
+  // Home's Weekly Leaderboard pill: your place this week underneath (through yesterday until you've played today).
+  let homeWeekAt = 0, homeWeekKey = "";
+  async function updateHomeWeekPlace() {
+    const el = $("#home-week-place");
+    if (!el || !dbReady() || !window.MatchDB) return;
+    try {
+      const today = dailyKeyOf(), hide = todayHidden(), key = today + (hide ? "h" : "p");
+      if (key === homeWeekKey && Date.now() - homeWeekAt < 60000) return;   // at most once a minute (and again once you've played)
+      homeWeekKey = key; homeWeekAt = Date.now();
+      const keys = [];
+      for (let k = weekStartOf(today); dayBase(k) <= dayBase(today); k = shiftDayKey(k, 1)) if (!(hide && k === today)) keys.push(k);
+      const boards = await Promise.all(keys.map(weekBoardFrom));
+      const pts = new Map(), ms = new Map();
+      keys.forEach((k, i) => {
+        const t = themedDay(k);
+        (boards[i] || []).forEach((e) => {
+          if (!e.uid) return;
+          e = rescoreEntrant(e, t);
+          pts.set(e.uid, (pts.get(e.uid) || 0) + scoreForDay(k, e));
+          ms.set(e.uid, (ms.get(e.uid) || 0) + (e.solveMs || 0));
+        });
+      });
+      const me = window.MatchDB.uid;
+      if (!pts.has(me)) { el.hidden = true; return; }
+      const order = [...pts.keys()].sort((a, b) => (pts.get(b) - pts.get(a)) || (ms.get(a) - ms.get(b)));
+      el.textContent = "You're " + ordinal(order.indexOf(me) + 1);
+      el.hidden = false;
+    } catch (e) {}
+  }
+  // Today's results stay hidden on the weekly board until you've finished today's daily (no spoilers).
+  const todayHidden = () => myDailyLastDay !== dailyKeyOf();
+  function setBoardScope(scope) {
+    boardScope = scope;
+    $("#screen-daily-board").classList.toggle("week", scope === "week");
+    $("#daily-board-week").hidden = scope !== "week";
+    $("#daily-board-scope").querySelectorAll("button").forEach((b) => {
+      const on = b.dataset.scope === scope;
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-selected", String(on));
+    });
+    if (scope === "week") {
+      const today = dailyKeyOf();
+      weekStart = weekStartOf(today);
+      if (todayHidden() && weekStart === today && !firstWeek(weekStart)) weekStart = shiftDayKey(weekStart, -7);   // a Monday before playing: last week
+      renderWeek();
+    }
+  }
+  async function renderWeek() {
+    const tok = ++weekTok, start = weekStart, today = dailyKeyOf(), thisMonday = weekStartOf(today);
+    const days = [0, 1, 2, 3, 4, 5, 6].map((i) => shiftDayKey(start, i));
+    const thisWeek = start === thisMonday;
+    $("#wk-range").textContent = shortDay(days[0]) + " – " + shortDay(days[6]);
+    $("#wk-next").disabled = thisWeek;
+    $("#wk-prev").disabled = firstWeek(start);
+    $("#wk-prev").style.visibility = firstWeek(start) ? "hidden" : "";
+    const final = !thisWeek && weekIsFinal(days[6]);
+    $("#wk-final").hidden = !final;
+    $("#wk-head").hidden = true;
+    const list = $("#wk-list");
+    list.innerHTML = "<p class='note'>Loading…</p>";
+    const upTo = days.filter((k) => dayBase(k) <= dayBase(today));
+    if (!dbReady()) { list.innerHTML = "<p class='note'>Couldn't load the week.</p>"; return; }
+    const boards = await Promise.all(upTo.map(weekBoardFrom));
+    if (tok !== weekTok || boardScope !== "week") return;
+    const hide = thisWeek && todayHidden();   // today's points, times and places wait until you've played
+    const playedToday = new Map();   // uid -> name: who has played today (shown, nothing else)
+    if (hide) {
+      const ti0 = upTo.indexOf(today);
+      if (ti0 >= 0) { (boards[ti0] || []).forEach((e) => { if (e.uid) playedToday.set(e.uid, e.name || ""); }); boards[ti0] = []; }
+    }
+    const by = new Map();
+    upTo.forEach((k, di) => {
+      const t = themedDay(k);
+      const done = (boards[di] || []).map((e) => rescoreEntrant(e, t)).sort(cmpForDay(k));
+      done.forEach((e, idx) => {
+        if (!e.uid) return;
+        const p = by.get(e.uid) || { uid: e.uid, name: e.name, pts: 0, ms: 0, days: [] };
+        if (e.name) p.name = e.name;
+        const pts = scoreForDay(k, e);
+        p.pts += pts; p.ms += e.solveMs || 0;
+        p.days[di] = { pts: pts, ms: e.solveMs || 0, place: idx + 1, e: e };
+        by.set(e.uid, p);
+      });
+    });
+    playedToday.forEach((name, uid) => { if (!by.has(uid)) by.set(uid, { uid: uid, name: name, pts: 0, ms: 0, days: [] }); });
+    const rows = [...by.values()].sort((a, b) => (b.pts - a.pts) || (a.ms - b.ms));
+    const myUid = window.MatchDB && window.MatchDB.uid;
+    list.innerHTML = "";
+    $("#wk-head").hidden = !rows.length;
+    if (!rows.length) { list.innerHTML = "<p class='note'>No one's played this week yet.</p>"; return; }
+    const ti = days.indexOf(today);
+    rows.forEach((r, i) => {
+      const row = document.createElement("div");
+      row.className = "lb-row" + (r.uid === myUid ? " me" : "");
+      const played = r.days.filter(Boolean).length;
+      row.innerHTML = '<div class="lb-rank"></div><div class="lb-name"></div><div class="lb-days"></div><div class="lb-score"></div><div class="lb-time"></div>';
+      row.querySelector(".lb-rank").textContent = i + 1;
+      const nm = row.querySelector(".lb-name");
+      const label = document.createElement("span");
+      label.textContent = shownName(r.name) + (r.uid === myUid ? " (you)" : "");
+      nm.appendChild(label);
+      if (final && i < 3) { const tr = document.createElement("span"); tr.className = "wk-trophy t" + (i + 1); tr.textContent = "🏆"; tr.setAttribute("aria-label", ["Gold", "Silver", "Bronze"][i] + " trophy"); nm.appendChild(tr); }
+      if (final && r.uid === myUid && played) {
+        const pill = document.createElement("button");
+        pill.type = "button"; pill.className = "lb-share";
+        pill.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.7l7.4-4.3M8.3 13.3l7.4 4.3"/></svg>';
+        pill.setAttribute("aria-label", "Share your week");
+        label.textContent = shownName(r.name);
+        const place = i + 1;
+        pill.addEventListener("click", (ev) => { ev.stopPropagation(); openWeekShare(r, days, place, rows); });   // not the row's tap
+        nm.appendChild(pill);
+      }
+      const dd = row.querySelector(".lb-days");
+      dd.textContent = played;
+      if (thisWeek && ti >= 0) { const dot = document.createElement("i"); dot.className = r.days[ti] || playedToday.has(r.uid) ? "done" : "wait"; dd.appendChild(dot); }
+      row.querySelector(".lb-score").textContent = r.pts;
+      row.querySelector(".lb-time").textContent = fmtWeekTime(r.ms);
+      r.doneToday = !r.days[ti] && playedToday.has(r.uid);   // played today, while today's still hidden from you
+      row.addEventListener("click", () => toggleWeekDetail(row, r, days, ti));
+      list.appendChild(row);
+    });
+  }
+  // Totals can pass an hour: h:mm:ss.
+  function fmtWeekTime(ms) {
+    const s = Math.round((ms || 0) / 1000), h = Math.floor(s / 3600);
+    return h ? h + ":" + String(Math.floor(s / 60) % 60).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0") : fmtDuration(ms);
+  }
+  // Tap a player: their week, a line per day.
+  function toggleWeekDetail(row, r, days, ti) {
+    const open = row.nextElementSibling && row.nextElementSibling.classList.contains("wk-detail");
+    document.querySelectorAll("#wk-list .wk-detail").forEach((d) => d.remove());
+    if (open) return;
+    const d = document.createElement("div");
+    d.className = "wk-detail";
+    const today = dailyKeyOf();
+    let max = 0;
+    days.forEach((k, i) => {
+      if (dayBase(k) > dayBase(today) || (k === today && todayHidden()) || !weekCounts(k)) return;   // no hint of today's most points before you play
+      max += dayMaxPoints(k);
+    });
+    const tot = document.createElement("div");
+    tot.className = "wk-tot";
+    tot.innerHTML = "<span></span><b></b>";
+    tot.lastChild.append(String(r.pts));
+    const of = document.createElement("span"); of.textContent = "/" + max; tot.lastChild.appendChild(of);
+    d.appendChild(tot);
+    days.forEach((k, i) => {
+      const line = document.createElement("div"), x = r.days[i], later = dayBase(k) > dayBase(today) || !weekCounts(k), t = themedDay(k);
+      line.className = "wk-day" + (later ? " later" : !x ? " wait" : "");
+      line.innerHTML = '<span class="d"></span><span class="th"></span><span class="p"></span><span class="t"></span><span class="pl"></span>';
+      const dl = line.querySelector(".d");
+      dl.textContent = shortDay(k, { weekday: "short" });
+      const sm = document.createElement("small"); sm.textContent = shortDay(k, { month: "short", day: "numeric" }); dl.appendChild(sm);
+      line.querySelector(".th").textContent = !later && t ? t.theme.name : "";
+      if (i === ti && r.doneToday) {
+        line.className = "wk-day";
+        line.querySelector(".p").remove(); line.querySelector(".t").remove(); line.querySelector(".pl").remove();
+        const done = document.createElement("span");
+        done.className = "wk-done";
+        done.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M4.6 8.3l2.2 2.2 4.6-4.8" fill="none" stroke="var(--rd-bg)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Completed';
+        line.appendChild(done);
+      } else if (x) {
+        const p = line.querySelector(".p"); p.textContent = x.pts;
+        const m = document.createElement("span"); m.textContent = "/" + dayMaxPoints(k); p.appendChild(m);
+        line.querySelector(".t").textContent = fmtDuration(x.ms);
+        line.querySelector(".pl").textContent = ordinal(x.place);
+      } else line.querySelector(".p").textContent = "–";
+      d.appendChild(line);
+    });
+    row.after(d);
+  }
+  $("#daily-board-scope").addEventListener("click", (e) => { const b = e.target.closest("button[data-scope]"); if (b && b.dataset.scope !== boardScope) { setBoardScope(b.dataset.scope); if (b.dataset.scope === "week") countFeature("week"); } });
+  $("#wk-prev").addEventListener("click", () => { if (firstWeek(weekStart)) return; weekStart = shiftDayKey(weekStart, -7); renderWeek(); });
+  $("#wk-next").addEventListener("click", () => { const next = shiftDayKey(weekStart, 7); if (dayBase(next) <= dayBase(weekStartOf(dailyKeyOf()))) { weekStart = next; renderWeek(); } });
+
   function setBoardTab(tab) {
     $("#screen-daily-board").classList.toggle("routes", tab === "routes");
     $("#daily-board-routes").hidden = tab !== "routes";
@@ -9056,6 +9482,8 @@ $1{ display: flex; gap: 8px; width: 100%; }
     if (!boardTheme) sub.append(document.createElement("br"), "3 Climbs · a point per word");
     $("#daily-board-theme").hidden = !boardTheme;
     $("#daily-board-tabs").hidden = !boardTheme;   // routes need the day's ladders (themed days)
+    $("#daily-board-scope").hidden = !isToday;   // This week rides on today's board
+    setBoardScope("day");
     if (boardTheme) $("#daily-board-theme-name").textContent = boardTheme.theme.name;
     $("#daily-board-sum").hidden = true;
 
@@ -9289,6 +9717,8 @@ $1{ display: flex; gap: 8px; width: 100%; }
     else if (canResume) btn.textContent = "Resume today's game";
     else btn.textContent = "Play";
     $("#btn-home-share").hidden = !(playedToday && newFormat(themedDay(today)));
+    $("#btn-home-week").hidden = !dbReady();
+    setTimeout(updateHomeWeekPlace, 0);
     meta.textContent = capFirst(dailyResetText()) + ".";
     $("#daily-compact-meta").textContent = "Completed — see today's standings";
     $("#next-daily").hidden = $("#next-daily-gap").hidden = !playedToday;
@@ -9654,6 +10084,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
   async function openShareSheet() {
     if (!pcardCtx) return;
     const id = ++shareOpenId, m = shareModel(), go = $("#btn-share-link");
+    $("#share-sheet .pc-bar b").innerHTML = 'Share your <span class="clb">Climb</span>';
     shareLink = null; sharePicFile = null;
     go.disabled = true; go.lastChild.textContent = "Share";
     $("#btn-share-pic").lastChild.textContent = "Send as picture";
@@ -9670,6 +10101,182 @@ $1{ display: flex; gap: 8px; width: 100%; }
     go.disabled = false;
   }
   function closeShareSheet() { shareOpenId++; $("#share-sheet").hidden = true; }
+
+  // ===== Sharing a finished week =====
+  function weekShareModel(r, days, place, rows) {
+    const md = (k) => shortDay(k, { month: "short", day: "numeric" });
+    const a = md(days[0]), b = md(days[6]), am = a.split(" ")[0], bm = b.split(" ")[0];
+    const range = am === bm ? a + "–" + b.slice(bm.length + 1) : a + "–" + b;
+    // The board slice: the top four if you're in the top 3, else the leader and then you with your neighbours.
+    const N = rows.length, me = place - 1;
+    let pick;
+    if (N <= 4 || place <= 3) pick = [0, 1, 2, 3].filter((i) => i < N);
+    else { const st = Math.max(1, Math.min(me - 1, N - 3)); pick = [0, st, st + 1, st + 2]; }
+    const slice = pick.map((i, j) => ({ rank: i + 1, name: shownName(rows[i].name), pts: rows[i].pts, me: i === me, gap: j > 0 && i !== pick[j - 1] + 1 }));
+    return {
+      name: shownName(r.name), range: range, place: place, pts: r.pts, day: days[0], rows: slice, count: N,
+      days: days.map((k, i) => {
+        const x = r.days[i], t = themedDay(k);
+        if (!x) return { letter: shortDay(k, { weekday: "narrow" }), pts: null, fills: [false, false, false] };
+        const e = x.e || {};
+        const fills = t && t.climbs ? [0, 1, 2].map((ci) => climbPerfectFrom(t, ci, (e.roundWords || [])[ci], entrantReveals(e, ci))) : [false, false, false];
+        return { letter: shortDay(k, { weekday: "narrow" }), pts: x.pts, fills: fills };
+      }),
+    };
+  }
+  // Three little peaks, like the daily share's: filled with a flag where that Climb got every point. A missed day is
+  // drawn in faded colours (not see-through, so the middle peak stays in front), in the logo's units.
+  function weekPeaks(x, d, tx, ty, sc) {
+    const miss = d.pts == null, INK = miss ? "#b09979" : "#121212";
+    x.save(); x.translate(tx, ty); x.scale(sc, sc);
+    x.lineJoin = "round"; x.lineCap = "round"; x.strokeStyle = INK;
+    const poly = (pts, fill, lw) => { x.beginPath(); pts.forEach((pt, i) => (i ? x.lineTo(pt[0], pt[1]) : x.moveTo(pt[0], pt[1]))); x.closePath(); x.fillStyle = fill; x.fill(); x.lineWidth = lw; x.stroke(); };
+    CRE_PEAKS.forEach((pk, i) => {
+      const on = !miss && d.fills[i], ax = pk.a[0], ay = pk.a[1], k = pk.k;
+      poly([[pk.l, 84], [ax, ay], [pk.r, 84]], miss ? "#f4d9b5" : on ? pk.tone : "#f4e6d4", 5);
+      poly([[ax - 8 * k, ay + 14 * k], [ax, ay], [ax + 9 * k, ay + 13 * k], [ax + 4 * k, ay + 10 * k], [ax, ay + 16 * k], [ax - 4 * k, ay + 11 * k]], miss ? "#f6e3c9" : "#ffffff", 4);
+      if (on) {
+        const kf = Math.max(k, 0.9), fy = ay - 18 * kf - 2;
+        x.beginPath(); x.moveTo(ax, ay); x.lineTo(ax, fy); x.lineWidth = 4; x.stroke();
+        poly([[ax, fy], [ax + 16 * kf + 2, fy + 5 * kf], [ax, fy + 10 * kf]], "#f6c90e", 3.5);
+      }
+    });
+    x.restore();
+  }
+  // The week: seven marks, each with its points and letter. cols wide each, gap between.
+  function weekRow(x, m, x0, top, col, gap, ptsPx, letPx) {
+    const sc = col / 132;
+    m.days.forEach((d, i) => {
+      const cx = x0 + i * (col + gap), mid = cx + col / 2;
+      weekPeaks(x, d, cx, top - 6 * sc, sc);
+      x.textAlign = "center";
+      x.fillStyle = d.pts == null ? "#8a6f55" : "#121212"; x.font = "800 " + ptsPx + "px " + SHARE_SN;
+      x.fillText(d.pts == null ? "–" : String(d.pts), mid, top + 78 * sc + ptsPx * 1.25);
+      x.fillStyle = "#5a4a3c"; x.font = "700 " + letPx + "px " + SHARE_SN;
+      x.fillText(d.letter, mid, top + 78 * sc + ptsPx * 1.25 + letPx * 1.4);
+    });
+  }
+  // A trophy cup, drawn (emoji differ by phone): gold, silver or bronze. h tall, centred on cx, top at y.
+  function weekTrophy(x, place, cx, y, h) {
+    const fill = ["#f6c90e", "#c9ced6", "#c9803e"][place - 1];
+    if (!fill) return;
+    const s = h / 114;
+    x.save(); x.translate(cx - 50 * s, y); x.scale(s, s);
+    x.lineJoin = "round"; x.lineCap = "round"; x.strokeStyle = "#121212"; x.lineWidth = 6;
+    x.beginPath(); x.moveTo(22, 22); x.bezierCurveTo(2, 22, 2, 54, 26, 56); x.stroke();
+    x.beginPath(); x.moveTo(78, 22); x.bezierCurveTo(98, 22, 98, 54, 74, 56); x.stroke();
+    x.fillStyle = fill;
+    x.beginPath(); x.moveTo(20, 10); x.lineTo(80, 10); x.lineTo(80, 40); x.quadraticCurveTo(80, 72, 50, 74); x.quadraticCurveTo(20, 72, 20, 40); x.closePath(); x.fill(); x.stroke();
+    x.beginPath(); x.rect(44, 74, 12, 18); x.fill(); x.stroke();
+    x.beginPath(); x.rect(28, 92, 44, 16); x.fill(); x.stroke();
+    x.restore();
+  }
+  // Letter-spaced text (canvas letterSpacing isn't everywhere). align "left" or "right" at X.
+  function weekSpaced(x, str, X, y, sp, align) {
+    const ws = [...str].map((ch) => x.measureText(ch).width), tot = ws.reduce((a, w) => a + w, 0) + sp * (ws.length - 1);
+    let cx = align === "right" ? X - tot : X;
+    x.textAlign = "left";
+    [...str].forEach((ch, i) => { x.fillText(ch, cx, y); cx += ws[i] + sp; });
+  }
+  // WEEKLY STANDINGS, Daily Climb, the dates: left-aligned at X, the block's top at y. Returns its height.
+  function weekHeading(x, m, X, y, kpx, tpx, dpx) {
+    const gap = kpx * 0.4;
+    x.fillStyle = "#5a4a3c"; x.font = "800 " + kpx + "px " + SHARE_SN;
+    weekSpaced(x, "WEEKLY STANDINGS", X, y + kpx * 0.82, kpx * 0.1, "left");
+    const ty = y + kpx + gap + tpx * 0.78;
+    x.font = "700 " + tpx + "px " + SHARE_SL; x.textAlign = "left";
+    const wd = x.measureText("Daily ").width;
+    x.fillStyle = "#121212"; x.fillText("Daily ", X, ty); x.fillStyle = "#c25e08"; x.fillText("Climb", X + wd, ty);
+    x.fillStyle = "#5a4a3c"; x.font = "700 " + dpx + "px " + SHARE_SN;
+    x.fillText(m.range, X, ty + gap + dpx * 1.05);
+    return kpx + gap + tpx * 0.98 + gap + dpx * 1.05;
+  }
+  // The slice of the board: a rule, the rows (a gap mark where rows are skipped), then "13 PLAYERS". Returns the bottom.
+  function weekSlice(x, m, X, Y, W, rowH, px) {
+    x.fillStyle = "#121212"; x.fillRect(X, Y, W, Math.max(3, px * 0.12));
+    let y = Y + Math.max(3, px * 0.12);
+    const padX = px * 0.45, rankW = px * 1.4, nx = X + padX + rankW + px * 0.45;
+    m.rows.forEach((rw) => {
+      if (rw.gap) {
+        x.fillStyle = "#8a6f55"; x.font = "800 " + px * 0.8 + "px " + SHARE_SN; x.textAlign = "center";
+        x.fillText("···", X + W / 2, y + px * 0.62); y += px * 0.8;
+      }
+      if (rw.me) {
+        x.fillStyle = "#fff3e2"; x.beginPath();
+        if (x.roundRect) x.roundRect(X, y + 3, W, rowH - 6, px * 0.4); else x.rect(X, y + 3, W, rowH - 6);
+        x.fill();
+      } else { x.fillStyle = "rgba(18,18,18,0.16)"; x.fillRect(X, y + rowH - 2, W, 2); }
+      const base = y + rowH / 2 + px * 0.36;
+      x.textAlign = "center"; x.font = "800 " + px + "px " + SHARE_SN; x.fillStyle = rw.me ? "#121212" : "#5a4a3c";
+      x.fillText(String(rw.rank), X + padX + rankW / 2, base);
+      x.font = "900 " + px + "px " + SHARE_SN; const pw = x.measureText(String(rw.pts)).width;
+      const th = rw.rank <= 3 ? px * 0.95 : 0, room = X + W - padX - pw - px * 0.8 - nx - (th ? th + px * 0.35 : 0);
+      x.font = (rw.me ? "800 " : "600 ") + px + "px " + SHARE_SN; x.fillStyle = "#121212"; x.textAlign = "left";
+      let name = rw.name;
+      while (name.length > 1 && x.measureText(name).width > room) name = name.slice(0, -1);
+      if (name !== rw.name) name = name.slice(0, -1) + "…";
+      x.fillText(name, nx, base);
+      if (th) weekTrophy(x, rw.rank, nx + x.measureText(name).width + px * 0.35 + th * 0.44, base - px * 0.84, th);
+      x.textAlign = "right"; x.font = "900 " + px + "px " + SHARE_SN; x.fillStyle = "#121212";
+      x.fillText(String(rw.pts), X + W - padX, base);
+      y += rowH;
+    });
+    x.fillStyle = "#8a6f55"; x.font = "800 " + px * 0.7 + "px " + SHARE_SN;
+    weekSpaced(x, m.count + (m.count === 1 ? " PLAYER" : " PLAYERS"), X + W - padX, y + px * 1.1, px * 0.06, "right");
+    return y + px * 1.2;
+  }
+  // The link card: 1200 x 630. Heading left, board right, the week's mountains across the bottom.
+  async function drawWeekCard(m) {
+    const W = 1200, H = 630, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    const x = cv.getContext("2d");
+    await shareFonts();
+    x.fillStyle = "#f4d3a6"; x.fillRect(0, 0, W, H);
+    const bottom = weekSlice(x, m, 560, 54, 580, 60, 34);
+    const hh = 36 + 14 + 77 * 0.98 + 14 + 36 * 1.05;
+    weekHeading(x, m, 60, 54 + Math.max(0, (bottom - 54 - hh) / 2), 36, 77, 36);
+    weekRow(x, m, 60, 432, 127, 31, 32, 23);
+    return cv;
+  }
+  // The picture: 960 x 1092, stacked: heading, board, mountains, the site.
+  async function drawWeekPic(m) {
+    const W = 960, H = 1092, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    const x = cv.getContext("2d");
+    await shareFonts();
+    x.fillStyle = "#f4d3a6"; x.fillRect(0, 0, W, H);
+    weekHeading(x, m, 60, 78, 40, 86, 40);
+    weekSlice(x, m, 60, 310, 840, 72, 40);
+    weekRow(x, m, 60, 760, 100, 23, 38, 26);
+    x.fillStyle = "#8a6f55"; x.font = "700 33px " + SHARE_SN; x.textAlign = "center";
+    x.fillText("thedailyclimb.com", W / 2, 1040);
+    return cv;
+  }
+  async function openWeekShare(r, days, place, rows) {
+    const id = ++shareOpenId, m = weekShareModel(r, days, place, rows), go = $("#btn-share-link");
+    shareLink = null; sharePicFile = null;
+    $("#share-sheet .pc-bar b").innerHTML = "Share your week";
+    go.disabled = true; go.lastChild.textContent = "Share";
+    $("#btn-share-pic").lastChild.textContent = "Send as picture";
+    $("#share-img").removeAttribute("src");
+    $("#share-sheet").hidden = false;
+    trackEv("share_open", { week: 1, place: place });
+    const card = await drawWeekCard(m);
+    if (id !== shareOpenId) return;
+    $("#share-img").src = card.toDataURL("image/png");
+    const [cardBlob, picBlob] = await Promise.all([toPng(card), drawWeekPic(m).then(toPng)]);
+    if (id !== shareOpenId) return;
+    if (picBlob) sharePicFile = new File([picBlob], "daily-climb-week.png", { type: "image/png" });
+    const title = { name: m.name + "’s week on Daily Climb · " + ordinal(place) + " of " + m.count, total: "", day: m.day };
+    try { shareLink = await uploadWeekCard(title, cardBlob); } catch (e) { shareLink = "https://thedailyclimb.com"; }
+    if (id !== shareOpenId) return;
+    go.disabled = false;
+  }
+  async function uploadWeekCard(t, blob) {
+    const headers = { "Content-Type": "image/png", "X-Title": encodeURIComponent(t.name), "X-Day": t.day };
+    try { const tok = window.MatchDB && window.MatchDB.idToken ? await window.MatchDB.idToken() : null; if (tok) headers.Authorization = "Bearer " + tok; } catch (e) {}
+    const res = await fetch(SHARE_API, { method: "POST", headers: headers, body: blob });
+    if (!res.ok) throw new Error("share " + res.status);
+    return (await res.json()).url;
+  }
   // Share: the link (its preview is your picture).
   async function shareShareLink() {
     if (!shareLink) return;
@@ -10391,6 +10998,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#pcard").hidden) closePcard(); });
 
   $("#btn-adventure-play").addEventListener("click", showCollection);
+  $("#btn-home-week").addEventListener("click", () => { showWeekBoard(); countFeature("week"); });
   $("#btn-collection-home").addEventListener("click", goHome);
   $("#collection-grid").addEventListener("click", (e) => {
     const t = e.target.closest(".collection-tile");
@@ -11082,6 +11690,9 @@ $1{ display: flex; gap: 8px; width: 100%; }
   // and puts a dot on ☰ until it's read; all of them live in the Announcements sheet.
   // replay: "routes" adds a link that plays that update's intro again.
   const ANN_ALL = [
+    { id: "week", date: "2026-10-15", title: "The Weekly Leaderboard", replay: "week",
+      body: "Your daily points now add up across the week, Monday to Sunday. When the week ends, the top three earn a trophy.\n\n" +
+        "Tap **Weekly Leaderboard** on the home screen, right under Play." },
     { id: "share", date: "2026-10-14", title: "Share your Climb",
       body: "Sharing your results is here. After you finish the daily, tap **Share** in your row on the leaderboard, or **Share today's Climb** on the home screen.\n\n" +
         "**A link with your picture.** Friends get a link that shows your three peaks, your time on each Climb and your total. Tapping it opens Daily Climb, so they can take on the same puzzle.\n\n" +
@@ -11111,7 +11722,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     if (seen === top.id) return false;
     const si = ANN_ALL.findIndex((a) => a.id === seen);   // already read a newer one (a later day, on the beta)
     if (si >= 0 && si < ANN_ALL.indexOf(top)) return false;
-    return !(top.replay === "routes" && whatsNewSeen());   // the Routes intro already showed it
+    return !((top.replay === "routes" && whatsNewSeen()) || (top.replay === "week" && weekFilmSeen()));   // its intro already showed it
   }
   function markAnnouncementsSeen() {
     const top = annList()[0]; if (top) try { localStorage.setItem(ANN_KEY, top.id); } catch (e) {}
@@ -11172,9 +11783,9 @@ $1{ display: flex; gap: 8px; width: 100%; }
         r.addEventListener("click", (e) => { e.stopPropagation(); annCloseHow = "replay"; hideAnnSheet(); setTimeout(() => startMenuTour(false), 250); });
         card.appendChild(r);
       }
-      if (a.replay === "routes") {
+      if (a.replay === "routes" || a.replay === "week") {
         const r = document.createElement("button"); r.type = "button"; r.className = "replay"; r.textContent = "Watch the intro again";
-        r.addEventListener("click", (e) => { e.stopPropagation(); annCloseHow = "replay"; hideAnnSheet(); setTimeout(openWhatsNew, 250); });
+        r.addEventListener("click", (e) => { e.stopPropagation(); annCloseHow = "replay"; hideAnnSheet(); setTimeout(() => openWhatsNew(a.replay), 250); });
         card.appendChild(r);
       }
       if (i) card.addEventListener("click", () => card.classList.toggle("open"));
@@ -11223,7 +11834,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
   // written for existing players (Meet Routes, the thank-you tour, the 6-7-8 launch note) count as seen.
   // Anything announced after that reaches them like everyone else.
   function skipIntrosForNewPlayer() {
-    markWhatsNewSeen();
+    markWhatsNewSeen(); markWeekFilmSeen();
     const top = annList()[0];
     if (top) try { localStorage.setItem(ANN_KEY, top.id); localStorage.setItem(NOTE_KEY, top.id); } catch (e) {}
     renderMenuDot();
@@ -11348,6 +11959,14 @@ $1{ display: flex; gap: 8px; width: 100%; }
   // (sw.js caches other files cache-first, so a notes file could go stale).
   // Each release shows from its date on (the player's own day), so notes can ship ahead of the change they describe.
   const PATCH_NOTES = [
+    { v: "0.16.0", date: "2026-10-15", title: "Weekly Leaderboard",
+      notes: [
+        ["new", "The Weekly Leaderboard. Your daily points add up from Monday to Sunday, and the lower total time breaks a tie. Find it on the home screen, right under Play, with your place this week. This first week counts from Tuesday, Oct 13."],
+        ["new", "Tap anyone on the weekly board to see their week, day by day. No spoilers: until you've played today, today's scores don't count, and anyone who's finished just shows Completed."],
+        ["new", "When a week ends, the top three earn gold, silver and bronze trophies, and you can share your week from your row."],
+        ["imp", "The home screen's buttons are all the same size."],
+        ["fix", "Tapping Keep Climbing quickly no longer plays the summit chime over your next Climb."],
+      ] },
     { v: "0.15.1", date: "2026-10-15", title: "Reveal word & Keyboard Integration",
       notes: [
         ["new", "Reveal word replaces Forfeit Climb. Stuck on a step? Tap it and the word unscrambles into place, then press Enter to keep climbing. A revealed word is worth no points, and it's marked on the leaderboard."],
