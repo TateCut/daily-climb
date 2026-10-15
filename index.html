@@ -9675,12 +9675,12 @@ $1{ display: flex; gap: 8px; width: 100%; }
     if (!shareLink) return;
     trackEv("share_link", {});
     if (navigator.share) {
-      try { await navigator.share({ url: shareLink }); } catch (e) {}
+      try { await navigator.share({ url: shareLink }); markShare("result"); } catch (e) {}
       return;
     }
     // No share sheet here (most computers): copy the link instead.
     let ok = false;
-    try { await navigator.clipboard.writeText(shareLink); ok = true; } catch (e) {}
+    try { await navigator.clipboard.writeText(shareLink); ok = true; markShare("result"); } catch (e) {}
     const lab = $("#btn-share-link").lastChild;
     lab.textContent = ok ? "Link copied" : shareLink;
     setTimeout(() => { lab.textContent = "Share"; }, 2500);
@@ -9690,13 +9690,14 @@ $1{ display: flex; gap: 8px; width: 100%; }
     if (!sharePicFile) return;
     trackEv("share_picture", {});
     if (navigator.canShare && navigator.canShare({ files: [sharePicFile] })) {
-      try { await navigator.share({ files: [sharePicFile], text: "https://thedailyclimb.com" }); } catch (e) {}
+      try { await navigator.share({ files: [sharePicFile], text: "https://thedailyclimb.com" }); markShare("picture"); } catch (e) {}
       return;
     }
     // No share sheet with pictures here (most computers): save the picture instead.
     const a = document.createElement("a"); a.href = URL.createObjectURL(sharePicFile); a.download = "daily-climb.png";
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    markShare("picture");
     const lab = $("#btn-share-pic").lastChild;
     lab.textContent = "Saved";
     setTimeout(() => { lab.textContent = "Send as picture"; }, 2000);

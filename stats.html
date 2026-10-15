@@ -128,6 +128,7 @@
         <div class="card"><h2>Adventure Mode</h2><div id="adv"></div></div>
         <div class="card"><h2>Sharing &amp; reminders</h2><div id="share"></div></div>
       </div>
+      <div class="card"><h2>Shares by player <small>invites, and results shared from the leaderboard or home</small></h2><div class="scroll" id="sharers"><p class="note">Loading…</p></div></div>
     </section>
 
     <section id="v-growth" hidden style="display:flex;flex-direction:column;gap:14px">
@@ -213,7 +214,7 @@
       .map(([n, t, mins], i) => ({ id: "f" + i, uid: "u" + i, name: n, text: t, at: { seconds: Math.floor((Date.now() - mins * 60000) / 1000) }, version: "0.12.4", app: { standalone: i % 2 === 0, platform: i ? "ios" : "android" } }));
     if (path === "usernames") return NAMES.map((n, i) => ({ id: nameKey(n), uid: "u" + i, username: n }));
     if (path === "players") return NAMES.concat(["Ali", "tess", "Wren"]).map((n, i) => ({ id: "u" + i, username: n, dailyStreak: Math.floor(r() * 12), dailyLastDay: (r() < 0.6 ? today : addDays(today, -3)) + SALT, bestStreak: 3 + Math.floor(r() * 14),
-      reminder: r() < 0.35 ? { on: true, tokens: ["x"], hour: 7 + Math.floor(r() * 3), tz: "America/Los_Angeles" } : undefined, shares: r() < 0.3 ? { copy: 1 + Math.floor(r() * 3), native: Math.floor(r() * 2) } : undefined,
+      reminder: r() < 0.35 ? { on: true, tokens: ["x"], hour: 7 + Math.floor(r() * 3), tz: "America/Los_Angeles" } : undefined, shares: r() < 0.55 ? { copy: r() < 0.5 ? 1 + Math.floor(r() * 3) : 0, native: Math.floor(r() * 2), result: Math.floor(r() * 6), picture: Math.floor(r() * 3), lastAt: { seconds: Math.floor((Date.now() - r() * 5 * 864e5) / 1000) } } : undefined,
       adventure: r() < 0.5 ? { starts: 1 + Math.floor(r() * 9) } : undefined,
       app: r() < 0.8 ? { standalone: r() < 0.4, platform: r() < 0.6 ? "ios" : "desktop", tz: "America/Chicago" } : undefined,
       features: { routes: Math.floor(r() * 5), calendar: Math.floor(r() * 3), howTo: Math.floor(r() * 2), patchNotes: Math.floor(r() * 2) },
@@ -296,12 +297,22 @@
     const live = (p) => { const d = String(p.dailyLastDay || "").slice(0, 10); return d === today || d === yst; };
     const nm = (p) => esc(p.username || p.name || p.id.slice(0, 6));
     const reminders = ps.filter((p) => p.reminder && p.reminder.on && (p.reminder.tokens || []).length);
-    const sharers = ps.filter((p) => p.shares && ((p.shares.copy || 0) + (p.shares.native || 0)));
-    const shareTotal = sharers.reduce((a, p) => a + (p.shares.copy || 0) + (p.shares.native || 0), 0);
+    // shares: the Invite screen (native share sheet / copy) and results (result = the link, picture = Send as picture)
+    // Result links shared before the game counted them (v0.15.0, Oct 14-15), from share.thedailyclimb.com's records:
+    // one link per player per day, so re-shares on the same day count once. { uid: [links, last shared ms] }
+    const PAST_RESULT_LINKS = { "3wu7xbR3cQVX3CF0Pef4VgNNBdM2": [2, 1792081744953], "tkVNJrXbh6feWOAPh6CQClUohJ53": [2, 1792074476566],
+      "F75zpHrC6iZkWkHZ6ivA5hW14zF2": [1, 1792037083487], "nV4xJc7t7edwD5wRzoHAi5urJZu1": [1, 1792035146634] };
+    const past = (p) => (MOCK ? null : PAST_RESULT_LINKS[p.id]);
+    const sh = (p, k) => ((p.shares && p.shares[k]) || 0) + (k === "result" && past(p) ? past(p)[0] : 0);
+    const inv = (p) => sh(p, "native") + sh(p, "copy"), res = (p) => sh(p, "result") + sh(p, "picture");
+    const sharers = ps.filter((p) => inv(p));
+    const resSharers = ps.filter((p) => res(p));
+    const shareTotal = sharers.reduce((a, p) => a + inv(p), 0);
+    const resTotal = resSharers.reduce((a, p) => a + res(p), 0);
     const advStart = ps.filter((p) => p.adventure && p.adventure.starts);
     const advWin = ps.filter((p) => (p.adventureBeaten || []).length);
     $("#okpis").innerHTML = kpi(ps.length, "player profiles") + '<div class="kpi"><b id="kpi-finished">…</b><span>have finished a daily</span></div>' + kpi(reminders.length, "reminders on") +
-      kpi(sharers.length, "have shared the link") + kpi(advWin.length, "beat an Adventure Climb") + kpi(ps.filter(live).filter((p) => p.dailyStreak > 1).length, "on a 2+ day streak");
+      kpi(sharers.length, "have invited a friend") + kpi(resSharers.length, "have shared a result") + kpi(advWin.length, "beat an Adventure Climb") + kpi(ps.filter(live).filter((p) => p.dailyStreak > 1).length, "on a 2+ day streak");
     const top = (arr, f) => "<table><tr><th>#</th><th>Player</th><th class='num'>Days</th></tr>" + arr.map((p, i) => "<tr><td>" + (i + 1) + "</td><td>" + nm(p) + "</td><td class='num'>" + f(p) + "</td></tr>").join("") + "</table>";
     $("#streakNow").innerHTML = top(ps.filter(live).filter((p) => p.dailyStreak > 0).sort((a, b) => b.dailyStreak - a.dailyStreak).slice(0, 10), (p) => p.dailyStreak);
     $("#streakBest").innerHTML = top(ps.filter((p) => p.bestStreak > 0).sort((a, b) => b.bestStreak - a.bestStreak).slice(0, 10), (p) => p.bestStreak);
@@ -316,9 +327,21 @@
       (advWin.length ? "<table><tr><th>Most Adventure wins</th><th class='num'>Beaten</th></tr>" + advWin.sort((a, b) => b.adventureBeaten.length - a.adventureBeaten.length).slice(0, 5).map((p) => "<tr><td>" + nm(p) + "</td><td class='num'>" + p.adventureBeaten.length + "</td></tr>").join("") + "</table>" : "");
     $("#share").innerHTML = "<table>" +
       "<tr><td>Players with daily reminders on</td><td class='num'>" + reminders.length + "</td></tr>" +
-      "<tr><td>Players who shared the link</td><td class='num'>" + sharers.length + "</td></tr>" +
-      "<tr><td>Times shared (share sheet / copied)</td><td class='num'>" + shareTotal + " (" + sharers.reduce((a, p) => a + (p.shares.native || 0), 0) + " / " + sharers.reduce((a, p) => a + (p.shares.copy || 0), 0) + ")</td></tr></table>" +
-      '<p class="note">Shares are counted from the stats update on (Invite screen: Share or Copy).</p>';
+      "<tr><td>Players who invited a friend</td><td class='num'>" + sharers.length + "</td></tr>" +
+      "<tr><td>Invites (share sheet / copied)</td><td class='num'>" + shareTotal + " (" + sharers.reduce((a, p) => a + sh(p, "native"), 0) + " / " + sharers.reduce((a, p) => a + sh(p, "copy"), 0) + ")</td></tr>" +
+      "<tr><td>Players who shared a result</td><td class='num'>" + resSharers.length + "</td></tr>" +
+      "<tr><td>Results shared (link / picture)</td><td class='num'>" + resTotal + " (" + resSharers.reduce((a, p) => a + sh(p, "result"), 0) + " / " + resSharers.reduce((a, p) => a + sh(p, "picture"), 0) + ")</td></tr></table>" +
+      '<p class="note">Invites are counted from the stats update on (Invite screen: Share or Copy). Results from Oct 15 on (Share, or Send as picture), plus the result links shared Oct 14-15 before that, filled in from the share links (one per player per day).</p>';
+    // everyone who has shared anything, most shares first
+    const anyShare = ps.filter((p) => inv(p) + res(p)).sort((a, b) => (inv(b) + res(b)) - (inv(a) + res(a)) || nm(a).localeCompare(nm(b)));
+    const lastShared = (p) => { const t = p.shares && p.shares.lastAt; const ms = Math.max((t && (t.seconds ? t.seconds * 1000 : Date.parse(t))) || 0, past(p) ? past(p)[1] : 0); return ms ? new Date(ms).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : ""; };
+    const z = (v) => v || "<span class='note'>–</span>";
+    $("#sharers").innerHTML = anyShare.length ? "<table><tr><th>#</th><th>Player</th><th class='num'>Invites</th><th class='num'>Result links</th><th class='num'>Result pictures</th><th class='num'>Total</th><th>Last shared</th></tr>" +
+      anyShare.map((p, i) => "<tr><td>" + (i + 1) + "</td><td>" + nm(p) + "</td><td class='num'>" + z(inv(p)) + "</td><td class='num'>" + z(sh(p, "result")) + "</td><td class='num'>" + z(sh(p, "picture")) +
+        "</td><td class='num'><b>" + (inv(p) + res(p)) + "</b></td><td>" + lastShared(p) + "</td></tr>").join("") +
+      "<tr class='grp'><td></td><td>All players</td><td class='num'>" + shareTotal + "</td><td class='num'>" + resSharers.reduce((a, p) => a + sh(p, "result"), 0) + "</td><td class='num'>" + resSharers.reduce((a, p) => a + sh(p, "picture"), 0) +
+        "</td><td class='num'><b>" + (shareTotal + resTotal) + "</b></td><td></td></tr></table>"
+      : '<p class="note">No shares yet.</p>';
     showDone(ps).catch(fail);
   }
   // Players who show up as more than one account under the same name: usually a name picked
