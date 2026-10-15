@@ -217,9 +217,9 @@
       reminder: r() < 0.35 ? { on: true, tokens: ["x"], hour: 7 + Math.floor(r() * 3), tz: "America/Los_Angeles" } : undefined, shares: r() < 0.55 ? { copy: r() < 0.5 ? 1 + Math.floor(r() * 3) : 0, native: Math.floor(r() * 2), result: Math.floor(r() * 6), picture: Math.floor(r() * 3), lastAt: { seconds: Math.floor((Date.now() - r() * 5 * 864e5) / 1000) } } : undefined,
       adventure: r() < 0.5 ? { starts: 1 + Math.floor(r() * 9) } : undefined,
       app: r() < 0.8 ? { standalone: r() < 0.4, platform: r() < 0.6 ? "ios" : "desktop", tz: "America/Chicago" } : undefined,
-      features: { routes: Math.floor(r() * 5), calendar: Math.floor(r() * 3), howTo: Math.floor(r() * 2), patchNotes: Math.floor(r() * 2) },
+      features: { week: Math.floor(r() * 6), routes: Math.floor(r() * 5), calendar: Math.floor(r() * 3), howTo: Math.floor(r() * 2), patchNotes: Math.floor(r() * 2) },
       prefs: r() < 0.5 ? { dark: r() < 0.3, sound: r() < 0.6 } : undefined,
-      announcements: r() < 0.75 ? { menu: (() => { const ms = r() < 0.3 ? Math.floor(r() * 5000) : Math.floor(8000 + r() * 70000); return { opens: 1 + Math.floor(r() * 2), totalMs: ms, firstMs: ms, firstHow: r() < 0.7 ? "done" : "outside", firstAuto: true, end: ms > 30000, words: 161 }; })() } : undefined, referredBy: r() < 0.2 ? "wren" : undefined, adventureBeaten: r() < 0.35 ? [1, 2, 3].slice(0, 1 + Math.floor(r() * 3)) : [], beatenSeeds: [4, 9, 12].slice(0, Math.floor(r() * 4)) }));
+      announcements: r() < 0.75 ? { menu: (() => { const ms = r() < 0.3 ? Math.floor(r() * 5000) : Math.floor(8000 + r() * 70000); return { opens: 1 + Math.floor(r() * 2), totalMs: ms, firstMs: ms, firstHow: r() < 0.7 ? "done" : "outside", firstAuto: true, end: ms > 30000, words: 161 }; })(), "week-film": (() => { const ms = Math.floor(2000 + r() * 30000); return { opens: 1, totalMs: ms, firstMs: ms, firstHow: r() < 0.6 ? "done" : "away", firstAuto: r() < 0.9, end: ms > 17000, words: 0 }; })() } : undefined, referredBy: r() < 0.2 ? "wren" : undefined, adventureBeaten: r() < 0.35 ? [1, 2, 3].slice(0, 1 + Math.floor(r() * 3)) : [], beatenSeeds: [4, 9, 12].slice(0, Math.floor(r() * 4)) }));
     const lens = (themeOf(day) || { lens: [4, 5, 5] }).lens;
     const out = [];
     NAMES.forEach((n, i) => {
@@ -428,7 +428,7 @@
       (Object.keys(plat).length ? "<p class='note'>" + Object.keys(plat).sort().map((k) => esc(k) + ": " + plat[k]).join(" · ") + "</p>" : "") +
       "<p class='note'>Recorded once a day per device from the stats update on, for players with a profile.</p>";
     // features
-    const F = [["routes", "Routes tab"], ["themeCard", "Theme pop-up (tapped)"], ["calendar", "Calendar"], ["howTo", "How to play"], ["patchNotes", "Patch notes"], ["invite", "Invite screen"]];
+    const F = [["routes", "Routes tab"], ["themeCard", "Theme pop-up (tapped)"], ["calendar", "Calendar"], ["howTo", "How to play"], ["patchNotes", "Patch notes"], ["invite", "Invite screen"], ["week", "Weekly Leaderboard"]];
     const withPrefs = ps.filter((p) => p.prefs);
     $("#feat").innerHTML = "<table><tr><th>Feature</th><th class='num'>Players</th><th class='num'>Times opened</th></tr>" +
       F.map(([k, l]) => { const us = ps.filter((p) => p.features && p.features[k]); return "<tr><td>" + l + "</td><td class='num'>" + us.length + "</td><td class='num'>" + us.reduce((a, p) => a + p.features[k], 0) + "</td></tr>"; }).join("") +
@@ -549,7 +549,9 @@
   // Announcements: for each one, how many players have seen it and how long it stayed on their screen the
   // first time (usually the pop-up). "Long enough to read it" = at least as long as reading every word at
   // about 4 words a second (an average reading pace). Each viewing counts at most 5 minutes.
-  const ANN_TITLES = { menu: "Thank you, and a new menu", routes: "Climb Routes are here" };
+  const ANN_TITLES = { menu: "Thank you, and a new menu", routes: "Climb Routes are here", shape: "A new shape for the daily", share: "Share your Climb", week: "The Weekly Leaderboard", "week-film": "Weekly Leaderboard intro film" };
+  // Films: "long enough" = one full loop (about 18s), "reached the end" = got to its last step.
+  const FILM_MS = { "week-film": 18000 };
   function showAnnouncementReads(ps) {
     const ids = [...new Set(ps.flatMap((p) => Object.keys(p.announcements || {})))];
     if (!ids.length) { $("#annreads").innerHTML = '<p class="note">Nothing yet. Reading times are recorded from v0.13.0 on.</p>'; return; }
@@ -559,19 +561,19 @@
       const seen = ps.filter((p) => p.announcements && p.announcements[id]).map((p) => Object.assign({ who: p.username || p.name || "(no name)" }, p.announcements[id]));
       const firsts = seen.map((a) => a.firstMs).filter((x) => x != null);
       const words = (seen.find((a) => a.words) || {}).words || 0;
-      const needMs = words / 4 * 1000;
+      const needMs = FILM_MS[id] || words / 4 * 1000;
       return { id, seen, words, needMs, med: median(firsts), skip: firsts.filter((x) => x < 5000).length, read: needMs ? firsts.filter((x) => x >= needMs).length : 0,
         end: seen.filter((a) => a.end).length, back: seen.filter((a) => (a.opens || 0) > 1).length, n: firsts.length };
     });
-    let html = "<table><tr><th>Announcement</th><th class='num'>Seen</th><th class='num'>Typical first look</th><th class='num'>Under 5s</th><th class='num'>Long enough to read it</th><th class='num'>Reached the end</th><th class='num'>Came back</th></tr>" +
-      rows.map((r) => "<tr><td>" + esc(ANN_TITLES[r.id] || r.id) + (r.words ? " <small>(" + r.words + " words, about " + Math.round(r.needMs / 1000) + "s to read)</small>" : "") + "</td><td class='num'>" + r.seen.length +
+    let html = "<table><tr><th>Announcement</th><th class='num'>Seen</th><th class='num'>Typical first look</th><th class='num'>Under 5s</th><th class='num'>Long enough to read or watch it</th><th class='num'>Reached the end</th><th class='num'>Came back</th></tr>" +
+      rows.map((r) => "<tr><td>" + esc(ANN_TITLES[r.id] || r.id) + (FILM_MS[r.id] ? " <small>(a film, about " + Math.round(FILM_MS[r.id] / 1000) + "s a loop)</small>" : r.words ? " <small>(" + r.words + " words, about " + Math.round(r.needMs / 1000) + "s to read)</small>" : "") + "</td><td class='num'>" + r.seen.length +
         "</td><td class='num'>" + secs(r.med) + "</td><td class='num'>" + pct(r.skip, r.n) + "</td><td class='num'>" + pct(r.read, r.n) + "</td><td class='num'>" + pct(r.end, r.seen.length) +
         "</td><td class='num'>" + pct(r.back, r.seen.length) + "</td></tr>").join("") + "</table>";
     // who has seen the newest one, longest first look first
-    const top = rows.find((r) => r.id === ids.find((i) => ANN_TITLES[i] === ANN_TITLES.menu)) || rows[0];
+    const top = rows.find((r) => r.id === "week-film") || rows.find((r) => r.id === ids.find((i) => ANN_TITLES[i] === ANN_TITLES.menu)) || rows[0];
     html += "<p class='note' style='margin-top:12px'><b>" + esc(ANN_TITLES[top.id] || top.id) + "</b>: who has seen it</p><div class='scroll'><table><tr><th>Player</th><th class='num'>First look</th><th>Closed by</th><th class='num'>Times opened</th><th class='num'>Total</th><th class='num'>Reached the end</th></tr>" +
       top.seen.slice().sort((a, b) => (b.firstMs || 0) - (a.firstMs || 0)).map((a) => "<tr><td>" + esc(a.who) + "</td><td class='num'>" + secs(a.firstMs) + "</td><td>" +
-        ({ done: "Done", outside: "tapping outside", away: "leaving the screen", replay: "watching the intro" }[a.firstHow] || "–") + "</td><td class='num'>" + (a.opens || 0) +
+        (({ done: FILM_MS[top.id] ? "Got it" : "Done", outside: "tapping outside", away: "leaving the screen", replay: "watching the intro" })[a.firstHow] || "–") + (FILM_MS[top.id] && a.firstAuto === false ? " (replayed)" : "") + "</td><td class='num'>" + (a.opens || 0) +
         "</td><td class='num'>" + secs(a.totalMs) + "</td><td class='num'>" + (a.end ? "✓" : "") + "</td></tr>").join("") + "</table></div>";
     $("#annreads").innerHTML = html;
   }

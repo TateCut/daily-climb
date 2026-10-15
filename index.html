@@ -8558,7 +8558,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     if (!tutorialSeen || updateWaiting || screens.home.hidden) return;
     if (!$("#howto-card").hidden || !$("#trophy-pop").hidden || anySheetOpen()) return;
     if (!whatsNewSeen()) openWhatsNew();
-    else if (weekFilmDue()) openWhatsNew("week");
+    else if (weekFilmDue()) openWhatsNew("week", true);
   }
   function wnFilm() {
     const steps = [[["hear", 58], ["hare", 42, "you"], ["rhea", 0]], [["heart", 67, "you"], ["earth", 33], ["hater", 0]],
@@ -8579,9 +8579,10 @@ $1{ display: flex; gap: 8px; width: 100%; }
       '</div><div class="wn-pop"><b>RATCHET · 7 PLAYERS</b>' + who.map(([r, n, me]) => "<div" + (me ? ' class="me"' : "") + "><em>" + r + "</em>" + n + "</div>").join("") + "</div></div>" +
       '<div class="wn-fg"></div>';
   }
-  function openWhatsNew(kind) {
+  function openWhatsNew(kind, auto) {
     wnKind = kind === "week" ? "week" : "routes";
     if (wnKind === "week") markWeekFilmSeen(); else markWhatsNewSeen();
+    if (wnKind === "week") { annView = { id: "week-film", ms: 0, since: document.hidden ? 0 : Date.now(), end: false, auto: !!auto, words: 0 }; annCloseHow = "away"; }
     $("#wn-title").textContent = wnKind === "week" ? "Weekly Leaderboard" : "Meet Routes";
     const film = $("#wn-film");
     film.innerHTML = wnKind === "week" ? wkFilm() : wnFilm();
@@ -8592,11 +8593,12 @@ $1{ display: flex; gap: 8px; width: 100%; }
     setTimeout(() => $("#btn-wn-done").focus({ preventScroll: true }), 60);
     runWhatsNew(++wnTok).catch(() => {});
   }
-  function closeWhatsNew() {
+  function closeWhatsNew(how) {
     if ($("#whatsnew").hidden) return;
     wnTok++;
     $("#whatsnew").hidden = true;
     $("#wn-film").replaceChildren();
+    if (annView && annView.id === "week-film") { annCloseHow = typeof how === "string" ? how : "away"; logAnnView(); }
   }
   // The week film: Home -> the weekly board -> a player's week -> last week, FINAL, trophies. Made-up players.
   const WF_THIS = [["Nova", 74, 4, 1], ["Lark", 70, 4, 1], ["Marco", 61, 3, 0], ["Otis", 58, 4, 1], ["You", 52, 3, 0, 1], ["Bea", 41, 3, 1], ["Theo", 33, 2, 0], ["Wren", 30, 2, 1]];
@@ -8624,7 +8626,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
     const range = (k) => md(k) + " – " + md(shiftDayKey(k, 6));
     const at = (el) => { const fg = film.querySelector(".wn-fg"); let x = 0, y = 0, n = el; while (n && n !== film) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; } fg.style.left = x + el.offsetWidth / 2 + "px"; fg.style.top = y + el.offsetHeight / 2 + "px"; };
     const tap = async (el) => { const fg = film.querySelector(".wn-fg"); fg.classList.add("down"); if (el) el.classList.add("wf-press"); await S(240); fg.classList.remove("down"); if (el) el.classList.remove("wf-press"); };
-    const say = async (i) => { cap.classList.add("fade"); await S(220); cap.innerHTML = "<span>" + WK_CAPS[i] + "</span>"; beats.forEach((b, j) => b.classList.toggle("on", j <= i)); cap.classList.remove("fade"); };
+    const say = async (i) => { cap.classList.add("fade"); await S(220); if (i === 3 && annView && annView.id === "week-film") annView.end = true; cap.innerHTML = "<span>" + WK_CAPS[i] + "</span>"; beats.forEach((b, j) => b.classList.toggle("on", j <= i)); cap.classList.remove("fade"); };
     const row = (nm) => film.querySelector('.wf-r[data-n="' + nm + '"]');
     for (;;) {
       film.innerHTML = wkFilm(); wkRows(film, WF_THIS, false);
@@ -8691,7 +8693,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
       pop.classList.add("show"); await S(600); fg.classList.remove("on"); await S(3000);
     }
   }
-  $("#btn-wn-done").addEventListener("click", closeWhatsNew);
+  $("#btn-wn-done").addEventListener("click", () => closeWhatsNew("done"));
   window.DC_showWhatsNew = (kind) => { if (screens.home.hidden) goHome(); setTimeout(() => openWhatsNew(kind), 300); };   // beta: see it again ("week" for the weekly one)
   $("#btn-howto-go").addEventListener("click", () => { if (howtoStep < 2) showHowtoStep(howtoStep + 1); else closeHowto(); });
   $("#btn-howto-back").addEventListener("click", () => showHowtoStep(howtoStep - 1));
@@ -11741,7 +11743,7 @@ $1{ display: flex; gap: 8px; width: 100%; }
   }
   function annPause() { if (annView && annView.since) { annView.ms += Date.now() - annView.since; annView.since = 0; } }
   function annResume() { if (annView && !annView.since) annView.since = Date.now(); }
-  document.addEventListener("visibilitychange", () => { if (document.hidden) annPause(); else if (!$("#ann-sheet").hidden || !$("#shape-note").hidden) annResume(); });
+  document.addEventListener("visibilitychange", () => { if (document.hidden) annPause(); else if (!$("#ann-sheet").hidden || !$("#shape-note").hidden || !$("#whatsnew").hidden) annResume(); });
   function logAnnView() {
     const v = annView;
     annView = null;
