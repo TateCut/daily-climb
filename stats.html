@@ -1,4 +1,4 @@
-<!doctype html>
+"</td><td class='num'>"<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -62,6 +62,13 @@
   .trend { display: flex; align-items: flex-end; gap: 4px; height: 160px; padding-top: 8px; }
   .trend .col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 2px; min-width: 0; height: 100%; position: relative; }
   .trend .st { width: 100%; background: var(--bar2); border-radius: 3px 3px 0 0; position: relative; }
+  .trend .stack { width: 100%; display: flex; flex-direction: column-reverse; border-radius: 3px 3px 0 0; overflow: hidden; }
+  .trend .stack i { display: block; width: 100%; }
+  .seg { display: inline-flex; padding: 2px; border: 1px solid var(--line); border-radius: 999px; gap: 2px; align-self: flex-start; }
+  .seg button { border: 0; background: none; color: var(--muted); font: inherit; font-weight: 700; font-size: .78rem; padding: 4px 12px; border-radius: 999px; cursor: pointer; }
+  .seg button.on { background: var(--ink); color: var(--bg); }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+  .sub td:first-child { padding-left: 26px; color: var(--muted); }
   .trend .fi { position: absolute; bottom: 0; left: 0; right: 0; background: var(--bar); border-radius: 3px 3px 0 0; }
   .trend .lb { font-size: .58rem; color: var(--faint); white-space: nowrap; }
   .legend { display: flex; gap: 14px; font-size: .78rem; color: var(--muted); }
@@ -87,7 +94,7 @@
   </header>
   <div class="msg" id="gate" hidden></div>
   <div id="app" hidden style="display:flex;flex-direction:column;gap:18px">
-    <div class="tabs" id="tabs"><button class="on" data-v="day">Day</button><button data-v="overview">Players</button><button data-v="growth">Growth</button><button data-v="puzzles">Puzzles</button><button data-v="trend">Trends</button></div>
+    <div class="tabs" id="tabs"><button class="on" data-v="day">Day</button><button data-v="overview">Players</button><button data-v="growth">Growth</button><button data-v="sources">Where from</button><button data-v="puzzles">Puzzles</button><button data-v="trend">Trends</button></div>
 
     <section id="v-day" style="display:flex;flex-direction:column;gap:14px">
       <div class="daybar">
@@ -138,6 +145,15 @@
       <div class="card"><h2>New players per day <small>first daily ever finished</small></h2><div class="trend" id="newchart"></div></div>
       <div class="card"><h2>Comeback rate <small>of each day's new players</small></h2><div class="scroll" id="cohorts"></div><p class="note">Next day: finished the very next daily. Within a week: finished another daily in the next 7 days. Still playing: finished a daily 7 or more days after their first. Blank until enough days have passed.</p></div>
       <div class="card"><h2>When people finish <small>hour of day, in each player's own time zone</small></h2><div class="trend" id="hours"></div><p class="note" id="hoursnote"></p></div>
+    </section>
+
+    <section id="v-sources" hidden style="display:flex;flex-direction:column;gap:14px">
+      <div class="seg" id="srcrange"><button data-d="7">Last 7 days</button><button class="on" data-d="30">Last 30 days</button><button data-d="all">All time</button></div>
+      <div class="kpis" id="skpis"><p class="note">Loading…</p></div>
+      <div class="card"><h2>New players by source <small>first daily ever finished, by day</small></h2><div class="legend" id="srclegend"></div><div class="trend" id="srcchart"></div></div>
+      <div class="card"><h2>Sources <small>how each group's new players stuck around</small></h2><div class="scroll" id="srctable"></div><p class="note" id="srcnote"></p></div>
+      <div class="card"><h2>Top recruiters <small>players whose links brought in new players</small></h2><div class="scroll" id="recruiters"></div></div>
+      <div class="card"><h2>New players <small id="newcount">newest first</small></h2><div class="scroll" id="newlist"></div></div>
     </section>
 
     <section id="v-puzzles" hidden style="display:flex;flex-direction:column;gap:14px">
@@ -230,6 +246,7 @@
       adventure: r() < 0.5 ? { starts: 1 + Math.floor(r() * 9) } : undefined,
       app: r() < 0.8 ? { standalone: r() < 0.4, platform: r() < 0.6 ? "ios" : "desktop", tz: "America/Chicago" } : undefined,
       src: r() < 0.7 ? [{ source: "direct", medium: "none" }, { source: "share", medium: "share" }, { source: "reddit", medium: "social", campaign: "launch" }, { source: "google", medium: "cpc", campaign: "words-1" }][Math.floor(r() * 4)] : undefined, features: { week: Math.floor(r() * 6), routes: Math.floor(r() * 5), calendar: Math.floor(r() * 3), howTo: Math.floor(r() * 2), patchNotes: Math.floor(r() * 2) },
+      referredBy: i > 1 && r() < 0.2 ? (r() < 0.6 ? "u0" : nameKey(NAMES[3])) : undefined,
       prefs: r() < 0.5 ? { dark: r() < 0.3, sound: r() < 0.6 } : undefined,
       announcements: r() < 0.75 ? { menu: (() => { const ms = r() < 0.3 ? Math.floor(r() * 5000) : Math.floor(8000 + r() * 70000); return { opens: 1 + Math.floor(r() * 2), totalMs: ms, firstMs: ms, firstHow: r() < 0.7 ? "done" : "outside", firstAuto: true, end: ms > 30000, words: 161 }; })(), "week-film": (() => { const ms = Math.floor(2000 + r() * 30000); return { opens: 1, totalMs: ms, firstMs: ms, firstHow: r() < 0.6 ? "done" : "away", firstAuto: r() < 0.9, end: ms > 17000, words: 0 }; })() } : undefined, referredBy: r() < 0.2 ? "wren" : undefined, adventureBeaten: r() < 0.35 ? [1, 2, 3].slice(0, 1 + Math.floor(r() * 3)) : [], beatenSeeds: [4, 9, 12].slice(0, Math.floor(r() * 4)) }));
     const lens = (themeOf(day) || { lens: [4, 5, 5] }).lens;
@@ -446,7 +463,7 @@
     const srcRows = {}; ps.forEach((p) => { if (!p.src) return; const k = (p.src.source || "?") + " · " + (p.src.medium || "?") + (p.src.campaign ? " · " + p.src.campaign : ""); (srcRows[k] = srcRows[k] || []).push(p); });
     const srcKeys = Object.keys(srcRows).sort((a, b) => srcRows[b].length - srcRows[a].length);
     $("#sources").innerHTML = srcKeys.length ? "<table><tr><th>Source · medium · campaign</th><th class='num'>Players</th><th class='num'>Played 3+ days</th></tr>" +
-      srcKeys.map((k) => { const us = srcRows[k]; return "<tr><td>" + esc(k) + "</td><td class='num'>" + us.length + "</td><td class='num'>" + us.filter((p) => (p.history ? Object.keys(p.history).filter((d) => /^d{4}-/.test(d)).length : 0) >= 3).length + "</td></tr>"; }).join("") + "</table>"
+      srcKeys.map((k) => { const us = srcRows[k]; return "<tr><td>" + esc(k) + "</td><td class='num'>" + us.length + "</td><td class='num'>" + us.filter((p) => (p.history ? Object.keys(p.history).filter((d) => /^\d{4}-/.test(d)).length : 0) >= 3).length + "</td></tr>"; }).join("") + "</table>"
       : "<p class='note'>Nothing yet. Sources are recorded from the next update on, when a new player finishes their first daily.</p>";
     $("#feat").innerHTML = "<table><tr><th>Feature</th><th class='num'>Players</th><th class='num'>Times opened</th></tr>" +
       F.map(([k, l]) => { const us = ps.filter((p) => p.features && p.features[k]); return "<tr><td>" + l + "</td><td class='num'>" + us.length + "</td><td class='num'>" + us.reduce((a, p) => a + p.features[k], 0) + "</td></tr>"; }).join("") +
@@ -504,6 +521,102 @@
     const lab = (h) => (h % 12 || 12) + (h < 12 ? "a" : "p");
     bars($("#hours"), hrs.map((v, h) => ({ v: v, lab: h % 3 === 0 ? lab(h) : "", tip: lab(h) + ": " + v + " finishes" })));
     $("#hoursnote").textContent = total ? known + " of " + total + " finishes use the player's own time zone; the rest use yours (" + local + ")." : "";
+  }
+
+  // ---------------- Where from tab ----------------
+  // Each new player (first daily finished) goes in one group, from players.src (saved at their first finish since
+  // v0.17.0: the first visit's utm tags / ad click ids / ?s share / ?r invite / referring site), players.referredBy
+  // (whose link brought them).
+  const SRC_GROUPS = [
+    ["friend", "A friend's link", "#e8871e"],
+    ["ads", "Ads", "#4f8fdc"],
+    ["web", "Social and other sites", "#9b7be0"],
+    ["direct", "Typed it in (word of mouth)", "#3fae7a"],
+    ["none", "Not recorded", "#8a8a8a"],
+  ];
+  function srcGroup(p) {
+    const s = p && p.src;
+    if (p && p.referredBy) return "friend";
+    if (!s) return "none";
+    if (s.source === "share" || s.source === "invite") return "friend";
+    if (s.ad || /^(cpc|paid|ppc|display)$/.test(s.medium || "")) return "ads";
+    if (s.source === "direct") return "direct";
+    return "web";
+  }
+  function srcDetail(p) {
+    const s = p.src;
+    if (s && s.source === "share") return "shared result";
+    if (p.referredBy || (s && s.source === "invite")) return "invite link";
+    if (!s) return "";
+    if (s.source === "direct") return "no link or referring site";
+    return [s.source, s.medium && s.medium !== "none" && s.medium !== s.source ? s.medium : "", s.campaign].filter(Boolean).join(" · ");
+  }
+  let srcRange = "30";
+  $("#srcrange").onclick = (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    srcRange = b.dataset.d;
+    document.querySelectorAll("#srcrange button").forEach((x) => x.classList.toggle("on", x === b));
+    showSources().catch(fail);
+  };
+  async function showSources() {
+    const all = await allDays();
+    const by = finishesByPlayer(all);
+    let ps = []; try { ps = await players(); } catch (x) {}
+    let names = []; try { names = await list("usernames"); } catch (x) {}
+    const pById = {}; ps.forEach((p) => { pById[p.id] = p; });
+    const ownerOf = {}; names.forEach((u) => { ownerOf[u.id] = u.uid; });
+    const nm = (p) => esc((p && (p.username || p.name)) || "?");
+    const from = srcRange === "all" ? "0000" : addDays(today, -(+srcRange - 1));
+    const newbies = Object.values(by).filter((x) => x.first >= from).map((x) => {
+      const p = pById[x.id] || { id: x.id, name: x.name };
+      return { id: x.id, p: p, first: x.first, days: x.days, group: srcGroup(p), detail: srcDetail(p), ref: p.referredBy ? (ownerOf[p.referredBy] || p.referredBy) : null };
+    }).sort((a, b) => (b.first > a.first ? 1 : b.first < a.first ? -1 : 0));
+    const inGroup = (g) => newbies.filter((x) => x.group === g);
+    const recorded = newbies.filter((x) => x.group !== "none").length;
+    const top = SRC_GROUPS.filter(([g]) => g !== "none").map(([g, l]) => [l, inGroup(g).length]).sort((a, b) => b[1] - a[1])[0];
+    $("#skpis").innerHTML = kpi(newbies.length, "new players") + kpi(pct(recorded, newbies.length), "with a known source") +
+      kpi(top && top[1] ? esc(top[0]) : "–", "biggest source") + kpi(inGroup("friend").length, "brought in by friends");
+    // chart: stacked by group, one bar per day (up to 30)
+    const span = srcRange === "7" ? 7 : 30, chartDays = []; for (let i = span - 1; i >= 0; i--) chartDays.push(addDays(today, -i));
+    const counts = chartDays.map((d) => { const c = {}; newbies.filter((x) => x.first === d).forEach((x) => { c[x.group] = (c[x.group] || 0) + 1; }); return c; });
+    const total = (c) => Object.values(c).reduce((a, b) => a + b, 0);
+    const max = Math.max(1, ...counts.map(total));
+    $("#srclegend").innerHTML = SRC_GROUPS.map(([, l, col]) => '<span><i style="background:' + col + '"></i>' + esc(l) + "</span>").join("");
+    $("#srcchart").innerHTML = chartDays.map((d, i) => {
+      const c = counts[i], t = total(c);
+      const tip = shortDay(d) + ": " + t + " new" + (t ? " (" + SRC_GROUPS.filter(([g]) => c[g]).map(([g, l]) => l + " " + c[g]).join(", ") + ")" : "");
+      return '<div class="col" title="' + esc(tip) + '"><div class="stack" style="height:' + (100 * t / max) + '%">' +
+        SRC_GROUPS.filter(([g]) => c[g]).map(([g, , col]) => '<i style="height:' + (100 * c[g] / t) + "%;background:" + col + '"></i>').join("") +
+        '</div><span class="lb">' + (span === 7 || i % 3 === 0 ? d.slice(8) : "") + "</span></div>";
+    }).join("");
+    // table: group, then its detail rows
+    const stuck = (xs) => { const old = xs.filter((x) => daysBetween(x.first, today) >= 7); return old.length ? pct(old.filter((x) => daysBetween(x.first, x.days[x.days.length - 1]) >= 7 || x.days.length >= 3).length, old.length) : "–"; };
+    const avgDays = (xs) => xs.length ? (xs.reduce((a, x) => a + x.days.length, 0) / xs.length).toFixed(1) : "–";
+    $("#srctable").innerHTML = newbies.length ? "<table><tr><th>Source</th><th class='num'>New players</th><th class='num'>Share</th><th class='num'>Dailies each</th><th class='num'>Still playing</th></tr>" +
+      SRC_GROUPS.map(([g, l, col]) => {
+        const xs = inGroup(g); if (!xs.length) return "";
+        const det = {}; xs.forEach((x) => { const k = x.detail || "—"; (det[k] = det[k] || []).push(x); });
+        const dk = Object.keys(det).sort((a, b) => det[b].length - det[a].length);
+        return "<tr><td><span class='dot' style='background:" + col + "'></span><b>" + esc(l) + "</b></td><td class='num'>" + xs.length + "</td><td class='num'>" + pct(xs.length, newbies.length) +
+          "</td><td class='num'>" + avgDays(xs) + "</td><td class='num'>" + stuck(xs) + "</td></tr>" +
+          (g === "none" || (dk.length === 1 && g !== "web" && g !== "ads") ? "" : dk.map((k) => "<tr class='sub'><td>" + esc(k) + "</td><td class='num'>" + det[k].length + "</td><td></td><td class='num'>" + avgDays(det[k]) + "</td><td class='num'>" + stuck(det[k]) + "</td></tr>").join(""));
+      }).join("") + "</table>"
+      : "<p class='note'>No new players in this range.</p>";
+    $("#srcnote").textContent = "Still playing: of new players at least a week in, the share who played 3+ dailies or were still playing a week later. Sources are recorded for players whose first daily came after v0.17.0 (Oct 17); earlier players show as Not recorded. Typed it in means no link, ad or referring site: usually word of mouth, sometimes a bookmark.";
+    // recruiters
+    const rec = {}; newbies.filter((x) => x.ref).forEach((x) => { (rec[x.ref] = rec[x.ref] || []).push(x); });
+    const rk = Object.keys(rec).sort((a, b) => rec[b].length - rec[a].length);
+    $("#recruiters").innerHTML = rk.length ? "<table><tr><th>Player</th><th class='num'>Brought in</th><th>Who</th></tr>" +
+      rk.map((u) => "<tr><td>" + (pById[u] ? nm(pById[u]) : esc(u.slice(0, 8))) + "</td><td class='num'>" + rec[u].length + "</td><td>" + rec[u].map((x) => nm(x.p)).join(", ") + "</td></tr>").join("") + "</table>"
+      : "<p class='note'>No credited recruits in this range yet. A player is credited when someone arrives on their shared result or invite link and finishes a first daily.</p>";
+    // the list
+    $("#newcount").textContent = newbies.length + " in this range, newest first";
+    $("#newlist").innerHTML = newbies.length ? "<table><tr><th>Player</th><th>First daily</th><th>Source</th><th>Detail</th><th>Brought by</th><th class='num'>Dailies</th></tr>" +
+      newbies.slice(0, 300).map((x) => { const G = SRC_GROUPS.find(([g]) => g === x.group);
+        return "<tr><td>" + nm(x.p) + "</td><td>" + shortDay(x.first) + "</td><td><span class='dot' style='background:" + G[2] + "'></span>" + esc(G[1]) + "</td><td>" + esc(x.detail) +
+          "</td><td>" + (x.ref ? (pById[x.ref] ? nm(pById[x.ref]) : esc(String(x.ref).slice(0, 8))) : "") +
+          "</td><td class='num'>" + x.days.length + "</td></tr>"; }).join("") + "</table>"
+      : "<p class='note'>No new players in this range.</p>";
   }
 
   // ---------------- Puzzles tab ----------------
@@ -744,8 +857,8 @@
   $("#tabs").onclick = (e) => {
     const b = e.target.closest("button"); if (!b) return;
     document.querySelectorAll("#tabs button").forEach((x) => x.classList.toggle("on", x === b));
-    ["day", "overview", "growth", "puzzles", "trend"].forEach((v) => { $("#v-" + v).hidden = v !== b.dataset.v; });
-    const run = { overview: showOverview, growth: showGrowth, puzzles: showPuzzles, trend: showTrend, day: showDay }[b.dataset.v];
+    ["day", "overview", "growth", "sources", "puzzles", "trend"].forEach((v) => { $("#v-" + v).hidden = v !== b.dataset.v; });
+    const run = { overview: showOverview, growth: showGrowth, sources: showSources, puzzles: showPuzzles, trend: showTrend, day: showDay }[b.dataset.v];
     if (!shown[b.dataset.v]) { shown[b.dataset.v] = 1; run().catch(fail); }
   };
   function fail(e) { console.error(e); $("#gate").hidden = false; $("#gate").innerHTML = "Couldn't load: " + esc(e && e.message || e); }
