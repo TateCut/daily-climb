@@ -76,6 +76,7 @@
   .panel .go { background: var(--bad); border-color: var(--bad); color: #fff; }
   .panel .go:disabled { opacity: .4; cursor: default; }
   [hidden] { display: none !important; }
+  .grecaptcha-badge { visibility: hidden !important; }   /* App Check's badge (this page is only for Tate) */
 </style>
 </head>
 <body>
@@ -120,6 +121,7 @@
       </div>
       <div class="grid2">
         <div class="card"><h2>Home Screen app vs browser</h2><div id="appfx"><p class="note">Loading…</p></div></div>
+        <div class="card"><h2>Where players come from <small>first visit: ads, shares, invites, other sites</small></h2><div id="sources"><p class="note">Loading…</p></div></div>
         <div class="card"><h2>Features used</h2><div id="feat"><p class="note">Loading…</p></div></div>
       </div>
       <div class="card"><h2>Announcements <small>how long each one stayed on screen</small></h2><div id="annreads"><p class="note">Loading…</p></div></div>
@@ -165,6 +167,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
   import { getFirestore, collection, getDocs, doc, getDoc, setDoc, writeBatch, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
   import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+  import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app-check.js";
 
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -198,7 +201,16 @@
     if (MOCK) return (cache[path] = mockList(path));
     const parts = path.split("/");
     const snap = await getDocs(collection(db, ...parts));
-    return (cache[path] = snap.docs.map((d) => Object.assign({ id: d.id }, d.data())));
+    return (cache[path] = snap.docs.map((d) => defang(Object.assign({ id: d.id }, d.data()))));
+  }
+  // Everything below is player-written, and much of it goes into the page as HTML: take the HTML-special characters out
+  // of every string (swapped for look-alikes), so a value like "<img onerror=...>" can never run here.
+  const DEFANG = { "<": "‹", ">": "›", '"': "”", "'": "’", "`": "‘" };
+  function defang(v) {
+    if (typeof v === "string") return v.replace(/[<>"'`]/g, (c) => DEFANG[c]);
+    if (Array.isArray(v)) return v.map(defang);
+    if (v && typeof v === "object" && Object.getPrototypeOf(v) === Object.prototype) { const o = {}; for (const k in v) o[k] = defang(v[k]); return o; }
+    return v;
   }
   const entrants = (day) => list("dailies/" + day + SALT + "/entrants");
   const progress = (day) => list("dailies/" + day + SALT + "/progress");
@@ -217,7 +229,7 @@
       reminder: r() < 0.35 ? { on: true, tokens: ["x"], hour: 7 + Math.floor(r() * 3), tz: "America/Los_Angeles" } : undefined, shares: r() < 0.55 ? { copy: r() < 0.5 ? 1 + Math.floor(r() * 3) : 0, native: Math.floor(r() * 2), result: Math.floor(r() * 6), picture: Math.floor(r() * 3), lastAt: { seconds: Math.floor((Date.now() - r() * 5 * 864e5) / 1000) } } : undefined,
       adventure: r() < 0.5 ? { starts: 1 + Math.floor(r() * 9) } : undefined,
       app: r() < 0.8 ? { standalone: r() < 0.4, platform: r() < 0.6 ? "ios" : "desktop", tz: "America/Chicago" } : undefined,
-      features: { week: Math.floor(r() * 6), routes: Math.floor(r() * 5), calendar: Math.floor(r() * 3), howTo: Math.floor(r() * 2), patchNotes: Math.floor(r() * 2) },
+      src: r() < 0.7 ? [{ source: "direct", medium: "none" }, { source: "share", medium: "share" }, { source: "reddit", medium: "social", campaign: "launch" }, { source: "google", medium: "cpc", campaign: "words-1" }][Math.floor(r() * 4)] : undefined, features: { week: Math.floor(r() * 6), routes: Math.floor(r() * 5), calendar: Math.floor(r() * 3), howTo: Math.floor(r() * 2), patchNotes: Math.floor(r() * 2) },
       prefs: r() < 0.5 ? { dark: r() < 0.3, sound: r() < 0.6 } : undefined,
       announcements: r() < 0.75 ? { menu: (() => { const ms = r() < 0.3 ? Math.floor(r() * 5000) : Math.floor(8000 + r() * 70000); return { opens: 1 + Math.floor(r() * 2), totalMs: ms, firstMs: ms, firstHow: r() < 0.7 ? "done" : "outside", firstAuto: true, end: ms > 30000, words: 161 }; })(), "week-film": (() => { const ms = Math.floor(2000 + r() * 30000); return { opens: 1, totalMs: ms, firstMs: ms, firstHow: r() < 0.6 ? "done" : "away", firstAuto: r() < 0.9, end: ms > 17000, words: 0 }; })() } : undefined, referredBy: r() < 0.2 ? "wren" : undefined, adventureBeaten: r() < 0.35 ? [1, 2, 3].slice(0, 1 + Math.floor(r() * 3)) : [], beatenSeeds: [4, 9, 12].slice(0, Math.floor(r() * 4)) }));
     const lens = (themeOf(day) || { lens: [4, 5, 5] }).lens;
@@ -430,6 +442,12 @@
     // features
     const F = [["routes", "Routes tab"], ["themeCard", "Theme pop-up (tapped)"], ["calendar", "Calendar"], ["howTo", "How to play"], ["patchNotes", "Patch notes"], ["invite", "Invite screen"], ["week", "Weekly Leaderboard"]];
     const withPrefs = ps.filter((p) => p.prefs);
+    // where players came from (players.src, set at their first finish from v0.16.1 on)
+    const srcRows = {}; ps.forEach((p) => { if (!p.src) return; const k = (p.src.source || "?") + " · " + (p.src.medium || "?") + (p.src.campaign ? " · " + p.src.campaign : ""); (srcRows[k] = srcRows[k] || []).push(p); });
+    const srcKeys = Object.keys(srcRows).sort((a, b) => srcRows[b].length - srcRows[a].length);
+    $("#sources").innerHTML = srcKeys.length ? "<table><tr><th>Source · medium · campaign</th><th class='num'>Players</th><th class='num'>Played 3+ days</th></tr>" +
+      srcKeys.map((k) => { const us = srcRows[k]; return "<tr><td>" + esc(k) + "</td><td class='num'>" + us.length + "</td><td class='num'>" + us.filter((p) => (p.history ? Object.keys(p.history).filter((d) => /^d{4}-/.test(d)).length : 0) >= 3).length + "</td></tr>"; }).join("") + "</table>"
+      : "<p class='note'>Nothing yet. Sources are recorded from the next update on, when a new player finishes their first daily.</p>";
     $("#feat").innerHTML = "<table><tr><th>Feature</th><th class='num'>Players</th><th class='num'>Times opened</th></tr>" +
       F.map(([k, l]) => { const us = ps.filter((p) => p.features && p.features[k]); return "<tr><td>" + l + "</td><td class='num'>" + us.length + "</td><td class='num'>" + us.reduce((a, p) => a + p.features[k], 0) + "</td></tr>"; }).join("") +
       "<tr><td>Dark mode on</td><td class='num'>" + withPrefs.filter((p) => p.prefs.dark === true).length + "</td><td class='num'>of " + withPrefs.filter((p) => "dark" in p.prefs).length + " who switched</td></tr>" +
@@ -737,6 +755,8 @@
   else {
     const cfg = window.THREE21_FIREBASE_CONFIG;
     const app = initializeApp(cfg);
+    // App Check, same as the game (off until firebase-config.js has appCheckKey)
+    if (cfg.appCheckKey && /(^|\.)thedailyclimb\.com$/.test(location.hostname)) { try { initializeAppCheck(app, { provider: new ReCaptchaEnterpriseProvider(cfg.appCheckKey), isTokenAutoRefreshEnabled: true }); } catch (e) {} }
     db = getFirestore(app);
     // Never signs in by itself: it uses the account you're already signed into in the game.
     onAuthStateChanged(getAuth(app), async (user) => {

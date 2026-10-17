@@ -2,7 +2,7 @@
 // land immediately; static assets (dictionary, icons) are cache-first for a
 // fast, offline-capable launch. Firebase / Datamuse / gstatic always hit the
 // network.
-const CACHE = "wadder-shell-v20"; // bump to re-fetch cached assets (v20: v0.15.0, Share your Climb + three-peak icons)
+const CACHE = "wadder-shell-v21"; // bump to re-fetch cached assets (v21: launch fixes; privacy page passes through)
 const ASSETS = [
   "./words.js",
   "./freq.js",
@@ -17,7 +17,8 @@ const ASSETS = [
 
 self.addEventListener("install", (e) => {
   e.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting())
+    // cache: "reload" goes past the browser's HTTP cache, so a fresh deploy never stores old copies of the files
+    caches.open(CACHE).then((c) => c.addAll(ASSETS.map((u) => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting())
   );
 });
 
@@ -35,7 +36,7 @@ self.addEventListener("fetch", (e) => {
   // Only same-origin GETs — never intercept Firestore, Datamuse, the Firebase CDN, etc.
   if (req.method !== "GET" || url.origin !== location.origin) return;
 
-  if (url.pathname.endsWith("/stats.html")) return;   // the private stats page is its own page, not the game
+  if (url.pathname.endsWith("/stats.html") || url.pathname.endsWith("/privacy.html")) return;   // their own pages, not the game
   const isHTML = req.mode === "navigate" ||
     (req.headers.get("accept") || "").includes("text/html") ||
     url.pathname.endsWith("/") || url.pathname.endsWith(".html");
